@@ -130,6 +130,12 @@ const Home = () => {
             ))}
           </div>
         </div>
+        <div className="wave-container">
+          <div className="wave wave1"></div>
+          <div className="wave wave2"></div>
+          <div className="wave wave3"></div>
+          <div className="wave wave4"></div>
+        </div>
       </section>
 
       <section className="how-it-works-section">
@@ -140,7 +146,6 @@ const Home = () => {
           <div className="steps-grid">
             {steps.map((step, index) => (
               <div key={index} className="step-card">
-                <div className="step-number">{step.number}</div>
                 <h3>{step.title}</h3>
                 <p>{step.description}</p>
               </div>
@@ -156,9 +161,6 @@ const Home = () => {
           <div className="cta-buttons">
             <Link to="/register" className="btn-cta">
               Sign Up Now
-            </Link>
-            <Link to="/providers" className="btn-cta-secondary">
-              Browse Providers
             </Link>
           </div>
         </div>
