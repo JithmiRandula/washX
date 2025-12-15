@@ -4,12 +4,21 @@
   position: sticky;
   top: 0;
   z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+}
+
+.navbar-visible {
+  transform: translateY(0);
+}
+
+.navbar-hidden {
+  transform: translateY(-100%);
 }
 
 .navbar-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 0.5rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -18,15 +27,13 @@
 .navbar-logo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #2563eb;
   text-decoration: none;
 }
 
-.logo-icon {
-  font-size: 1.8rem;
+.logo-image {
+  height: 90px;
+  width: auto;
+  object-fit: contain;
 }
 
 .navbar-menu {
