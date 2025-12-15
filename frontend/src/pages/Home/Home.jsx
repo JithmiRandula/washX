@@ -1,8 +1,22 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Search, MapPin, Clock, Shield, Star, TrendingUp } from 'lucide-react';
 import './Home.css';
 
 const Home = () => {
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const handleVideoClick = (e) => {
+    const video = e.target;
+    if (video.paused) {
+      video.play();
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  };
+
   const features = [
     {
       icon: <Search size={40} />,
@@ -82,8 +96,22 @@ const Home = () => {
             </div>
           </div>
         </div>
-        <div className="hero-image">
-          <img src="https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=600" alt="Laundry Service" />
+        <div className="hero-video-frame">
+          <video 
+            className="hero-video"
+            src="/video1.mp4" 
+            autoPlay
+            loop
+            muted 
+            playsInline
+            onClick={handleVideoClick}
+            style={{ cursor: 'pointer' }}
+          />
+          {!isPlaying && (
+            <div className="video-play-overlay">
+              <div className="video-play-icon">▶</div>
+            </div>
+          )}
         </div>
       </section>
 
