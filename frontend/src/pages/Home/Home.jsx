@@ -1,0 +1,168 @@
+import { Link } from 'react-router-dom';
+import { Search, MapPin, Clock, Shield, Star, TrendingUp } from 'lucide-react';
+import './Home.css';
+
+const Home = () => {
+  const features = [
+    {
+      icon: <Search size={40} />,
+      title: 'Find Providers',
+      description: 'Search and compare laundry service providers in your area'
+    },
+    {
+      icon: <MapPin size={40} />,
+      title: 'Location-Based',
+      description: 'Find the closest and most convenient service providers'
+    },
+    {
+      icon: <Clock size={40} />,
+      title: 'Track Orders',
+      description: 'Real-time tracking of your laundry from pickup to delivery'
+    },
+    {
+      icon: <Shield size={40} />,
+      title: 'Verified Providers',
+      description: 'All providers are verified and rated by real customers'
+    }
+  ];
+
+  const steps = [
+    {
+      number: '1',
+      title: 'Search Providers',
+      description: 'Find laundry service providers near you'
+    },
+    {
+      number: '2',
+      title: 'Compare & Choose',
+      description: 'Compare prices, ratings, and services'
+    },
+    {
+      number: '3',
+      title: 'Book Service',
+      description: 'Schedule pickup time and service type'
+    },
+    {
+      number: '4',
+      title: 'Track & Receive',
+      description: 'Track your order and receive clean laundry'
+    }
+  ];
+
+  return (
+    <div className="home-page">
+      <section className="hero-section">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            Your Laundry, <span className="highlight">Simplified</span>
+          </h1>
+          <p className="hero-subtitle">
+            Connect with trusted laundry service providers. Compare, book, and track your orders all in one place.
+          </p>
+          <div className="hero-actions">
+            <Link to="/providers" className="btn-hero-primary">
+              Find Providers
+            </Link>
+            <Link to="/how-it-works" className="btn-hero-secondary">
+              Learn More
+            </Link>
+          </div>
+          <div className="hero-stats">
+            <div className="stat-item">
+              <div className="stat-number">500+</div>
+              <div className="stat-label">Verified Providers</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-number">10K+</div>
+              <div className="stat-label">Happy Customers</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-number">4.8</div>
+              <div className="stat-label">Average Rating</div>
+            </div>
+          </div>
+        </div>
+        <div className="hero-image">
+          <img src="https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=600" alt="Laundry Service" />
+        </div>
+      </section>
+
+      <section className="features-section">
+        <div className="section-container">
+          <h2 className="section-title">Why Choose WashX?</h2>
+          <p className="section-subtitle">Everything you need for hassle-free laundry service</p>
+          
+          <div className="features-grid">
+            {features.map((feature, index) => (
+              <div key={index} className="feature-card">
+                <div className="feature-icon">{feature.icon}</div>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="how-it-works-section">
+        <div className="section-container">
+          <h2 className="section-title">How It Works</h2>
+          <p className="section-subtitle">Get your laundry done in 4 simple steps</p>
+          
+          <div className="steps-grid">
+            {steps.map((step, index) => (
+              <div key={index} className="step-card">
+                <div className="step-number">{step.number}</div>
+                <h3>{step.title}</h3>
+                <p>{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="cta-section">
+        <div className="cta-container">
+          <h2>Ready to Get Started?</h2>
+          <p>Join thousands of satisfied customers using WashX</p>
+          <div className="cta-buttons">
+            <Link to="/register" className="btn-cta">
+              Sign Up Now
+            </Link>
+            <Link to="/providers" className="btn-cta-secondary">
+              Browse Providers
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="provider-cta-section">
+        <div className="provider-cta-container">
+          <div className="provider-cta-content">
+            <h2>Are you a Laundry Service Provider?</h2>
+            <p>Grow your business by joining our platform</p>
+            <ul className="provider-benefits">
+              <li>
+                <TrendingUp size={24} />
+                <span>Reach more customers</span>
+              </li>
+              <li>
+                <Star size={24} />
+                <span>Build your reputation</span>
+              </li>
+              <li>
+                <Shield size={24} />
+                <span>Secure payments</span>
+              </li>
+            </ul>
+            <Link to="/provider/register" className="btn-provider">
+              Register as Provider
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default Home;
