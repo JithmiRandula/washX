@@ -1,0 +1,26 @@
+/* Register.css - for Register.jsx role-option neon animation */
+
+.role-option {
+  transition: box-shadow 0.3s, border 0.3s;
+  border-radius: 16px;
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: none;
+  position: relative;
+}
+
+.role-option.selected {
+  border: 2px solid #00c3ff;
+  box-shadow: 0 0 16px 2px #00c3ff, 0 0 32px 4px #00c3ff44;
+  animation: neon-glow 1s infinite alternate;
+}
+
+@keyframes neon-glow {
+  from {
+    box-shadow: 0 0 16px 2px #00c3ff, 0 0 32px 4px #00c3ff44;
+    border-color: #00c3ff;
+  }
+  to {
+    box-shadow: 0 0 32px 8px #00c3ff, 0 0 48px 12px #00c3ff88;
+    border-color: #00e0ff;
+  }
+}
