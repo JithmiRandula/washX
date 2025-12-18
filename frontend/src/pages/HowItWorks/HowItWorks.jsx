@@ -1,48 +1,60 @@
-
+import { useRef, useEffect, useState } from 'react';
 import './HowItWorks.css';
-
-// Vite/React: import image for correct path resolution
-import wash1 from '/wash3.jpg';
+import wash1 from '/wash5.jpg';
 
 const HowItWorks = () => {
   const steps = [
     {
-      number: '1',
       title: 'Find Providers',
-      description: 'Search for laundry service providers near you using our location-based search. Compare prices, ratings, and services offered.',
-      icon: '🔍'
+      description: 'Search for laundry service providers near you using our location-based search. Compare prices, ratings, and services offered.'
     },
     {
-      number: '2',
       title: 'Choose Your Service',
-      description: 'Select the services you need - wash & fold, dry cleaning, ironing, or premium care. Review pricing and available time slots.',
-      icon: '✅'
+      description: 'Select the services you need - wash & fold, dry cleaning, ironing, or premium care. Review pricing and available time slots.'
     },
     {
-      number: '3',
       title: 'Schedule Pickup',
-      description: 'Choose a convenient pickup time and location. Our partner will collect your laundry at the scheduled time.',
-      icon: '📅'
+      description: 'Choose a convenient pickup time and location. Our partner will collect your laundry at the scheduled time.'
     },
     {
-      number: '4',
       title: 'Track Your Order',
-      description: 'Monitor your laundry status in real-time - from pickup to washing, drying, and quality check.',
-      icon: '📍'
+      description: 'Monitor your laundry status in real-time - from pickup to washing, drying, and quality check.'
     },
     {
-      number: '5',
       title: 'Receive Clean Laundry',
-      description: 'Get your freshly cleaned and neatly packed laundry delivered to your doorstep at the chosen time.',
-      icon: '🎁'
+      description: 'Get your freshly cleaned and neatly packed laundry delivered to your doorstep at the chosen time.'
     },
     {
-      number: '6',
       title: 'Review & Earn Points',
-      description: 'Rate your experience and earn loyalty points for future discounts. Your feedback helps others choose the best service.',
-      icon: '⭐'
+      description: 'Rate your experience and earn loyalty points for future discounts. Your feedback helps others choose the best service.'
     }
   ];
+
+  const cardRefs = useRef([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const mid = window.innerHeight / 2;
+      let closest = -1;
+      let minDist = Infinity;
+      cardRefs.current.forEach((ref, idx) => {
+        if (ref) {
+          const rect = ref.getBoundingClientRect();
+          const cardMid = rect.top + rect.height / 2;
+          const dist = Math.abs(cardMid - mid);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = idx;
+          }
+        }
+      });
+      setActiveIndex(closest);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div
@@ -60,7 +72,12 @@ const HowItWorks = () => {
         <div className="steps-bg">
           <div className="steps-list">
             {steps.map((step, index) => (
-              <div key={index} className="simple-step">
+              <div
+                key={index}
+                ref={el => (cardRefs.current[index] = el)}
+                className={`simple-step animated-step${activeIndex === index ? ' active' : ''}`}
+                style={{ transitionDelay: `${index * 0.08}s` }}
+              >
                 <h3>{step.title}</h3>
                 <p>{step.description}</p>
               </div>
