@@ -142,17 +142,21 @@ const Services = () => {
 
       {/* ...existing code... */}
       <div className="services-container">
-        <div className="services-grid">
+        <div className="modern-services-grid">
           {services.map((service, index) => (
-            <div key={index} className="service-card">
-              <div className="service-header">
-                <h3>{service.title}</h3>
-                <span className="service-price">{service.price}</span>
+            <div key={index} className="modern-service-card">
+              <div className="modern-service-header">
+                <div className="modern-service-title">{service.title}</div>
+                <div className="modern-service-price-badge">
+                  <span className="modern-service-price-value">{service.price.replace('$', 'Rs ')}</span>
+                </div>
               </div>
-              <p className="service-description">{service.description}</p>
-              <ul className="service-features">
+              <div className="modern-service-description">{service.description}</div>
+              <ul className="modern-service-features">
                 {service.features.map((feature, idx) => (
-                  <li key={idx}>✓ {feature}</li>
+                  <li key={idx} className="modern-service-feature-item">
+                    <span className="modern-service-feature-check">✓</span> {feature}
+                  </li>
                 ))}
               </ul>
             </div>

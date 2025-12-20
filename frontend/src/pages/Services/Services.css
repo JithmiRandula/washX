@@ -1,3 +1,90 @@
+.modern-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 2.5rem;
+  margin-top: 2rem;
+}
+
+.modern-service-card {
+  background: rgba(255,255,255,0.95);
+  border-radius: 2rem;
+  box-shadow: 0 4px 32px 0 rgba(31, 38, 135, 0.10), 0 1.5px 12px 0 rgba(110, 198, 242, 0.08);
+  padding: 2.5rem 2rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: box-shadow 0.25s, transform 0.25s;
+  border: 1.5px solid #f2f4f8;
+  position: relative;
+}
+.modern-service-card:hover {
+  box-shadow: 0 8px 40px 0 rgba(31, 38, 135, 0.18), 0 2px 16px 0 rgba(110, 198, 242, 0.13);
+  transform: translateY(-4px) scale(1.012);
+}
+.modern-service-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 1.2rem;
+}
+.modern-service-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #23272f;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  margin-right: 0.5rem;
+}
+.modern-service-price-badge {
+  background: #f3f7ff;
+  border-radius: 1.5rem;
+  padding: 0.5rem 1.2rem 0.5rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 110px;
+  box-shadow: 0 2px 8px 0 rgba(110, 198, 242, 0.07);
+}
+.modern-service-price-label {
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.1rem;
+}
+.modern-service-price-value {
+  color: #2563eb;
+  font-weight: 800;
+  font-size: 1.35rem;
+  letter-spacing: -0.5px;
+}
+.modern-service-description {
+  color: #5b6472;
+  font-size: 1.13rem;
+  margin-bottom: 1.2rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.modern-service-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+.modern-service-feature-item {
+  color: #23272f;
+  font-size: 1.08rem;
+  font-weight: 500;
+  margin-bottom: 0.7rem;
+  display: flex;
+  align-items: center;
+}
+.modern-service-feature-check {
+  color: #22c55e;
+  font-size: 1.15rem;
+  margin-right: 0.7rem;
+  font-weight: 700;
+}
 .nft-image-behind {
   z-index: 0;
   filter: brightness(0.85) blur(1px);
