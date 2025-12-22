@@ -47,18 +47,116 @@ const Services = () => {
         <p>Professional laundry care for all your needs</p>
       </div>
 
+      {/* 7 Images in a Horizontal Row, Each with Own Wave SVG Behind */}
+      <div className="nft-images-row">
+        <div className="nft-images-row-inner">
+          {[
+            'card1.jpg',
+            'card2.jpg',
+            'card3.jpg',
+            'card4.jpg',
+            'card5.jpg',
+            'card6.jpg',
+            'card7.jpg',
+            'card8.jpg',
+          ].map((img, idx) => (
+            <div
+              key={idx}
+              className="nft-image-card"
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                marginTop: idx % 2 === 0 ? '0px' : '40px',
+              }}
+            >
+              {/* Gradient overlay */}
+              <div className="nft-image-gradient" />
+              {/* Individual wave for each image */}
+              <svg
+                viewBox="0 0 300 40"
+                preserveAspectRatio="none"
+                className="wave-svg"
+                style={{
+                  position: 'absolute',
+                  top: idx % 2 === 0 ? '80%' : '60%',
+                  left: 0,
+                  width: '100%',
+                  height: '40px',
+                  zIndex: 0,
+                }}
+              >
+                <path
+                  d="M0,20 C75,40 225,0 300,20 L300,40 L0,40 Z"
+                  fill="#6ec6f2"
+                  opacity="0.7"
+                />
+              </svg>
+              <img src={img} alt="NFT" className="nft-image-only" style={{ position: 'relative', zIndex: 1 }} />
+            </div>
+          ))}
+          {/* Duplicate for infinite effect */}
+          {[
+            'card1.jpg',
+            'card2.jpg',
+            'card3.jpg',
+            'card4.jpg',
+            'card5.jpg',
+            'card6.jpg',
+            'card7.jpg',
+            'card8.jpg',
+          ].map((img, idx) => (
+            <div
+              key={"dup-" + idx}
+              className="nft-image-card"
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                marginTop: idx % 2 === 0 ? '0px' : '40px',
+              }}
+            >
+              <div className="nft-image-gradient" />
+              <svg
+                viewBox="0 0 300 40"
+                preserveAspectRatio="none"
+                className="wave-svg"
+                style={{
+                  position: 'absolute',
+                  top: idx % 2 === 0 ? '80%' : '60%',
+                  left: 0,
+                  width: '100%',
+                  height: '40px',
+                  zIndex: 0,
+                }}
+              >
+                <path
+                  d="M0,20 C75,40 225,0 300,20 L300,40 L0,40 Z"
+                  fill="#6ec6f2"
+                  opacity="0.7"
+                />
+              </svg>
+              <img src={img} alt="NFT" className="nft-image-only" style={{ position: 'relative', zIndex: 1 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ...existing code... */}
       <div className="services-container">
-        <div className="services-grid">
+        <div className="modern-services-grid">
           {services.map((service, index) => (
-            <div key={index} className="service-card">
-              <div className="service-header">
-                <h3>{service.title}</h3>
-                <span className="service-price">{service.price}</span>
+            <div key={index} className="modern-service-card">
+              <div className="modern-service-header">
+                <div className="modern-service-title">{service.title}</div>
+                <div className="modern-service-price-badge">
+                  <span className="modern-service-price-value">{service.price.replace('$', 'Rs ')}</span>
+                </div>
               </div>
-              <p className="service-description">{service.description}</p>
-              <ul className="service-features">
+              <div className="modern-service-description">{service.description}</div>
+              <ul className="modern-service-features">
                 {service.features.map((feature, idx) => (
-                  <li key={idx}>✓ {feature}</li>
+                  <li key={idx} className="modern-service-feature-item">
+                    <span className="modern-service-feature-check">✓</span> {feature}
+                  </li>
                 ))}
               </ul>
             </div>
