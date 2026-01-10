@@ -1,0 +1,221 @@
+
+.animated-step {
+  opacity: 0.7;
+  transform: translateY(40px) scale(1);
+  transition:
+    opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+}
+
+.animated-step.active {
+  opacity: 1;
+  transform: translateY(0) scale(1.18);
+  z-index: 2;
+  box-shadow: 0 16px 48px 0 rgba(31, 38, 135, 0.28), 0 0 0 6px rgba(96,165,250,0.16);
+}
+
+.simple-step:not(.active) {
+  opacity: 0.7;
+  transform: scale(1);
+  z-index: 1;
+}
+.how-it-works-page {
+  min-height: 100vh;
+  width: 100vw;
+  overflow-x: hidden;
+  /* background handled inline for fixed effect */
+}
+
+.how-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+
+.how-header {
+  background: rgba(102, 126, 234, 0.18);
+  color: #fff;
+  padding: 4rem 2rem;
+  text-align: center;
+  border-radius: 2rem;
+  margin: 2rem auto 3rem auto;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  transition: box-shadow 0.3s, border 0.3s, background 0.3s;
+}
+
+.how-header h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.45);
+}
+
+.how-header p {
+  font-size: 1.25rem;
+  opacity: 0.95;
+  color: #e5e7eb;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.35);
+}
+
+.how-header h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.how-header p {
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+.how-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+
+/* Steps background image section */
+.steps-bg {
+  /* Remove background image from just this section, handled by page */
+  border-radius: 1.5rem;
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+}
+
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+
+.simple-step {
+  background: rgba(30, 41, 59, 0.45);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  padding: 2.5rem 2rem;
+  text-align: left;
+  transition: box-shadow 0.3s, border 0.3s, background 0.3s;
+}
+
+.simple-step h3,
+.simple-step p {
+  color: #fff !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.45);
+}
+
+.simple-step:hover {
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+  border: 1.5px solid rgba(96, 165, 250, 0.45);
+  background: rgba(30, 41, 59, 0.60);
+}
+
+.simple-step h3 {
+  font-size: 1.5rem;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+}
+
+.simple-step p {
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.cta-section {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.cta-section h2 {
+  font-size: 2rem;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.cta-section p {
+  font-size: 1.125rem;
+  color: #6b7280;
+  margin-bottom: 2rem;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-cta,
+.btn-cta-outline {
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-decoration: none;
+  transition: all 0.3s;
+  display: inline-block;
+}
+
+.btn-cta {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-cta:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+}
+
+.btn-cta-outline {
+  background: transparent;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+}
+
+.btn-cta-outline:hover {
+  background: #eff6ff;
+}
+
+@media (max-width: 768px) {
+  .how-header {
+    padding: 3rem 1rem;
+  }
+
+  .how-header h1 {
+    font-size: 2rem;
+  }
+
+  .how-container {
+    padding: 2rem 1rem;
+  }
+
+  .timeline-step {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .step-connector {
+    left: 30px;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+  }
+}
