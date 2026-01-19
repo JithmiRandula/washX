@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Home, Users, Calendar, MessageCircle, Settings, LogOut, Menu, X } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Home, Users, Calendar, MessageCircle, Settings, LogOut, Menu, X, Droplets, Shirt, Zap, Sparkles } from 'lucide-react';
 import './CustomerDashboard.css';
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchLocation, setSearchLocation] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
   const [orders] = useState([
     {
       id: '1',
@@ -47,12 +46,6 @@ const CustomerDashboard = () => {
       label: 'Completed',
       value: '11',
       color: '#10b981'
-    },
-    {
-      icon: <Star size={24} />,
-      label: 'Loyalty Points',
-      value: '450',
-      color: '#8b5cf6'
     }
   ];
 
@@ -68,18 +61,53 @@ const CustomerDashboard = () => {
 
   const handleSearch = () => {
     // Navigate to providers page with search parameters
-    const params = new URLSearchParams();
-    if (searchQuery) params.set('search', searchQuery);
-    if (searchLocation) params.set('location', searchLocation);
-    
-    window.location.href = `/providers?${params.toString()}`;
+    window.location.href = `/providers`;
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+  const services = [
+    {
+      title: "Dry Cleaning",
+      description: "Professional dry cleaning for delicate fabrics",
+      color: "#3b82f6"
+    },
+    {
+      title: "Wash & Fold",
+      description: "Complete wash and fold laundry service",
+      color: "#10b981"
+    },
+    {
+      title: "Express Service",
+      description: "Fast turnaround for urgent laundry needs",
+      color: "#f59e0b"
+    },
+    {
+      title: "Ironing Service",
+      description: "Professional ironing for crisp, wrinkle-free clothes",
+      color: "#ef4444"
+    },
+    {
+      title: "Steam Press",
+      description: "Advanced steam pressing for perfect finish",
+      color: "#06b6d4"
+    },
+    {
+      title: "Premium Care",
+      description: "Luxury treatment for your finest garments",
+      color: "#8b5cf6"
     }
-  };
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentServiceIndex((prevIndex) => 
+        (prevIndex + 1) % services.length
+      );
+    }, 3000); // Change every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [services.length]);
+
+  const currentService = services[currentServiceIndex];
 
   const sidebarItems = [
     {
@@ -94,29 +122,14 @@ const CustomerDashboard = () => {
       href: '/providers'
     },
     {
-      icon: <ShoppingBag size={20} />,
-      label: 'My Orders',
-      href: '/customer/orders'
-    },
-    {
       icon: <Calendar size={20} />,
       label: 'My Bookings',
       href: '/customer/bookings'
     },
     {
-      icon: <Star size={20} />,
-      label: 'Reviews',
-      href: '/customer/reviews'
-    },
-    {
       icon: <User size={20} />,
       label: 'Profile',
       href: '/customer/profile'
-    },
-    {
-      icon: <Settings size={20} />,
-      label: 'Settings',
-      href: '/customer/settings'
     }
   ];
 
@@ -131,7 +144,7 @@ const CustomerDashboard = () => {
       <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <h2>WashX</h2>
+            <img src="/washx logo.png" alt="WashX" className="logo-image" />
           </div>
           <button 
             className="sidebar-close"
@@ -194,57 +207,21 @@ const CustomerDashboard = () => {
           </div>
         </div>
 
-        {/* Search Bar Section */}
-        <div className="search-section">
-          <div className="search-container">
-            <div className="search-title">
-              <h2>Find Laundry Providers</h2>
-              <p>Search for the best laundry services near you</p>
-            </div>
-            <div className="search-bar">
-              <div className="search-input-group">
-                <div className="search-input-wrapper">
-                  <Search size={20} className="search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search providers, services..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="search-input"
-                  />
-                </div>
-                <div className="location-input-wrapper">
-                  <MapPin size={20} className="location-icon" />
-                  <input
-                    type="text"
-                    placeholder="Enter location"
-                    value={searchLocation}
-                    onChange={(e) => setSearchLocation(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="location-input"
-                  />
-                </div>
-                <button 
-                  className="search-button"
-                  onClick={handleSearch}
-                >
-                  <Search size={18} />
-                  Search
-                </button>
+        {/* Animated Services Showcase */}
+        <div className="services-showcase">
+          <div className="showcase-container">
+            <div className="showcase-content" style={{ borderColor: currentService.color }}>
+              <div className="showcase-text">
+                <h2>{currentService.title}</h2>
+                <p>{currentService.description}</p>
               </div>
-              <div className="search-filters">
-                <button className="filter-btn">
-                  <Filter size={16} />
-                  Filters
-                </button>
-                <div className="quick-filters">
-                  <span className="filter-tag" onClick={() => setSearchQuery('dry cleaning')}>Dry Cleaning</span>
-                  <span className="filter-tag" onClick={() => setSearchQuery('wash & fold')}>Wash & Fold</span>
-                  <span className="filter-tag" onClick={() => setSearchQuery('express')}>Express Service</span>
-                  <span className="filter-tag" onClick={() => setSearchQuery('pickup')}>Pickup & Delivery</span>
-                </div>
-              </div>
+              <button 
+                className="showcase-button"
+                style={{ backgroundColor: currentService.color }}
+                onClick={handleSearch}
+              >
+                Explore Services
+              </button>
             </div>
           </div>
         </div>
