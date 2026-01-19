@@ -6,6 +6,7 @@ import './Bookings.css';
 const Bookings = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   const bookings = [
     {
@@ -108,6 +109,132 @@ const Bookings = () => {
     window.history.back();
   };
 
+  // Individual Booking Detail Component
+  const BookingDetail = ({ booking, onBack }) => {
+    return (
+      <div className="detail-page">
+        {/* Detail Page Navbar */}
+        <nav className="detail-navbar">
+          <div className="detail-nav-container">
+            <div className="detail-nav-brand">
+              <h2>WashX</h2>
+            </div>
+            <div className="detail-nav-links">
+              <a href="/customer-dashboard" className="detail-nav-link">Dashboard</a>
+              <a href="/providers" className="detail-nav-link">Find Providers</a>
+              <a href="#" className="detail-nav-link active" onClick={(e) => { e.preventDefault(); onBack(); }}>My Bookings</a>
+              <a href="/profile" className="detail-nav-link">Profile</a>
+            </div>
+          </div>
+        </nav>
+
+        {/* Search Bar */}
+        <div className="detail-search-section">
+          <div className="detail-search-container">
+            <div className="detail-search-bar">
+              <div className="detail-search-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search"
+                className="detail-search-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="detail-container">
+          <button className="detail-back-button" onClick={onBack}>
+            <ArrowLeft size={20} />
+            Back to Bookings
+          </button>
+
+          <div className="detail-header">
+            <h1>Order Details</h1>
+            <div className="detail-order-id">Order #{booking.id}</div>
+          </div>
+
+          <div className="detail-content">
+            <div className="detail-main">
+              <div className="detail-provider-section">
+                <h2>{booking.providerName}</h2>
+                <div className="detail-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star 
+                      key={star} 
+                      size={18} 
+                      fill={star <= Math.floor(booking.rating) ? "#fbbf24" : "none"}
+                      color="#fbbf24"
+                    />
+                  ))}
+                  <span>{booking.rating}</span>
+                </div>
+                <div className="detail-services">
+                  {booking.services.map((service, index) => (
+                    <span key={index} className="detail-service-tag">{service}</span>
+                  ))}
+                </div>
+                <p className="detail-description">{booking.description}</p>
+              </div>
+
+              <div className="detail-info-grid">
+                <div className="detail-info-card">
+                  <h3>Order Information</h3>
+                  <div className="detail-info-item">
+                    <Package size={18} />
+                    <span>{booking.items} items</span>
+                  </div>
+                  <div className="detail-info-item">
+                    <Calendar size={18} />
+                    <span>Pickup: {booking.pickupDate}</span>
+                  </div>
+                  <div className="detail-info-item">
+                    <Clock size={18} />
+                    <span>Delivery: {booking.deliveryDate}</span>
+                  </div>
+                </div>
+
+                <div className="detail-info-card">
+                  <h3>Contact & Location</h3>
+                  <div className="detail-info-item">
+                    <MapPin size={18} />
+                    <span>{booking.address}</span>
+                  </div>
+                  <div className="detail-info-item">
+                    <Phone size={18} />
+                    <span>{booking.phone}</span>
+                  </div>
+                  <div className="detail-info-item">
+                    <Mail size={18} />
+                    <span>{booking.email}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="detail-image-section">
+              <div className="detail-image-container">
+                <img 
+                  src="/wash1.jpg" 
+                  alt={booking.providerName}
+                  className="detail-provider-image"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Show detail page if booking is selected
+  if (selectedBooking) {
+    return <BookingDetail booking={selectedBooking} onBack={() => setSelectedBooking(null)} />;
+  }
+
   return (
     <div className="bookings-page">
       <div className="bookings-container">
@@ -171,7 +298,12 @@ const Bookings = () => {
         {/* Bookings List */}
         <div className="bookings-list">
           {filteredBookings.map(booking => (
-            <div key={booking.id} className="booking-card">
+            <div 
+              key={booking.id} 
+              className="booking-card"
+              onClick={() => setSelectedBooking(booking)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="booking-content">
                 <div className="left-content">
                   <div className="provider-section">
