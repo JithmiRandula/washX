@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Home, Users, Calendar, MessageCircle, Settings, LogOut, Menu, X } from 'lucide-react';
 import './CustomerDashboard.css';
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders] = useState([
     {
       id: '1',
@@ -63,13 +66,186 @@ const CustomerDashboard = () => {
     }
   };
 
+  const handleSearch = () => {
+    // Navigate to providers page with search parameters
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('search', searchQuery);
+    if (searchLocation) params.set('location', searchLocation);
+    
+    window.location.href = `/providers?${params.toString()}`;
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const sidebarItems = [
+    {
+      icon: <Home size={20} />,
+      label: 'Dashboard',
+      href: '/customer/dashboard',
+      active: true
+    },
+    {
+      icon: <Search size={20} />,
+      label: 'Find Providers',
+      href: '/providers'
+    },
+    {
+      icon: <ShoppingBag size={20} />,
+      label: 'My Orders',
+      href: '/customer/orders'
+    },
+    {
+      icon: <Calendar size={20} />,
+      label: 'My Bookings',
+      href: '/customer/bookings'
+    },
+    {
+      icon: <Star size={20} />,
+      label: 'Reviews',
+      href: '/customer/reviews'
+    },
+    {
+      icon: <User size={20} />,
+      label: 'Profile',
+      href: '/customer/profile'
+    },
+    {
+      icon: <Settings size={20} />,
+      label: 'Settings',
+      href: '/customer/settings'
+    }
+  ];
+
+  const handleLogout = () => {
+    // Add logout functionality here
+    console.log('Logout clicked');
+  };
+
   return (
     <div className="dashboard-page">
+      {/* Sidebar */}
+      <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <h2>WashX</h2>
+          </div>
+          <button 
+            className="sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="sidebar-user">
+          <div className="user-avatar">
+            <User size={24} />
+          </div>
+          <div className="user-info">
+            <h3>{user.name}</h3>
+            <p>Customer</p>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          {sidebarItems.map((item, index) => (
+            <a
+              key={index}
+              href={item.href}
+              className={`sidebar-item ${item.active ? 'sidebar-item-active' : ''}`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </a>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <button className="sidebar-logout" onClick={handleLogout}>
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Sidebar Overlay for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       <div className="dashboard-container">
         <div className="dashboard-header">
+          <button 
+            className="mobile-menu-btn"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
           <div>
             <h1>Welcome back, {user.name}!</h1>
             <p>Here's what's happening with your orders</p>
+          </div>
+        </div>
+
+        {/* Search Bar Section */}
+        <div className="search-section">
+          <div className="search-container">
+            <div className="search-title">
+              <h2>Find Laundry Providers</h2>
+              <p>Search for the best laundry services near you</p>
+            </div>
+            <div className="search-bar">
+              <div className="search-input-group">
+                <div className="search-input-wrapper">
+                  <Search size={20} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search providers, services..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="search-input"
+                  />
+                </div>
+                <div className="location-input-wrapper">
+                  <MapPin size={20} className="location-icon" />
+                  <input
+                    type="text"
+                    placeholder="Enter location"
+                    value={searchLocation}
+                    onChange={(e) => setSearchLocation(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="location-input"
+                  />
+                </div>
+                <button 
+                  className="search-button"
+                  onClick={handleSearch}
+                >
+                  <Search size={18} />
+                  Search
+                </button>
+              </div>
+              <div className="search-filters">
+                <button className="filter-btn">
+                  <Filter size={16} />
+                  Filters
+                </button>
+                <div className="quick-filters">
+                  <span className="filter-tag" onClick={() => setSearchQuery('dry cleaning')}>Dry Cleaning</span>
+                  <span className="filter-tag" onClick={() => setSearchQuery('wash & fold')}>Wash & Fold</span>
+                  <span className="filter-tag" onClick={() => setSearchQuery('express')}>Express Service</span>
+                  <span className="filter-tag" onClick={() => setSearchQuery('pickup')}>Pickup & Delivery</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
