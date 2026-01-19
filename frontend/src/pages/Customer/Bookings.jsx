@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Clock, CheckCircle, MapPin, Phone, Mail, Package, Star, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, MapPin, Phone, Mail, Package, Star, ArrowLeft, Settings } from 'lucide-react';
 import './Bookings.css';
 
 const Bookings = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showOrderSidebar, setShowOrderSidebar] = useState(false);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editableItems, setEditableItems] = useState([]);
 
   const bookings = [
     {
@@ -23,7 +26,7 @@ const Bookings = () => {
       email: 'info@cleanwash.com',
       services: ['Dry Cleaning', 'Wash & Fold'],
       rating: 4.5,
-      description: 'Professional dry cleaning with eco-friendly solvents and premium fabric care.',
+      description: 'Professional dry cleaning with eco-friendly solvents and premium fabric care. Our state-of-the-art facility uses advanced cleaning technologies to ensure your garments receive the highest quality treatment. We specialize in delicate fabrics, designer clothing, and everyday wear with expert stain removal, precise pressing, and careful handling. Our experienced team provides personalized service with same-day and next-day options available. We are committed to environmental sustainability using biodegradable solvents and energy-efficient processes.',
       location: {
         lat: 40.7128,
         lng: -74.0060
@@ -117,7 +120,7 @@ const Bookings = () => {
         <nav className="detail-navbar">
           <div className="detail-nav-container">
             <div className="detail-nav-brand">
-              <h2>WashX</h2>
+              <img src="/washx logo.png" alt="WashX" className="detail-nav-logo" />
             </div>
             <div className="detail-nav-links">
               <a href="/customer-dashboard" className="detail-nav-link">Dashboard</a>
@@ -130,6 +133,10 @@ const Bookings = () => {
 
         {/* Search Bar */}
         <div className="detail-search-section">
+          <div className="detail-search-header">
+            <h2 className="detail-search-title">Find Your Perfect Laundry Service</h2>
+            <p className="detail-search-subtitle">Search for providers, services, or locations near you</p>
+          </div>
           <div className="detail-search-container">
             <div className="detail-search-bar">
               <div className="detail-search-icon">
@@ -139,7 +146,7 @@ const Bookings = () => {
               </div>
               <input 
                 type="text" 
-                placeholder="Search"
+                placeholder="Search for laundry services, dry cleaning, or locations..."
                 className="detail-search-input"
               />
             </div>
@@ -147,20 +154,41 @@ const Bookings = () => {
         </div>
 
         <div className="detail-container">
-          <button className="detail-back-button" onClick={onBack}>
-            <ArrowLeft size={20} />
-            Back to Bookings
-          </button>
-
-          <div className="detail-header">
-            <h1>Order Details</h1>
-            <div className="detail-order-id">Order #{booking.id}</div>
-          </div>
-
           <div className="detail-content">
             <div className="detail-main">
               <div className="detail-provider-section">
-                <h2>{booking.providerName}</h2>
+                {/* Laundry Image with provider name overlay */}
+                <div className="detail-inner-image-section">
+                  <img 
+                    src="/wash1.jpg" 
+                    alt="Laundry Service"
+                    className="detail-inner-laundry-image"
+                  />
+                  <div className="detail-image-overlay">
+                    <div className="detail-overlay-settings">
+                      <Settings size={32} className="detail-settings-icon" />
+                    </div>
+                    <div className="detail-overlay-content">
+                      <h2 className="detail-overlay-title">{booking.providerName}</h2>
+                      <div className="detail-overlay-services">
+                        {booking.services.map((service, index) => (
+                          <span key={index} className="detail-overlay-service-tag">{service}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <button 
+                      className="detail-order-button"
+                      onClick={() => setShowOrderSidebar(true)}
+                    >
+                      View Order Items
+                    </button>
+                  </div>
+                </div>
+
+                {/* Description first */}
+                <p className="detail-description">{booking.description}</p>
+
+                {/* Rating and reviews */}
                 <div className="detail-rating">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star 
@@ -172,12 +200,6 @@ const Bookings = () => {
                   ))}
                   <span>{booking.rating}</span>
                 </div>
-                <div className="detail-services">
-                  {booking.services.map((service, index) => (
-                    <span key={index} className="detail-service-tag">{service}</span>
-                  ))}
-                </div>
-                <p className="detail-description">{booking.description}</p>
               </div>
 
               <div className="detail-info-grid">
@@ -218,14 +240,262 @@ const Bookings = () => {
             <div className="detail-image-section">
               <div className="detail-image-container">
                 <img 
-                  src="/wash1.jpg" 
-                  alt={booking.providerName}
+                  src="/map1.png" 
+                  alt="Location Map"
                   className="detail-provider-image"
                 />
+              </div>
+              
+              <div className="detail-image-container">
+                <div className="detail-calendar">
+                  <div className="detail-calendar-header">
+                    <button className="detail-calendar-nav">&lt;</button>
+                    <span className="detail-calendar-month">December 2025</span>
+                    <button className="detail-calendar-nav">&gt;</button>
+                  </div>
+                  <div className="detail-calendar-grid">
+                    <div className="detail-calendar-day-header">Sun</div>
+                    <div className="detail-calendar-day-header">Mon</div>
+                    <div className="detail-calendar-day-header">Tue</div>
+                    <div className="detail-calendar-day-header">Wed</div>
+                    <div className="detail-calendar-day-header">Thu</div>
+                    <div className="detail-calendar-day-header">Fri</div>
+                    <div className="detail-calendar-day-header">Sat</div>
+                    
+                    {/* Calendar Days for December 2025 */}
+                    {[...Array(31)].map((_, i) => {
+                      const day = i + 1;
+                      const isPickupDate = day === 8; // December 8th - Pickup
+                      const isDeliveryDate = day === 9; // December 9th - Delivery
+                      
+                      return (
+                        <div 
+                          key={i} 
+                          className={`detail-calendar-day ${
+                            isPickupDate ? 'pickup-date' : 
+                            isDeliveryDate ? 'delivery-date' : 
+                            day < 8 ? 'disabled' : ''
+                          }`}
+                          title={
+                            isPickupDate ? 'Pickup Date' :
+                            isDeliveryDate ? 'Delivery Date' : ''
+                          }
+                        >
+                          {day}
+                          {isPickupDate && <span className="date-label">Pickup</span>}
+                          {isDeliveryDate && <span className="date-label">Delivery</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Order Details Sidebar */}
+        <div className={`detail-order-sidebar ${showOrderSidebar ? 'open' : ''}`}>
+          <div className="detail-sidebar-header">
+            <h3>Order Details</h3>
+            <div className="detail-sidebar-controls">
+              {!isEditingOrder ? (
+                <button 
+                  className="detail-edit-button"
+                  onClick={() => {
+                    setIsEditingOrder(true);
+                    setEditableItems([
+                      { name: 'Formal Shirt', type: 'Dry Clean', quantity: 2, price: 12.00 },
+                      { name: 'Business Suit', type: 'Dry Clean', quantity: 1, price: 25.00 },
+                      { name: 'Cotton T-Shirt', type: 'Wash & Fold', quantity: 3, price: 9.00 }
+                    ]);
+                  }}
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="detail-edit-controls">
+                  <button 
+                    className="detail-save-button"
+                    onClick={() => setIsEditingOrder(false)}
+                  >
+                    Save
+                  </button>
+                  <button 
+                    className="detail-cancel-button"
+                    onClick={() => {
+                      setIsEditingOrder(false);
+                      setEditableItems([]);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              <button 
+                className="detail-sidebar-close"
+                onClick={() => setShowOrderSidebar(false)}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          
+          <div className="detail-sidebar-content">
+            <div className="detail-order-summary">
+              <h4>Order Summary</h4>
+              <div className="detail-order-info">
+                <div className="detail-order-row">
+                  <span>Order ID:</span>
+                  <span>#{booking.id}</span>
+                </div>
+                <div className="detail-order-row">
+                  <span>Status:</span>
+                  <span className="status-badge">{booking.status}</span>
+                </div>
+                <div className="detail-order-row">
+                  <span>Total Amount:</span>
+                  <span className="amount">Rs.{booking.amount}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="detail-order-items">
+              <h4>Items</h4>
+              <div className="detail-item-list">
+                {!isEditingOrder ? (
+                  // View Mode
+                  <>
+                    <div className="detail-item">
+                      <div className="detail-item-info">
+                        <span className="detail-item-name">Formal Shirt</span>
+                        <span className="detail-item-type">Dry Clean</span>
+                      </div>
+                      <div className="detail-item-details">
+                        <span className="detail-item-qty-price">Qty: 2Rs.12.00</span>
+                      </div>
+                    </div>
+                    
+                    <div className="detail-item">
+                      <div className="detail-item-info">
+                        <span className="detail-item-name">Business Suit</span>
+                        <span className="detail-item-type">Dry Clean</span>
+                      </div>
+                      <div className="detail-item-details">
+                        <span className="detail-item-qty-price">Qty: 1Rs.25.00</span>
+                      </div>
+                    </div>
+                    
+                    <div className="detail-item">
+                      <div className="detail-item-info">
+                        <span className="detail-item-name">Cotton T-Shirt</span>
+                        <span className="detail-item-type">Wash & Fold</span>
+                      </div>
+                      <div className="detail-item-details">
+                        <span className="detail-item-qty-price">Qty: 3Rs.9.00</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  // Edit Mode
+                  editableItems.map((item, index) => (
+                    <div key={index} className="detail-item edit-mode">
+                      <div className="detail-item-info">
+                        <input 
+                          type="text" 
+                          value={item.name}
+                          onChange={(e) => {
+                            const newItems = [...editableItems];
+                            newItems[index].name = e.target.value;
+                            setEditableItems(newItems);
+                          }}
+                          className="detail-item-name-input"
+                        />
+                        <select 
+                          value={item.type}
+                          onChange={(e) => {
+                            const newItems = [...editableItems];
+                            newItems[index].type = e.target.value;
+                            setEditableItems(newItems);
+                          }}
+                          className="detail-item-type-select"
+                        >
+                          <option value="Dry Clean">Dry Clean</option>
+                          <option value="Wash & Fold">Wash & Fold</option>
+                          <option value="Ironing">Ironing</option>
+                          <option value="Express Service">Express Service</option>
+                        </select>
+                      </div>
+                      <div className="detail-item-edit-controls">
+                        <div className="detail-quantity-controls">
+                          <label>Qty:</label>
+                          <input 
+                            type="number" 
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newItems = [...editableItems];
+                              newItems[index].quantity = parseInt(e.target.value) || 1;
+                              setEditableItems(newItems);
+                            }}
+                            className="detail-quantity-input"
+                          />
+                        </div>
+                        <div className="detail-price-controls">
+                          <label>Rs.</label>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            min="0"
+                            value={item.price}
+                            onChange={(e) => {
+                              const newItems = [...editableItems];
+                              newItems[index].price = parseFloat(e.target.value) || 0;
+                              setEditableItems(newItems);
+                            }}
+                            className="detail-price-input"
+                          />
+                        </div>
+                        <button 
+                          className="detail-remove-item"
+                          onClick={() => {
+                            const newItems = editableItems.filter((_, i) => i !== index);
+                            setEditableItems(newItems);
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+                
+                {isEditingOrder && (
+                  <button 
+                    className="detail-add-item"
+                    onClick={() => {
+                      setEditableItems([...editableItems, { 
+                        name: 'New Item', 
+                        type: 'Dry Clean', 
+                        quantity: 1, 
+                        price: 10.00 
+                      }]);
+                    }}
+                  >
+                    + Add Item
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="detail-service-notes">
+              <h4>Service Notes</h4>
+              <p>Handle with care - delicate items included. Express service requested for business suit.</p>
+            </div>
+          </div>
+        </div>
+        
+        {showOrderSidebar && <div className="detail-sidebar-overlay" onClick={() => setShowOrderSidebar(false)}></div>}
       </div>
     );
   };
