@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Droplets, Shirt, Zap, Sparkles } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Droplets, Shirt, Zap, Sparkles, Calendar, DollarSign, Activity } from 'lucide-react';
+import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import './CustomerDashboard.css';
 
 const CustomerDashboard = () => {
@@ -108,15 +109,66 @@ const CustomerDashboard = () => {
 
   const currentService = services[currentServiceIndex];
 
+  const recentActivity = [
+    {
+      id: 1,
+      type: 'order_completed',
+      title: 'Order #1234 completed',
+      description: 'CleanWash Express completed your dry cleaning order',
+      time: '2 hours ago',
+      icon: <CheckCircle size={20} />,
+      color: '#10b981'
+    },
+    {
+      id: 2,
+      type: 'order_picked',
+      title: 'Order #1235 picked up',
+      description: 'Premium Laundry Care picked up your items',
+      time: '1 day ago',
+      icon: <Package size={20} />,
+      color: '#f59e0b'
+    },
+    {
+      id: 3,
+      type: 'order_placed',
+      title: 'New order placed',
+      description: 'Order #1236 placed with Express Wash Co.',
+      time: '3 days ago',
+      icon: <ShoppingBag size={20} />,
+      color: '#2563eb'
+    },
+    {
+      id: 4,
+      type: 'provider_rated',
+      title: 'Provider rated',
+      description: 'You rated CleanWash Express 5 stars',
+      time: '5 days ago',
+      icon: <Star size={20} />,
+      color: '#f59e0b'
+    }
+  ];
+
+  // Helper functions
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'in-progress': return 'In Progress';
+      case 'completed': return 'Completed';
+      default: return status;
+    }
+  };
+
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-container">
-        <div className="dashboard-header">
-          <div>
-            <h1>Welcome back, {user.name}!</h1>
-            <p>Here's what's happening with your orders</p>
+    <>
+      <CustomerNavbar />
+      <div className="dashboard-page">
+        <div className="dashboard-container">
+          <div className="dashboard-header">
+            <div>
+              <h1>Welcome back, {user.name}!</h1>
+              <p>Here's what's happening with your orders</p>
+            </div>
           </div>
-        </div>
 
         {/* Animated Services Showcase */}
         <div className="services-showcase">
@@ -192,25 +244,26 @@ const CustomerDashboard = () => {
           </div>
 
           <div className="quick-actions">
-            <h2>Quick Actions</h2>
-            <div className="actions-list">
-              <a href="/providers" className="action-card">
-                <Search size={24} />
-                <span>Find Providers</span>
-              </a>
-              <a href="/customer/orders" className="action-card">
-                <ShoppingBag size={24} />
-                <span>My Orders</span>
-              </a>
-              <a href="/customer/profile" className="action-card">
-                <User size={24} />
-                <span>Edit Profile</span>
-              </a>
+            <h2>Recent Activity</h2>
+            <div className="activity-list">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="activity-item">
+                  <div className="activity-icon" style={{ color: activity.color }}>
+                    {activity.icon}
+                  </div>
+                  <div className="activity-content">
+                    <h4>{activity.title}</h4>
+                    <p>{activity.description}</p>
+                    <span className="activity-time">{activity.time}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
