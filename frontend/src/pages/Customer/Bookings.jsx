@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle, MapPin, Phone, Mail, Package, Star, ArrowLeft, Settings } from 'lucide-react';
-import CustomerNavigation from '../../components/CustomerNavigation/CustomerNavigation';
 import './Bookings.css';
 
 const Bookings = () => {
@@ -505,7 +504,7 @@ const Bookings = () => {
   }
 
   return (
-    <CustomerNavigation>
+    <div className="bookings-page">
       <div className="bookings-main">
         <div className="bookings-header">
           <h1>My Bookings</h1>
@@ -633,7 +632,7 @@ const Bookings = () => {
           )}
         </div>
       </div>
-    </CustomerNavigation>
+    </div>
   );
 };
 

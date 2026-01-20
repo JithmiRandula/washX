@@ -13,40 +13,6 @@ const ProviderDashboard = () => {
     { id: '3', customer: 'Bob Johnson', status: 'ready', amount: 30, items: 2, date: '2025-12-07' }
   ]);
 
-  const sidebarItems = [
-    {
-      icon: <Home size={20} />,
-      label: 'Dashboard',
-      path: '/provider/dashboard',
-      active: true
-    },
-    {
-      icon: <Package size={20} />,
-      label: 'Orders',
-      path: '/provider/orders'
-    },
-    {
-      icon: <Plus size={20} />,
-      label: 'Services',
-      path: '/provider/services'
-    },
-    {
-      icon: <BarChart3 size={20} />,
-      label: 'Analytics',
-      path: '/provider/analytics'
-    },
-    {
-      icon: <User size={20} />,
-      label: 'Profile',
-      path: '/provider/profile'
-    },
-    {
-      icon: <Settings size={20} />,
-      label: 'Settings',
-      path: '/provider/settings'
-    }
-  ];
-
   const stats = [
     { icon: <Package size={24} />, label: 'Total Orders', value: '156', color: '#2563eb' },
     { icon: <DollarSign size={24} />, label: 'Revenue', value: '$8,450', color: '#10b981' },
@@ -71,38 +37,6 @@ const ProviderDashboard = () => {
 
   return (
     <div className="dashboard-page provider-dashboard">
-      {/* Sidebar */}
-      <div className="provider-sidebar">
-        <div className="provider-sidebar-header">
-          <div className="provider-sidebar-logo">
-            <img src="/washx logo.png" alt="WashX" className="logo-image" />
-          </div>
-        </div>
-        
-        <div className="provider-sidebar-user">
-          <div className="user-avatar">
-            <User size={24} />
-          </div>
-          <div className="user-info">
-            <h3>{user?.name || 'Provider Name'}</h3>
-            <p>Service Provider</p>
-          </div>
-        </div>
-
-        <nav className="provider-sidebar-nav">
-          {sidebarItems.map((item, index) => (
-            <Link
-              key={index}
-              to={item.path}
-              className={`provider-sidebar-item ${item.active ? 'provider-sidebar-item-active' : ''}`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-      </div>
-
       {/* Main Content */}
       <div className="provider-main">
         <div className="dashboard-header">

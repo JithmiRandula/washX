@@ -1,10 +1,10 @@
 .provider-dashboard {
   background: #f9fafb;
   min-height: 100vh;
-  position: relative;
+  padding: 2rem;
 }
 
-/* Sidebar Styles */
+/* Main Content */
 .provider-sidebar {
   width: 280px;
   background: white;
@@ -106,11 +106,9 @@
 
 /* Main Content */
 .provider-main {
-  width: 100%;
-  margin-left: 0;
-  padding: 2rem;
-  min-height: 100vh;
-  box-sizing: border-box;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
 }
 
 .dashboard-header {

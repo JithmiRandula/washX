@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Home, Users, Calendar, MessageCircle, Settings, LogOut, Menu, X, Droplets, Shirt, Zap, Sparkles } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Package, TrendingUp, Star, Search, User, MapPin, Filter, Droplets, Shirt, Zap, Sparkles } from 'lucide-react';
 import './CustomerDashboard.css';
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
   const [orders] = useState([
     {
@@ -109,98 +108,10 @@ const CustomerDashboard = () => {
 
   const currentService = services[currentServiceIndex];
 
-  const sidebarItems = [
-    {
-      icon: <Home size={20} />,
-      label: 'Dashboard',
-      href: '/customer/dashboard',
-      active: true
-    },
-    {
-      icon: <Search size={20} />,
-      label: 'Find Providers',
-      href: '/providers'
-    },
-    {
-      icon: <Calendar size={20} />,
-      label: 'My Bookings',
-      href: '/customer/bookings'
-    },
-    {
-      icon: <User size={20} />,
-      label: 'Profile',
-      href: '/customer/profile'
-    }
-  ];
-
-  const handleLogout = () => {
-    // Add logout functionality here
-    console.log('Logout clicked');
-  };
-
   return (
     <div className="dashboard-page">
-      {/* Sidebar */}
-      <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <img src="/washx logo.png" alt="WashX" className="logo-image" />
-          </div>
-          <button 
-            className="sidebar-close"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        <div className="sidebar-user">
-          <div className="user-avatar">
-            <User size={24} />
-          </div>
-          <div className="user-info">
-            <h3>{user.name}</h3>
-            <p>Customer</p>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          {sidebarItems.map((item, index) => (
-            <a
-              key={index}
-              href={item.href}
-              className={`sidebar-item ${item.active ? 'sidebar-item-active' : ''}`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </a>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="sidebar-logout" onClick={handleLogout}>
-            <LogOut size={20} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Sidebar Overlay for mobile */}
-      {sidebarOpen && (
-        <div 
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-
       <div className="dashboard-container">
         <div className="dashboard-header">
-          <button 
-            className="mobile-menu-btn"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
           <div>
             <h1>Welcome back, {user.name}!</h1>
             <p>Here's what's happening with your orders</p>
