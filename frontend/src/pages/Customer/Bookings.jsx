@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle, MapPin, Phone, Mail, Package, Star, ArrowLeft, Settings } from 'lucide-react';
+import CustomerNavigation from '../../components/CustomerNavigation/CustomerNavigation';
 import './Bookings.css';
 
 const Bookings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showOrderSidebar, setShowOrderSidebar] = useState(false);
@@ -107,10 +110,6 @@ const Bookings = () => {
     if (activeTab === 'all') return true;
     return booking.status === activeTab;
   });
-
-  const handleGoBack = () => {
-    window.history.back();
-  };
 
   // Individual Booking Detail Component
   const BookingDetail = ({ booking, onBack }) => {
@@ -506,137 +505,135 @@ const Bookings = () => {
   }
 
   return (
-    <div className="bookings-page">
-      <div className="bookings-container">
+    <CustomerNavigation>
+      <div className="bookings-main">
         <div className="bookings-header">
-          <button className="back-button" onClick={handleGoBack}>
-            <ArrowLeft size={20} />
-            Back to Dashboard
-          </button>
           <h1>My Bookings</h1>
-          <p>Track and manage all your laundry orders</p>
+          <p>Track and manage your laundry orders</p>
         </div>
 
-        {/* Stats Summary */}
-        <div className="stats-cards">
-          <div className="stat-card total">
-            <div className="stat-number">{bookings.length}</div>
-            <div className="stat-label">Total Orders</div>
+        <div className="bookings-container">
+          {/* Stats Summary */}
+          <div className="stats-cards">
+            <div className="stat-card total">
+              <div className="stat-number">{bookings.length}</div>
+              <div className="stat-label">Total Orders</div>
+            </div>
+            <div className="stat-card pending">
+              <div className="stat-number">{bookings.filter(b => b.status === 'pending').length}</div>
+              <div className="stat-label">Pending</div>
+            </div>
+            <div className="stat-card progress">
+              <div className="stat-number">{bookings.filter(b => b.status === 'in-progress').length}</div>
+              <div className="stat-label">In Progress</div>
+            </div>
+            <div className="stat-card completed">
+              <div className="stat-number">{bookings.filter(b => b.status === 'completed').length}</div>
+              <div className="stat-label">Completed</div>
+            </div>
           </div>
-          <div className="stat-card pending">
-            <div className="stat-number">{bookings.filter(b => b.status === 'pending').length}</div>
-            <div className="stat-label">Pending</div>
-          </div>
-          <div className="stat-card progress">
-            <div className="stat-number">{bookings.filter(b => b.status === 'in-progress').length}</div>
-            <div className="stat-label">In Progress</div>
-          </div>
-          <div className="stat-card completed">
-            <div className="stat-number">{bookings.filter(b => b.status === 'completed').length}</div>
-            <div className="stat-label">Completed</div>
-          </div>
-        </div>
 
-        {/* Filter Tabs */}
-        <div className="filter-tabs">
-          <button 
-            className={`tab ${activeTab === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            All Orders
-          </button>
-          <button 
-            className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
-            onClick={() => setActiveTab('pending')}
-          >
-            Pending
-          </button>
-          <button 
-            className={`tab ${activeTab === 'in-progress' ? 'active' : ''}`}
-            onClick={() => setActiveTab('in-progress')}
-          >
-            In Progress
-          </button>
-          <button 
-            className={`tab ${activeTab === 'completed' ? 'active' : ''}`}
-            onClick={() => setActiveTab('completed')}
-          >
-            Completed
-          </button>
-        </div>
-
-        {/* Bookings List */}
-        <div className="bookings-list">
-          {filteredBookings.map(booking => (
-            <div 
-              key={booking.id} 
-              className="booking-card"
-              onClick={() => setSelectedBooking(booking)}
-              style={{ cursor: 'pointer' }}
+          {/* Filter Tabs */}
+          <div className="filter-tabs">
+            <button 
+              className={`tab ${activeTab === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveTab('all')}
             >
-              <div className="booking-content">
-                <div className="left-content">
-                  <div className="provider-section">
-                    <h3>{booking.providerName}</h3>
-                    <div className="rating">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          size={16} 
-                          fill={star <= Math.floor(booking.rating) ? "#fbbf24" : "none"}
-                          color="#fbbf24"
-                        />
-                      ))}
-                      <span>{booking.rating}</span>
+              All Orders
+            </button>
+            <button 
+              className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
+              onClick={() => setActiveTab('pending')}
+            >
+              Pending
+            </button>
+            <button 
+              className={`tab ${activeTab === 'in-progress' ? 'active' : ''}`}
+              onClick={() => setActiveTab('in-progress')}
+            >
+              In Progress
+            </button>
+            <button 
+              className={`tab ${activeTab === 'completed' ? 'active' : ''}`}
+              onClick={() => setActiveTab('completed')}
+            >
+              Completed
+            </button>
+          </div>
+
+          {/* Bookings List */}
+          <div className="bookings-list">
+            {filteredBookings.map(booking => (
+              <div 
+                key={booking.id} 
+                className="booking-card"
+                onClick={() => setSelectedBooking(booking)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="booking-content">
+                  <div className="left-content">
+                    <div className="provider-section">
+                      <h3>{booking.providerName}</h3>
+                      <div className="rating">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star 
+                            key={star} 
+                            size={16} 
+                            fill={star <= Math.floor(booking.rating) ? "#fbbf24" : "none"}
+                            color="#fbbf24"
+                          />
+                        ))}
+                        <span>{booking.rating}</span>
+                      </div>
+                      <div className="services-tags">
+                        {booking.services.map((service, index) => (
+                          <span key={index} className="service-tag">{service}</span>
+                        ))}
+                      </div>
+                      <p className="service-description">{booking.description}</p>
                     </div>
-                    <div className="services-tags">
-                      {booking.services.map((service, index) => (
-                        <span key={index} className="service-tag">{service}</span>
-                      ))}
+
+                    <div className="detail-section">
+                      <h4>Order Information</h4>
+                      <div className="detail-grid">
+                        <div className="detail-item">
+                          <Package size={16} />
+                          <span>{booking.items} items</span>
+                        </div>
+                        <div className="detail-item">
+                          <Calendar size={16} />
+                          <span>Pickup: {booking.pickupDate}</span>
+                        </div>
+                        <div className="detail-item">
+                          <Clock size={16} />
+                          <span>Delivery: {booking.deliveryDate}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="service-description">{booking.description}</p>
                   </div>
 
-                  <div className="detail-section">
-                    <h4>Order Information</h4>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <Package size={16} />
-                        <span>{booking.items} items</span>
-                      </div>
-                      <div className="detail-item">
-                        <Calendar size={16} />
-                        <span>Pickup: {booking.pickupDate}</span>
-                      </div>
-                      <div className="detail-item">
-                        <Clock size={16} />
-                        <span>Delivery: {booking.deliveryDate}</span>
-                      </div>
-                    </div>
+                  <div className="booking-image">
+                    <img 
+                      src="/wash1.jpg" 
+                      alt={booking.providerName}
+                      className="provider-image"
+                    />
                   </div>
-                </div>
-
-                <div className="booking-image">
-                  <img 
-                    src="/wash1.jpg" 
-                    alt={booking.providerName}
-                    className="provider-image"
-                  />
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredBookings.length === 0 && (
-          <div className="no-bookings">
-            <Package size={48} />
-            <h3>No bookings found</h3>
-            <p>You don't have any {activeTab === 'all' ? '' : activeTab} orders yet.</p>
+            ))}
           </div>
-        )}
+
+          {filteredBookings.length === 0 && (
+            <div className="no-bookings">
+              <Package size={48} />
+              <h3>No bookings found</h3>
+              <p>You don't have any {activeTab === 'all' ? '' : activeTab} orders yet.</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </CustomerNavigation>
   );
 };
 
