@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, CheckCircle, MapPin, Phone, Mail, Package, Star, ArrowLeft, Settings } from 'lucide-react';
+import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import './Bookings.css';
 
 const Bookings = () => {
@@ -114,42 +115,7 @@ const Bookings = () => {
   const BookingDetail = ({ booking, onBack }) => {
     return (
       <div className="detail-page">
-        {/* Detail Page Navbar */}
-        <nav className="detail-navbar">
-          <div className="detail-nav-container">
-            <div className="detail-nav-brand">
-              <img src="/washx logo.png" alt="WashX" className="detail-nav-logo" />
-            </div>
-            <div className="detail-nav-links">
-              <a href="/customer-dashboard" className="detail-nav-link">Dashboard</a>
-              <a href="/providers" className="detail-nav-link">Find Providers</a>
-              <a href="#" className="detail-nav-link active" onClick={(e) => { e.preventDefault(); onBack(); }}>My Bookings</a>
-              <a href="/profile" className="detail-nav-link">Profile</a>
-            </div>
-          </div>
-        </nav>
-
-        {/* Search Bar */}
-        <div className="detail-search-section">
-          <div className="detail-search-header">
-            <h2 className="detail-search-title">Find Your Perfect Laundry Service</h2>
-            <p className="detail-search-subtitle">Search for providers, services, or locations near you</p>
-          </div>
-          <div className="detail-search-container">
-            <div className="detail-search-bar">
-              <div className="detail-search-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 21L16.514 16.506M19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <input 
-                type="text" 
-                placeholder="Search for laundry services, dry cleaning, or locations..."
-                className="detail-search-input"
-              />
-            </div>
-          </div>
-        </div>
+        <CustomerNavbar />
 
         <div className="detail-container">
           <div className="detail-content">
@@ -504,12 +470,14 @@ const Bookings = () => {
   }
 
   return (
-    <div className="bookings-page">
-      <div className="bookings-main">
-        <div className="bookings-header">
-          <h1>My Bookings</h1>
-          <p>Track and manage your laundry orders</p>
-        </div>
+    <>
+      <CustomerNavbar />
+      <div className="bookings-page">
+        <div className="bookings-main">
+          <div className="bookings-header">
+            <h1>My Bookings</h1>
+            <p>Track and manage your laundry orders</p>
+          </div>
 
         <div className="bookings-container">
           {/* Stats Summary */}
@@ -631,8 +599,9 @@ const Bookings = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

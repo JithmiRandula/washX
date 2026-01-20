@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { User, Mail, Phone, MapPin, Edit, Save, X, Camera, Shield, CreditCard, Bell } from 'lucide-react';
+import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import './CustomerProfile.css';
 
 const CustomerProfile = () => {
@@ -53,8 +54,10 @@ const CustomerProfile = () => {
   ];
 
   return (
-    <div className="profile-page">
-      <div className="profile-main">
+    <>
+      <CustomerNavbar />
+      <div className="profile-page">
+        <div className="profile-main">
         <div className="profile-header">
           <h1>Profile Settings</h1>
           <p>Manage your account information and preferences</p>
@@ -356,8 +359,9 @@ const CustomerProfile = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
