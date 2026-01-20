@@ -9,8 +9,7 @@
 }
 
 .main-content.no-navbar {
-  height: 100vh;
-  overflow: hidden;
+  padding-top: 0;
 }
 
 * {
