@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, X, User, ShoppingBag, LayoutDashboard, LogOut, MapPin } from 'lucide-react';
+import { Menu, X, User, ShoppingBag, LayoutDashboard, LogOut, MapPin, Package, TrendingUp, Settings } from 'lucide-react';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -55,19 +55,41 @@ const Navbar = () => {
         </Link>
 
         <div className={`navbar-menu ${isOpen ? 'active' : ''}`}>
-          <Link to="/services" className="navbar-link" onClick={() => setIsOpen(false)}>
-            Services
-          </Link>
-          <Link to="/providers" className="navbar-link" onClick={() => setIsOpen(false)}>
-            Find Providers
-          </Link>
-          <Link to="/how-it-works" className="navbar-link" onClick={() => setIsOpen(false)}>
-            How It Works
-          </Link>
-          {isProvider && (
-            <Link to="/provider/dashboard" className="navbar-link" onClick={() => setIsOpen(false)}>
-              Provider Dashboard
-            </Link>
+          {!isProvider ? (
+            <>
+              {!user && (
+                <Link to="/" className="navbar-link" onClick={() => setIsOpen(false)}>
+                  Home
+                </Link>
+              )}
+              <Link to="/services" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Services
+              </Link>
+              <Link to="/providers" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Find Providers
+              </Link>
+              <Link to="/how-it-works" className="navbar-link" onClick={() => setIsOpen(false)}>
+                How It Works
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/provider/dashboard" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Dashboard
+              </Link>
+              <Link to="/provider/services" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Services
+              </Link>
+              <Link to="/provider/orders" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Orders
+              </Link>
+              <Link to="/provider/analytics" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Analytics
+              </Link>
+              <Link to="/provider/profile" className="navbar-link" onClick={() => setIsOpen(false)}>
+                Profile
+              </Link>
+            </>
           )}
         </div>
 
@@ -99,6 +121,27 @@ const Navbar = () => {
                       </Link>
                     </>
                   )}
+                  {isProvider && (
+                    <>
+                      <Link to="/provider/services" className="dropdown-item">
+                        <Package size={18} />
+                        <span>Services</span>
+                      </Link>
+                      <Link to="/provider/orders" className="dropdown-item">
+                        <ShoppingBag size={18} />
+                        <span>Orders</span>
+                      </Link>
+                      <Link to="/provider/analytics" className="dropdown-item">
+                        <TrendingUp size={18} />
+                        <span>Analytics</span>
+                      </Link>
+                      <Link to="/provider/profile" className="dropdown-item">
+                        <Settings size={18} />
+                        <span>Profile</span>
+                      </Link>
+                    </>
+                  )}
+                  )
                   <button onClick={handleLogout} className="dropdown-item logout">
                     <LogOut size={18} />
                     <span>Logout</span>
