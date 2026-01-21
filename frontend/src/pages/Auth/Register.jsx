@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin } from 'lucide-react';
 import './Login.css';
@@ -20,6 +20,11 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get return URL and message from navigation state
+  const message = location.state?.message;
+  const returnTo = location.state?.returnTo;
 
   const handleChange = (e) => {
     setFormData({
@@ -46,8 +51,10 @@ const Register = () => {
 
     try {
       const user = await register(formData);
-      // Redirect based on role
-      if (user.role === 'admin') {
+      // Redirect based on return URL or role
+      if (returnTo) {
+        navigate(returnTo);
+      } else if (user.role === 'admin') {
         navigate('/admin/dashboard');
       } else if (user.role === 'provider') {
         navigate('/provider/dashboard');
@@ -68,6 +75,11 @@ const Register = () => {
           <div className="auth-header">
             <h1>Create Account</h1>
             <p>Join WashX and start your laundry journey</p>
+            {message && (
+              <div className="info-message">
+                {message}
+              </div>
+            )}
           </div>
 
           {error && (
