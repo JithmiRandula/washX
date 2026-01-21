@@ -1,0 +1,241 @@
+.admin-navbar {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.admin-nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 70px;
+}
+
+/* Logo */
+.admin-nav-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #2563eb;
+}
+
+.logo-image {
+  height: 40px;
+  width: auto;
+}
+
+/* Navigation Links */
+.admin-nav-links {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.admin-nav-link:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.admin-nav-link.active {
+  background: #2563eb;
+  color: white;
+}
+
+.admin-nav-link.active:hover {
+  background: #1d4ed8;
+}
+
+/* User Section */
+.admin-nav-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #2563eb;
+  color: white;
+  border-radius: 50%;
+}
+
+.admin-user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-user-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.9rem;
+}
+
+.admin-user-role {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.admin-logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-logout-btn:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+/* Mobile Menu */
+.admin-mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.admin-mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem 2rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-mobile-link,
+.admin-mobile-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+  border: none;
+  background: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.admin-mobile-link:hover,
+.admin-mobile-logout:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.admin-mobile-link.active {
+  background: #2563eb;
+  color: white;
+}
+
+.admin-mobile-logout {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+}
+
+.admin-mobile-logout:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .admin-nav-container {
+    padding: 0 1rem;
+  }
+  
+  .admin-nav-links {
+    gap: 0.25rem;
+  }
+  
+  .admin-nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  .admin-user-details {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-nav-links,
+  .admin-user-info {
+    display: none;
+  }
+  
+  .admin-mobile-menu-toggle {
+    display: flex;
+  }
+  
+  .admin-mobile-menu {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-nav-container {
+    padding: 0 0.75rem;
+    height: 60px;
+  }
+  
+  .logo-image {
+    height: 32px;
+  }
+  
+  .admin-mobile-menu {
+    padding: 0.75rem 1rem;
+  }
+}
