@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, DollarSign, TrendingUp, Users, Clock, CheckCircle, XCircle, Home, Settings, BarChart3, User, Plus } from 'lucide-react';
+import { Package, DollarSign, TrendingUp, Users, Clock, CheckCircle, XCircle, Plus } from 'lucide-react';
 import './ProviderDashboard.css';
 
 const ProviderDashboard = () => {
@@ -42,9 +42,12 @@ const ProviderDashboard = () => {
         <div className="dashboard-header">
           <div>
             <h1>Provider Dashboard</h1>
-            <p>Manage your laundry service business</p>
+            <p>Welcome back! Here's your business overview</p>
           </div>
-          <button className="btn-primary">Add New Service</button>
+          <Link to="/provider/services" className="btn-primary">
+            <Plus size={20} />
+            Add New Service
+          </Link>
         </div>
 
         <div className="dashboard-container">

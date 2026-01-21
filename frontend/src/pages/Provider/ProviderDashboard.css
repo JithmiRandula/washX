@@ -1,7 +1,12 @@
 .provider-dashboard {
-  background: #f9fafb;
+  background: #f8fafc;
   min-height: 100vh;
+}
+
+.provider-main {
   padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* Main Content */
