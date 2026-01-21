@@ -1,0 +1,175 @@
+.providers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.provider-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.provider-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.provider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.provider-info h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.provider-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.provider-contact {
+  margin-bottom: 1rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.contact-item svg {
+  color: #9ca3af;
+}
+
+.provider-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.provider-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+  justify-content: center;
+}
+
+.action-btn.approve {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.action-btn.approve:hover {
+  background: #a7f3d0;
+}
+
+.action-btn.reject {
+  background: #fecaca;
+  color: #dc2626;
+}
+
+.action-btn.reject:hover {
+  background: #fca5a5;
+}
+
+.action-btn.suspend {
+  background: #fed7aa;
+  color: #ea580c;
+}
+
+.action-btn.suspend:hover {
+  background: #fdba74;
+}
+
+.action-btn.activate {
+  background: #ddd6fe;
+  color: #7c3aed;
+}
+
+.action-btn.activate:hover {
+  background: #c4b5fd;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .providers-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .provider-card {
+    padding: 1rem;
+  }
+  
+  .provider-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .provider-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    flex: none;
+  }
+}
