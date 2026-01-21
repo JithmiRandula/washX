@@ -1,118 +1,260 @@
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Package, DollarSign, TrendingUp, Shield, AlertTriangle } from 'lucide-react';
+import AdminNavbar from '../../components/AdminNavbar/AdminNavbar';
+import { Users, Shield, Package, TrendingUp, Clock, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalProviders: 0,
+    totalOrders: 0,
+    monthlyRevenue: 0,
+    pendingProviders: 0,
+    activeOrders: 0,
+    completedOrders: 0,
+    cancelledOrders: 0
+  });
   
-  const stats = [
-    { icon: <Users size={24} />, label: 'Total Users', value: '1,234', color: '#2563eb' },
-    { icon: <Package size={24} />, label: 'Total Orders', value: '5,678', color: '#10b981' },
-    { icon: <Shield size={24} />, label: 'Providers', value: '156', color: '#8b5cf6' },
-    { icon: <DollarSign size={24} />, label: 'Revenue', value: '$89,450', color: '#f59e0b' }
-  ];
+  const [recentActivity, setRecentActivity] = useState([]);
 
-  const pendingProviders = [
-    { id: '1', name: 'Fresh Laundry Co.', email: 'fresh@laundry.com', date: '2025-12-07' },
-    { id: '2', name: 'Quick Wash Service', email: 'quick@wash.com', date: '2025-12-08' }
-  ];
+  useEffect(() => {
+    // Mock data - replace with actual API calls
+    setStats({
+      totalUsers: 1234,
+      totalProviders: 56,
+      totalOrders: 892,
+      monthlyRevenue: 12456.78,
+      pendingProviders: 8,
+      activeOrders: 23,
+      completedOrders: 756,
+      cancelledOrders: 37
+    });
 
-  const recentActivity = [
-    { id: '1', type: 'order', message: 'New order placed by John Doe', time: '2 hours ago' },
-    { id: '2', type: 'provider', message: 'New provider registered', time: '4 hours ago' },
-    { id: '3', type: 'user', message: 'New customer registered', time: '5 hours ago' }
-  ];
+    setRecentActivity([
+      {
+        id: 1,
+        type: 'user_registration',
+        message: 'New user registration: John Doe',
+        timestamp: '2 hours ago',
+        icon: Users,
+        color: '#3b82f6'
+      },
+      {
+        id: 2,
+        type: 'provider_approval',
+        message: 'Provider approved: CleanPro Services',
+        timestamp: '4 hours ago',
+        icon: Shield,
+        color: '#10b981'
+      },
+      {
+        id: 3,
+        type: 'order_completed',
+        message: 'Booking completed: Order #WX24001',
+        timestamp: '6 hours ago',
+        icon: CheckCircle,
+        color: '#059669'
+      },
+      {
+        id: 4,
+        type: 'provider_pending',
+        message: 'New provider application: QuickWash Express',
+        timestamp: '8 hours ago',
+        icon: Clock,
+        color: '#f59e0b'
+      },
+      {
+        id: 5,
+        type: 'order_cancelled',
+        message: 'Order cancelled: #WX24003',
+        timestamp: '1 day ago',
+        icon: AlertCircle,
+        color: '#ef4444'
+      }
+    ]);
+  }, []);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const StatCard = ({ title, value, icon: Icon, color, change }) => (
+    <div className="stat-card">
+      <div className="stat-icon" style={{ backgroundColor: `${color}20`, color: color }}>
+        <Icon size={24} />
+      </div>
+      <div className="stat-content">
+        <h3>{title}</h3>
+        <p className="stat-number">{value}</p>
+        {change && (
+          <span className={`stat-change ${change.type}`}>
+            {change.type === 'increase' ? '+' : ''}{change.value}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="dashboard-page admin-dashboard">
-      <div className="dashboard-container">
+    <div className="admin-dashboard">
+      <AdminNavbar />
+      
+      <div className="admin-content">
         <div className="dashboard-header">
-          <div>
-            <h1>Admin Dashboard</h1>
-            <p>Manage and monitor the WashX platform</p>
-          </div>
+          <h1>Dashboard Overview</h1>
+          <p>Welcome back, {user?.firstName}! Here's what's happening with your platform.</p>
         </div>
 
-        <div className="stats-grid">
-          {stats.map((stat, index) => (
-            <div key={index} className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: `${stat.color}20`, color: stat.color }}>
-                {stat.icon}
-              </div>
-              <div className="stat-content">
-                <p className="stat-label">{stat.label}</p>
-                <p className="stat-value">{stat.value}</p>
-              </div>
-            </div>
-          ))}
+        <div className="dashboard-stats">
+          <StatCard
+            title="Total Users"
+            value={stats.totalUsers.toLocaleString()}
+            icon={Users}
+            color="#3b82f6"
+            change={{ type: 'increase', value: 12 }}
+          />
+          <StatCard
+            title="Active Providers"
+            value={stats.totalProviders}
+            icon={Shield}
+            color="#10b981"
+            change={{ type: 'increase', value: 8 }}
+          />
+          <StatCard
+            title="Total Orders"
+            value={stats.totalOrders.toLocaleString()}
+            icon={Package}
+            color="#8b5cf6"
+            change={{ type: 'increase', value: 24 }}
+          />
         </div>
 
-        <div className="admin-content">
-          <div className="pending-section">
-            <div className="section-header">
-              <h2>
-                <AlertTriangle size={20} />
-                Pending Provider Verifications
-              </h2>
-            </div>
-            <div className="pending-list">
-              {pendingProviders.map(provider => (
-                <div key={provider.id} className="pending-card">
-                  <div className="pending-info">
-                    <h4>{provider.name}</h4>
-                    <p>{provider.email}</p>
-                    <span className="date">Applied: {provider.date}</span>
+        <div className="dashboard-sections">
+          <div className="dashboard-row">
+            <div className="section recent-activity">
+              <div className="section-header">
+                <h2>Recent Activity</h2>
+                <span className="view-all">View All</span>
+              </div>
+              <div className="activity-list">
+                {recentActivity.map(activity => (
+                  <div key={activity.id} className="activity-item">
+                    <div className="activity-icon" style={{ backgroundColor: `${activity.color}20`, color: activity.color }}>
+                      <activity.icon size={16} />
+                    </div>
+                    <div className="activity-content">
+                      <span className="activity-message">{activity.message}</span>
+                      <span className="activity-time">{activity.timestamp}</span>
+                    </div>
                   </div>
-                  <div className="pending-actions">
-                    <button className="btn-approve">Approve</button>
-                    <button className="btn-reject">Reject</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="section order-summary">
+              <div className="section-header">
+                <h2>Order Summary</h2>
+                <span className="view-all">View Orders</span>
+              </div>
+              <div className="order-stats">
+                <div className="order-stat">
+                  <div className="order-stat-icon pending">
+                    <Clock size={20} />
+                  </div>
+                  <div className="order-stat-content">
+                    <span className="order-stat-number">{stats.activeOrders}</span>
+                    <span className="order-stat-label">Active Orders</span>
                   </div>
                 </div>
-              ))}
+                <div className="order-stat">
+                  <div className="order-stat-icon completed">
+                    <CheckCircle size={20} />
+                  </div>
+                  <div className="order-stat-content">
+                    <span className="order-stat-number">{stats.completedOrders}</span>
+                    <span className="order-stat-label">Completed</span>
+                  </div>
+                </div>
+                <div className="order-stat">
+                  <div className="order-stat-icon cancelled">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div className="order-stat-content">
+                    <span className="order-stat-number">{stats.cancelledOrders}</span>
+                    <span className="order-stat-label">Cancelled</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="activity-section">
-            <div className="section-header">
-              <h2>Recent Activity</h2>
-            </div>
-            <div className="activity-list">
-              {recentActivity.map(activity => (
-                <div key={activity.id} className="activity-item">
-                  <div className="activity-icon">
-                    {activity.type === 'order' && <Package size={16} />}
-                    {activity.type === 'provider' && <Shield size={16} />}
-                    {activity.type === 'user' && <Users size={16} />}
+          <div className="dashboard-row">
+            <div className="section pending-approvals">
+              <div className="section-header">
+                <h2>Pending Approvals</h2>
+                <span className="view-all">View All</span>
+              </div>
+              <div className="approval-list">
+                <div className="approval-item">
+                  <div className="approval-info">
+                    <span className="approval-title">QuickWash Express</span>
+                    <span className="approval-subtitle">Provider Application</span>
                   </div>
-                  <div className="activity-content">
-                    <p>{activity.message}</p>
-                    <span className="activity-time">{activity.time}</span>
+                  <div className="approval-actions">
+                    <button className="approve-btn">Approve</button>
+                    <button className="reject-btn">Reject</button>
                   </div>
                 </div>
-              ))}
+                <div className="approval-item">
+                  <div className="approval-info">
+                    <span className="approval-title">Premium Cleaners</span>
+                    <span className="approval-subtitle">Document Verification</span>
+                  </div>
+                  <div className="approval-actions">
+                    <button className="approve-btn">Approve</button>
+                    <button className="reject-btn">Reject</button>
+                  </div>
+                </div>
+                <div className="approval-item">
+                  <div className="approval-info">
+                    <span className="approval-title">Eco Clean Services</span>
+                    <span className="approval-subtitle">Provider Registration</span>
+                  </div>
+                  <div className="approval-actions">
+                    <button className="approve-btn">Approve</button>
+                    <button className="reject-btn">Reject</button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="admin-actions">
-            <h2>Management</h2>
-            <div className="admin-actions-grid">
-              <button className="admin-action-btn">
-                <Users size={24} />
-                <span>Manage Users</span>
-              </button>
-              <button className="admin-action-btn">
-                <Shield size={24} />
-                <span>Manage Providers</span>
-              </button>
-              <button className="admin-action-btn">
-                <Package size={24} />
-                <span>View All Orders</span>
-              </button>
-              <button className="admin-action-btn">
-                <TrendingUp size={24} />
-                <span>Analytics</span>
-              </button>
+            <div className="section quick-actions">
+              <div className="section-header">
+                <h2>Quick Actions</h2>
+              </div>
+              <div className="action-grid">
+                <button className="action-btn users">
+                  <Users size={20} />
+                  <span>Manage Users</span>
+                </button>
+                <button className="action-btn providers">
+                  <Shield size={20} />
+                  <span>Manage Providers</span>
+                </button>
+                <button className="action-btn orders">
+                  <Package size={20} />
+                  <span>View Orders</span>
+                </button>
+                <button className="action-btn analytics">
+                  <TrendingUp size={20} />
+                  <span>Analytics</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
