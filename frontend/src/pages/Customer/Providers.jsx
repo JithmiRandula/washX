@@ -11,6 +11,7 @@ const Providers = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [useTransportService, setUseTransportService] = useState(false);
   const [bookingData, setBookingData] = useState({
     customerInfo: {
       name: '',
@@ -34,7 +35,8 @@ const Providers = () => {
     promoCode: '',
     paymentMethod: 'Cash on Delivery',
     invoiceRequired: false,
-    estimate: { subtotal: 0, discount: 0, total: 0 }
+    estimate: { subtotal: 0, discount: 0, total: 0 },
+    transportCost: 0
   });
   const [filters, setFilters] = useState({
     search: '',
@@ -240,6 +242,27 @@ const Providers = () => {
     setSelectedProvider(null);
   };
 
+  const handleProviderSelect = (provider) => {
+    setSelectedProvider(provider);
+    setShowBookingForm(true);
+    setBookingData((prev) => ({
+      ...prev,
+      estimate: { ...prev.estimate, subtotal: parseFloat(provider.priceRange.split('-')[0]) },
+      transportCost: provider.transportCost || 0
+    }));
+  };
+
+  const handleTransportToggle = () => {
+    setUseTransportService(!useTransportService);
+    setBookingData((prev) => ({
+      ...prev,
+      estimate: {
+        ...prev.estimate,
+        total: prev.estimate.subtotal + (useTransportService ? 0 : prev.transportCost)
+      }
+    }));
+  };
+
   // Provider Detail View (similar to booking detail)
   if (selectedProvider && !showBookingForm) {
     return (
@@ -427,6 +450,21 @@ const Providers = () => {
               <div className="booking-form">
                 <div className="booking-header">
                   <h2>Book Laundry Service</h2>
+                </div>
+
+                <div className="transport-option">
+                  <label className="transport-toggle-label">
+                    <input
+                      type="checkbox"
+                      checked={useTransportService}
+                      onChange={handleTransportToggle}
+                    />
+                    Use our transport service (+${selectedProvider.transportCost || 0})
+                  </label>
+                </div>
+
+                <div className="total-amount">
+                  <strong>Total Amount: </strong>${bookingData.estimate.total}
                 </div>
 
                 {/* Customer Details */}
