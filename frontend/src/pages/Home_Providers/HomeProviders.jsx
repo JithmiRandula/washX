@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ProvidersPopup from '../../components/ProvidersPopup/ProvidersPopup';
 import { Search, Filter, MapPin, Star, Clock, Phone, Mail, Package, Calendar } from 'lucide-react';
 import './HomeProviders.css';
 
@@ -99,6 +100,9 @@ const HomeProviders = () => {
     }
   ]);
 
+  const [location, setLocation] = useState(null);
+  const [showPopup, setShowPopup] = useState(true);
+
   const filteredProviders = providers.filter(provider => {
     const matchesSearch = provider.name.toLowerCase().includes(filters.search.toLowerCase()) ||
                          provider.address.toLowerCase().includes(filters.search.toLowerCase());
@@ -143,8 +147,43 @@ const HomeProviders = () => {
     setFilters({ ...filters, [key]: value });
   };
 
+  const handleUseCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ latitude, longitude });
+          setShowPopup(false);
+          // Fetch and sort providers based on location
+          console.log(`Location: ${latitude}, ${longitude}`);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          alert('Location access denied. Please enter your location manually.');
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by your browser.');
+    }
+  };
+
+  const handleEnterLocation = (manualLocation) => {
+    // Convert manual location to coordinates (use a geocoding API here)
+    console.log(`Manual location entered: ${manualLocation}`);
+    setLocation({ latitude: 0, longitude: 0 }); // Replace with actual coordinates
+    setShowPopup(false);
+  };
+
   return (
     <div className="home-providers-page">
+      {showPopup && (
+        <ProvidersPopup
+          onClose={setShowPopup}
+          onUseCurrentLocation={handleUseCurrentLocation}
+          onEnterLocation={handleEnterLocation}
+        />
+      )}
+
       <div className="home-providers-container">
         {/* Header */}
         <div className="home-providers-header">
