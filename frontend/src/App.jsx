@@ -177,7 +177,7 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <Footer />
+      {!isCustomerRoute && !isAdminRoute && <Footer />}
     </div>
   );
 }
