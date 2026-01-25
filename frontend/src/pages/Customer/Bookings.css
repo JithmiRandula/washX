@@ -1124,6 +1124,28 @@
   line-height: 1.5;
 }
 
+.detail-transport-option {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.transport-toggle-label {
+  font-size: 1rem;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.detail-total-amount {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
 @media (max-width: 1024px) {
   .bookings-sidebar {
     transform: translateX(-100%);

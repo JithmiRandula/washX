@@ -13,6 +13,7 @@ const Bookings = () => {
   const [showOrderSidebar, setShowOrderSidebar] = useState(false);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editableItems, setEditableItems] = useState([]);
+  const [useTransportService, setUseTransportService] = useState(false);
 
   const bookings = [
     {
@@ -22,6 +23,8 @@ const Bookings = () => {
       status: 'in-progress',
       items: 3,
       amount: 45,
+      transportAvailable: true,
+      transportCost: 10,
       pickupDate: '2025-12-08',
       deliveryDate: '2025-12-09',
       address: '123 Main St, Downtown',
@@ -46,6 +49,8 @@ const Bookings = () => {
       status: 'completed',
       items: 5,
       amount: 75,
+      transportAvailable: false,
+      transportCost: 0,
       pickupDate: '2025-12-05',
       deliveryDate: '2025-12-06',
       address: '456 Oak Ave, Midtown',
@@ -113,6 +118,22 @@ const Bookings = () => {
 
   // Individual Booking Detail Component
   const BookingDetail = ({ booking, onBack }) => {
+    const handleTransportToggle = () => {
+      if (booking.transportAvailable) {
+        setUseTransportService(!useTransportService);
+      } else {
+        alert('Transport service is not available for this provider.');
+      }
+    };
+
+    const calculateTotalAmount = () => {
+      let total = booking.amount;
+      if (useTransportService && booking.transportAvailable) {
+        total += booking.transportCost;
+      }
+      return total;
+    };
+
     return (
       <div className="detail-page">
         <CustomerNavbar />
@@ -140,12 +161,6 @@ const Bookings = () => {
                         ))}
                       </div>
                     </div>
-                    <button 
-                      className="detail-order-button"
-                      onClick={() => setShowOrderSidebar(true)}
-                    >
-                      View Order Items
-                    </button>
                   </div>
                 </div>
 
@@ -158,11 +173,10 @@ const Bookings = () => {
                     <Star 
                       key={star} 
                       size={18} 
-                      fill={star <= Math.floor(booking.rating) ? "#fbbf24" : "none"}
-                      color="#fbbf24"
+                      color={star <= booking.rating ? '#f59e0b' : '#d1d5db'}
                     />
                   ))}
-                  <span>{booking.rating}</span>
+                  <span className="detail-rating-value">{booking.rating}</span>
                 </div>
               </div>
 
@@ -546,8 +560,7 @@ const Bookings = () => {
                           <Star 
                             key={star} 
                             size={16} 
-                            fill={star <= Math.floor(booking.rating) ? "#fbbf24" : "none"}
-                            color="#fbbf24"
+                            color={star <= booking.rating ? '#fbbf24' : '#d1d5db'}
                           />
                         ))}
                         <span>{booking.rating}</span>
