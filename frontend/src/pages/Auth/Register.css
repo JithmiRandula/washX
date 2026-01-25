@@ -35,3 +35,30 @@
   font-size: 0.875rem;
   font-weight: 500;
 }
+
+.btn-location {
+  background-color: #00c3ff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn-location:hover {
+  background-color: #00a3cc;
+  transform: scale(1.05);
+}
+
+.btn-location:active {
+  background-color: #0088aa;
+  transform: scale(0.95);
+}
+
+.btn-location:disabled {
+  background-color: #b3e5fc;
+  cursor: not-allowed;
+}

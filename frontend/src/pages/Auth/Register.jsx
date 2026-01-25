@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Compass } from 'lucide-react';
 import './Login.css';
 import './Register.css';
 
@@ -13,7 +13,8 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'customer',
-    address: ''
+    address: '',
+    location: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +32,26 @@ const Register = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleLocationAccess = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setFormData({
+            ...formData,
+            latitude,
+            longitude,
+          });
+        },
+        (error) => {
+          setError('Unable to fetch location. Please allow location access.');
+        }
+      );
+    } else {
+      setError('Geolocation is not supported by this browser.');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -188,6 +209,16 @@ const Register = () => {
                 </div>
               </div>
             )}
+
+            <div className="form-group">
+              <button
+                type="button"
+                className="btn-location"
+                onClick={handleLocationAccess}
+              >
+                Use my current location
+              </button>
+            </div>
 
             <div className="form-group">
               <label htmlFor="password">Password</label>
