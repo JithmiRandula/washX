@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, X, User, ShoppingBag, LayoutDashboard, LogOut, MapPin, Package, TrendingUp, Settings } from 'lucide-react';
+import { Menu, User, ShoppingBag, LayoutDashboard, LogOut, MapPin, Package, TrendingUp, Settings } from 'lucide-react';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -151,18 +151,13 @@ const Navbar = () => {
             </div>
           ) : (
             <div className="auth-buttons">
-              <Link to="/login" className="btn-secondary">Login</Link>
-              <Link to="/register" className="btn-primary">Sign Up</Link>
+              <div className="navbar-auth-buttons">
+                <Link to="/login" className="navbar-login-button">Login</Link>
+                <Link to="/register" className="navbar-signup-button">Sign Up</Link>
+              </div>
             </div>
           )}
         </div>
-
-        <button 
-          className="navbar-toggle"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
       </div>
     </nav>
   );
