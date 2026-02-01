@@ -51,7 +51,7 @@ const Navbar = () => {
     <nav className={`navbar ${isVisible ? 'navbar-visible' : 'navbar-hidden'}`}>
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
-          <img src="/wash2.png" alt="WashX" className="logo-image" />
+          <img src="/washx logo.png" alt="WashX" className="logo-image" />
         </Link>
 
         <div className={`navbar-menu ${isOpen ? 'active' : ''}`}>
