@@ -81,18 +81,18 @@ const Home = () => {
               Learn More
             </Link>
           </div>
-          <div className="hero-stats">
-            <div className="stat-item">
-              <div className="stat-number">500+</div>
-              <div className="stat-label">Verified Providers</div>
+          <div className="hero-stats-updated">
+            <div className="stat-item-updated">
+              <div className="stat-number-updated">500+</div>
+              <div className="stat-label-updated">Verified Providers</div>
             </div>
-            <div className="stat-item">
-              <div className="stat-number">10K+</div>
-              <div className="stat-label">Happy Customers</div>
+            <div className="stat-item-updated">
+              <div className="stat-number-updated">10K+</div>
+              <div className="stat-label-updated">Happy Customers</div>
             </div>
-            <div className="stat-item">
-              <div className="stat-number">4.8</div>
-              <div className="stat-label">Average Rating</div>
+            <div className="stat-item-updated">
+              <div className="stat-number-updated">4.8</div>
+              <div className="stat-label-updated">Average Rating</div>
             </div>
           </div>
         </div>

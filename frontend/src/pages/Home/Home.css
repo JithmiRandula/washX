@@ -99,6 +99,34 @@
   border-top: 2px solid rgba(255, 255, 255, 0.2);
 }
 
+.hero-stats-updated {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 20px;
+  color: #ffffff;
+  margin-top: 20px;
+}
+
+.stat-item-updated {
+  text-align: center;
+  margin: 0 15px;
+  border: 2px solid #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.stat-number-updated {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.stat-label-updated {
+  font-size: 1rem;
+  color: #ffffff;
+}
+
 .stat-item {
   text-align: center;
 }
