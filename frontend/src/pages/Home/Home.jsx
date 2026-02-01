@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Search, MapPin, Clock, Shield, Star, TrendingUp } from 'lucide-react';
 import './Home.css';
+import searchImage from "/search4.jpg";
 
 const Home = () => {
   const [isPlaying, setIsPlaying] = useState(true);
@@ -16,29 +17,6 @@ const Home = () => {
       setIsPlaying(false);
     }
   };
-
-  const features = [
-    {
-      icon: <Search size={40} />,
-      title: 'Find Providers',
-      description: 'Search and compare laundry service providers in your area'
-    },
-    {
-      icon: <MapPin size={40} />,
-      title: 'Location-Based',
-      description: 'Find the closest and most convenient service providers'
-    },
-    {
-      icon: <Clock size={40} />,
-      title: 'Track Orders',
-      description: 'Real-time tracking of your laundry from pickup to delivery'
-    },
-    {
-      icon: <Shield size={40} />,
-      title: 'Verified Providers',
-      description: 'All providers are verified and rated by real customers'
-    }
-  ];
 
   const steps = [
     {
@@ -115,26 +93,9 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="features-section">
-        <div className="section-container">
-          <h2 className="section-title">Why Choose WashX?</h2>
-          <p className="section-subtitle">Everything you need for hassle-free laundry service</p>
-          
-          <div className="features-grid">
-            {features.map((feature, index) => (
-              <div key={index} className="feature-card">
-                <div className="feature-icon">{feature.icon}</div>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="wave-container">
-          <div className="wave wave1"></div>
-          <div className="wave wave2"></div>
-          <div className="wave wave3"></div>
-          <div className="wave wave4"></div>
+      <section className="image-section">
+        <div className="image-container">
+          <img src={searchImage} alt="Search Providers" className="search-image" />
         </div>
       </section>
 
