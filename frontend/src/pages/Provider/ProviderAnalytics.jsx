@@ -38,22 +38,19 @@ const ProviderAnalytics = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `Rs ${amount.toLocaleString()}`;
   };
 
   const getChangeColor = (change) => {
-    return change >= 0 ? '#10b981' : '#ef4444';
+    return change >= 0 ? '#1e3a8a' : '#6b7280';
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed': return '#10b981';
-      case 'in-progress': return '#2563eb';
-      case 'ready': return '#f59e0b';
-      case 'pending': return '#8b5cf6';
+      case 'completed': return '#1e3a8a';
+      case 'in-progress': return '#1e40af';
+      case 'ready': return '#2563eb';
+      case 'pending': return '#3b82f6';
       default: return '#6b7280';
     }
   };
@@ -180,7 +177,7 @@ const ProviderAnalytics = () => {
                       className="chart-bar"
                       style={{ 
                         height: `${(data.revenue / 15000) * 100}%`,
-                        background: '#10b981'
+                        background: '#1e3a8a'
                       }}
                     />
                     <span className="chart-label">{data.month}</span>
@@ -209,7 +206,7 @@ const ProviderAnalytics = () => {
                       className="service-progress"
                       style={{ 
                         width: `${service.percentage}%`,
-                        background: `hsl(${140 + index * 30}, 60%, 50%)`
+                        background: index === 0 ? '#1e3a8a' : index === 1 ? '#1e40af' : index === 2 ? '#2563eb' : '#3b82f6'
                       }}
                     />
                   </div>
@@ -227,23 +224,23 @@ const ProviderAnalytics = () => {
             <button className="view-all-btn">View All</button>
           </div>
           
-          <div className="orders-table">
-            <div className="table-header">
-              <span>Order ID</span>
-              <span>Customer</span>
-              <span>Amount</span>
-              <span>Date</span>
-              <span>Status</span>
+          <div className="analytics-orders-table">
+            <div className="analytics-table-header">
+              <span className="analytics-header-orderid">Order ID</span>
+              <span className="analytics-header-customer">Customer</span>
+              <span className="analytics-header-amount">Amount</span>
+              <span className="analytics-header-date">Date</span>
+              <span className="analytics-header-status">Status</span>
             </div>
             
             {analytics.recentOrders.map((order, index) => (
-              <div key={index} className="table-row">
-                <span className="order-id">#{order.id}</span>
-                <span className="customer-name">{order.customer}</span>
-                <span className="order-amount">{formatCurrency(order.amount)}</span>
-                <span className="order-date">{order.date}</span>
+              <div key={index} className="analytics-table-row">
+                <span className="analytics-cell-orderid">#{order.id}</span>
+                <span className="analytics-cell-customer">{order.customer}</span>
+                <span className="analytics-cell-amount">{formatCurrency(order.amount)}</span>
+                <span className="analytics-cell-date">{order.date}</span>
                 <span 
-                  className="order-status"
+                  className="analytics-cell-status"
                   style={{ 
                     background: `${getStatusColor(order.status)}20`,
                     color: getStatusColor(order.status)

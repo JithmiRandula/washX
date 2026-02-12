@@ -91,22 +91,28 @@
   align-items: center;
   justify-content: center;
   color: white;
+  background: #1e3a8a;
+  border: 1px solid #1e40af;
 }
 
 .metric-icon.revenue {
-  background: #10b981;
+  background: #1e3a8a;
+  color: white;
 }
 
 .metric-icon.orders {
-  background: #2563eb;
+  background: #1e40af;
+  color: white;
 }
 
 .metric-icon.customers {
-  background: #8b5cf6;
+  background: #2563eb;
+  color: white;
 }
 
 .metric-icon.avg-order {
-  background: #f59e0b;
+  background: #3b82f6;
+  color: white;
 }
 
 .metric-content {
@@ -195,7 +201,7 @@
 .chart-bar {
   width: 100%;
   max-width: 40px;
-  background: #10b981;
+  background: #1e3a8a;
   border-radius: 4px 4px 0 0;
   transition: all 0.3s ease;
   min-height: 20px;
@@ -293,7 +299,7 @@
 }
 
 .view-all-btn {
-  background: #10b981;
+  background: #1e3a8a;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -304,25 +310,25 @@
 }
 
 .view-all-btn:hover {
-  background: #059669;
+  background: #1e40af;
 }
 
 /* Orders Table */
-.orders-table {
+.analytics-orders-table {
   display: flex;
   flex-direction: column;
 }
 
-.table-header,
-.table-row {
+.analytics-table-header,
+.analytics-table-row {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr;
-  gap: 1rem;
-  padding: 0.75rem 0;
+  grid-template-columns: 0.8fr 1.5fr 1fr 1fr 1.3fr;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
   align-items: center;
 }
 
-.table-header {
+.analytics-table-header {
   border-bottom: 2px solid #e5e7eb;
   font-weight: 600;
   color: #374151;
@@ -331,36 +337,61 @@
   letter-spacing: 0.025em;
 }
 
-.table-row {
+.analytics-header-orderid,
+.analytics-cell-orderid {
+  text-align: left;
+}
+
+.analytics-header-customer,
+.analytics-cell-customer {
+  text-align: left;
+}
+
+.analytics-header-amount,
+.analytics-cell-amount {
+  text-align: center;
+}
+
+.analytics-header-date,
+.analytics-cell-date {
+  text-align: center;
+}
+
+.analytics-header-status,
+.analytics-cell-status {
+  text-align: center;
+}
+
+.analytics-table-row {
   border-bottom: 1px solid #f3f4f6;
   transition: background-color 0.2s;
 }
 
-.table-row:hover {
+.analytics-table-row:hover {
   background: #f8fafc;
 }
 
-.order-id {
+.analytics-cell-orderid {
   font-weight: 600;
-  color: #2563eb;
+  color: #1e3a8a;
 }
 
-.customer-name {
+.analytics-cell-customer {
   font-weight: 500;
   color: #1f2937;
 }
 
-.order-amount {
+.analytics-cell-amount {
   font-weight: 600;
   color: #374151;
 }
 
-.order-date {
+.analytics-cell-date {
   color: #6b7280;
   font-size: 0.875rem;
 }
 
-.order-status {
+.analytics-cell-status {
   display: inline-block;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
@@ -368,7 +399,6 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  text-align: center;
 }
 
 /* Business Insights */
