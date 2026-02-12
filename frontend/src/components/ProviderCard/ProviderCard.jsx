@@ -65,7 +65,7 @@ const ProviderCard = ({ provider }) => {
         <div className="provider-price">
           <span className="price-label">Starting from</span>
           <span className="price-value">
-            ${provider.services[0]?.price || 0}/{provider.services[0]?.unit || 'item'}
+            Rs {provider.services[0]?.price || 0}/{provider.services[0]?.unit || 'item'}
           </span>
         </div>
       </div>

@@ -77,25 +77,14 @@
 }
 
 .nav-item:hover {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
+  color: #2563eb;
+  background: #f3f4f6;
 }
 
 .nav-item.active {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.nav-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  background: #10b981;
-  border-radius: 1px;
+  color: #2563eb;
+  background: #eff6ff;
+  font-weight: 600;
 }
 
 /* Right Section */

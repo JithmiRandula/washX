@@ -67,7 +67,7 @@ const AdminAnalytics = () => {
         <div className="analytics-stats">
           <StatCard
             title="Total Revenue"
-            value={`$${analytics.totalRevenue.toLocaleString()}`}
+            value={`Rs ${analytics.totalRevenue.toLocaleString()}`}
             icon={DollarSign}
             color="#10b981"
             change={15.2}
@@ -88,7 +88,7 @@ const AdminAnalytics = () => {
           />
           <StatCard
             title="Avg Order Value"
-            value={`$${analytics.avgOrderValue}`}
+            value={`Rs ${analytics.avgOrderValue}`}
             icon={TrendingUp}
             color="#f59e0b"
             change={5.1}
@@ -110,7 +110,7 @@ const AdminAnalytics = () => {
                     <div className="date">{new Date(day.date).toLocaleDateString()}</div>
                     <div className="metric">
                       <span className="orders">{day.orders} orders</span>
-                      <span className="revenue">${day.revenue}</span>
+                      <span className="revenue">Rs {day.revenue}</span>
                     </div>
                   </div>
                 ))}
@@ -132,7 +132,7 @@ const AdminAnalytics = () => {
                     <h4>{service.name}</h4>
                     <div className="service-metrics">
                       <span>{service.orders} orders</span>
-                      <span>${service.revenue.toLocaleString()}</span>
+                      <span>Rs {service.revenue.toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="service-bar">
