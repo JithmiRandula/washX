@@ -33,6 +33,7 @@ function AppContent() {
   const location = useLocation();
   const isCustomerRoute = location.pathname.startsWith('/customer');
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isAuthRoute = ['/login', '/register', '/forgot-password'].includes(location.pathname);
 
   return (
     <div className="app">
@@ -177,7 +178,7 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {!isCustomerRoute && !isAdminRoute && <Footer />}
+      {!isCustomerRoute && !isAdminRoute && !isAuthRoute && <Footer />}
     </div>
   );
 }
