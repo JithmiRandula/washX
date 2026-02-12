@@ -93,7 +93,7 @@
 }
 
 .navbar-signup-button {
-  background-color: #003366;
+  background-color: #1e3a8a;
   color: #ffffff;
   border: none;
   border-radius: 5px;
@@ -102,10 +102,12 @@
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  box-shadow: 0 4px 14px rgba(30, 58, 138, 0.4);
 }
 
 .navbar-signup-button:hover {
-  background-color: #002244;
+  background-color: #1d4ed8;
+  box-shadow: 0 8px 20px rgba(29, 78, 216, 0.5);
 }
 
 .btn-primary, .btn-secondary {

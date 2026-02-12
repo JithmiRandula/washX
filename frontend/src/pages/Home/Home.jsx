@@ -1,11 +1,23 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, MapPin, Clock, Shield, Star, TrendingUp } from 'lucide-react';
 import './Home.css';
-import searchImage from "/search4.jpg";
 
 const Home = () => {
   const [isPlaying, setIsPlaying] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  const images = ['/search13.jpg', '/search14.jpg', '/search15.jpg', '/search16.jpg'];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => 
+        (prevIndex + 1) % images.length
+      );
+    }, 4000); // Change image every 4 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleVideoClick = (e) => {
     const video = e.target;
@@ -95,7 +107,16 @@ const Home = () => {
 
       <section className="image-section">
         <div className="image-container">
-          <img src={searchImage} alt="Search Providers" className="search-image" />
+          <div className="image-wrapper">
+            {images.map((image, index) => (
+              <img 
+                key={index}
+                src={image} 
+                alt="Search Providers" 
+                className={`search-image ${currentImageIndex === index ? 'active' : ''}`}
+              />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -120,7 +141,7 @@ const Home = () => {
           <h2>Ready to Get Started?</h2>
           <p>Join thousands of satisfied customers using WashX</p>
           <div className="cta-buttons">
-            <Link to="/register" className="btn-cta">
+            <Link to="/register" className="btn-cta-signup">
               Sign Up Now
             </Link>
           </div>
@@ -134,19 +155,16 @@ const Home = () => {
             <p>Grow your business by joining our platform</p>
             <ul className="provider-benefits">
               <li>
-                <TrendingUp size={24} />
                 <span>Reach more customers</span>
               </li>
               <li>
-                <Star size={24} />
                 <span>Build your reputation</span>
               </li>
               <li>
-                <Shield size={24} />
                 <span>Secure payments</span>
               </li>
             </ul>
-            <Link to="/provider/register" className="btn-provider">
+            <Link to="/register" className="btn-provider">
               Register as Provider
             </Link>
           </div>
