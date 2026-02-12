@@ -150,22 +150,22 @@ const AdminOrders = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: '#f59e0b',
-      confirmed: '#3b82f6',
-      in_progress: '#8b5cf6',
-      completed: '#10b981',
-      cancelled: '#ef4444'
+      pending: '#1e3a8a',
+      confirmed: '#1e3a8a',
+      in_progress: '#1e3a8a',
+      completed: '#1e3a8a',
+      cancelled: '#1e3a8a'
     };
-    return colors[status] || '#6b7280';
+    return colors[status] || '#1e3a8a';
   };
 
   const getPaymentStatusColor = (status) => {
     const colors = {
-      paid: '#10b981',
-      pending: '#f59e0b',
-      refunded: '#ef4444'
+      paid: '#1e3a8a',
+      pending: '#1e3a8a',
+      refunded: '#1e3a8a'
     };
-    return colors[status] || '#6b7280';
+    return colors[status] || '#1e3a8a';
   };
 
   const updateOrderStatus = (orderId, newStatus) => {
@@ -239,12 +239,12 @@ const AdminOrders = () => {
                     <div key={index} className="item-row">
                       <span>{item.name}</span>
                       <span>Qty: {item.quantity}</span>
-                      <span>${item.price.toFixed(2)}</span>
+                      <span>Rs {item.price.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="total-amount">
-                  <strong>Total: ${order.totalAmount.toFixed(2)}</strong>
+                  <strong>Total: Rs {order.totalAmount.toFixed(2)}</strong>
                 </div>
               </div>
 
@@ -330,7 +330,7 @@ const AdminOrders = () => {
           </div>
           <div className="stat-card">
             <div className="stat-value">
-              ${orders.reduce((sum, order) => sum + (order.paymentStatus === 'paid' ? order.totalAmount : 0), 0).toFixed(2)}
+              Rs {orders.reduce((sum, order) => sum + (order.paymentStatus === 'paid' ? order.totalAmount : 0), 0).toFixed(2)}
             </div>
             <div className="stat-label">Total Revenue</div>
           </div>
@@ -386,7 +386,7 @@ const AdminOrders = () => {
                     </span>
                   </td>
                   <td>
-                    <div className="amount">${order.totalAmount.toFixed(2)}</div>
+                    <div className="amount">Rs {order.totalAmount.toFixed(2)}</div>
                   </td>
                   <td>
                     <div className="order-date">
@@ -394,17 +394,17 @@ const AdminOrders = () => {
                     </div>
                   </td>
                   <td>
-                    <div className="table-actions">
+                    <div className="ao-table-actions">
                       <button 
-                        className="action-btn view"
+                        className="ao-action-btn view"
                         onClick={() => setSelectedOrder(order)}
                       >
-                        <Eye size={14} />
+                        <Eye size={13} />
                       </button>
                       
                       {order.status === 'pending' && (
                         <button 
-                          className="action-btn approve"
+                          className="ao-action-btn approve"
                           onClick={() => updateOrderStatus(order.id, 'confirmed')}
                         >
                           Confirm
@@ -413,7 +413,7 @@ const AdminOrders = () => {
                       
                       {order.status === 'confirmed' && (
                         <button 
-                          className="action-btn progress"
+                          className="ao-action-btn progress"
                           onClick={() => updateOrderStatus(order.id, 'in_progress')}
                         >
                           Start
@@ -422,7 +422,7 @@ const AdminOrders = () => {
                       
                       {order.status === 'in_progress' && (
                         <button 
-                          className="action-btn complete"
+                          className="ao-action-btn complete"
                           onClick={() => updateOrderStatus(order.id, 'completed')}
                         >
                           Complete
@@ -431,7 +431,7 @@ const AdminOrders = () => {
                       
                       {['pending', 'confirmed'].includes(order.status) && (
                         <button 
-                          className="action-btn cancel"
+                          className="ao-action-btn cancel"
                           onClick={() => updateOrderStatus(order.id, 'cancelled')}
                         >
                           Cancel

@@ -215,7 +215,7 @@ const AdminProviders = () => {
           </div>
           <div className="admin-stat-card">
             <div className="stat-content">
-              <h3>${providers.reduce((sum, p) => sum + p.revenue, 0).toLocaleString()}</h3>
+              <h3>Rs {providers.reduce((sum, p) => sum + p.revenue, 0).toLocaleString()}</h3>
               <p>Total Revenue</p>
             </div>
             <div className="stat-icon total">
@@ -255,64 +255,64 @@ const AdminProviders = () => {
           {loading ? (
             <div className="loading-state">Loading providers...</div>
           ) : (
-            <div className="providers-grid">
+            <div className="ap-grid">
               {filteredProviders.map((provider) => (
-                <div key={provider.id} className="provider-card">
-                  <div className="provider-header">
-                    <div className="provider-info">
+                <div key={provider.id} className="ap-card">
+                  <div className="ap-card-header">
+                    <div className="ap-card-info">
                       <h3>{provider.name}</h3>
                       <span 
-                        className="status-badge" 
+                        className="ap-status-badge" 
                         style={{ backgroundColor: `${getStatusColor(provider.status)}20`, color: getStatusColor(provider.status) }}
                       >
                         {provider.status.charAt(0).toUpperCase() + provider.status.slice(1)}
                       </span>
                     </div>
                     {provider.rating > 0 && (
-                      <div className="provider-rating">
-                        <Star size={16} fill="#fbbf24" color="#fbbf24" />
+                      <div className="ap-rating">
+                        <Star size={14} fill="#fbbf24" color="#fbbf24" />
                         <span>{provider.rating}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="provider-contact">
-                    <div className="contact-item">
-                      <Mail size={16} />
+                  <div className="ap-contact">
+                    <div className="ap-contact-item">
+                      <Mail size={14} />
                       <span>{provider.email}</span>
                     </div>
-                    <div className="contact-item">
-                      <Phone size={16} />
+                    <div className="ap-contact-item">
+                      <Phone size={14} />
                       <span>{provider.phone}</span>
                     </div>
                   </div>
 
-                  <div className="provider-stats">
-                    <div className="stat-item">
-                      <span className="stat-value">{provider.totalOrders}</span>
-                      <span className="stat-label">Orders</span>
+                  <div className="ap-stats">
+                    <div className="ap-stat-box">
+                      <span className="ap-stat-value">{provider.totalOrders}</span>
+                      <span className="ap-stat-label">Orders</span>
                     </div>
-                    <div className="stat-item">
-                      <span className="stat-value">${provider.revenue.toLocaleString()}</span>
-                      <span className="stat-label">Revenue</span>
+                    <div className="ap-stat-box">
+                      <span className="ap-stat-value">Rs {provider.revenue.toLocaleString()}</span>
+                      <span className="ap-stat-label">Revenue</span>
                     </div>
                   </div>
 
-                  <div className="provider-actions">
+                  <div className="admin-provider-actions">
                     {provider.status === 'pending' && (
                       <>
                         <button 
-                          className="action-btn approve"
+                          className="admin-provider-action-btn approve"
                           onClick={() => handleApproveProvider(provider.id)}
                         >
-                          <CheckCircle size={16} />
+                          <CheckCircle size={14} />
                           Approve
                         </button>
                         <button 
-                          className="action-btn reject"
+                          className="admin-provider-action-btn reject"
                           onClick={() => handleRejectProvider(provider.id)}
                         >
-                          <XCircle size={16} />
+                          <XCircle size={14} />
                           Reject
                         </button>
                       </>
@@ -320,20 +320,20 @@ const AdminProviders = () => {
                     
                     {provider.status === 'active' && (
                       <button 
-                        className="action-btn suspend"
+                        className="admin-provider-action-btn suspend"
                         onClick={() => handleSuspendProvider(provider.id)}
                       >
-                        <XCircle size={16} />
+                        <XCircle size={14} />
                         Suspend
                       </button>
                     )}
                     
                     {provider.status === 'suspended' && (
                       <button 
-                        className="action-btn activate"
+                        className="admin-provider-action-btn activate"
                         onClick={() => handleSuspendProvider(provider.id)}
                       >
-                        <CheckCircle size={16} />
+                        <CheckCircle size={14} />
                         Activate
                       </button>
                     )}

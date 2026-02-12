@@ -39,7 +39,7 @@ const AdminDashboard = () => {
         message: 'New user registration: John Doe',
         timestamp: '2 hours ago',
         icon: Users,
-        color: '#3b82f6'
+        color: '#1e3a8a'
       },
       {
         id: 2,
@@ -47,7 +47,7 @@ const AdminDashboard = () => {
         message: 'Provider approved: CleanPro Services',
         timestamp: '4 hours ago',
         icon: Shield,
-        color: '#10b981'
+        color: '#1e3a8a'
       },
       {
         id: 3,
@@ -55,7 +55,7 @@ const AdminDashboard = () => {
         message: 'Booking completed: Order #WX24001',
         timestamp: '6 hours ago',
         icon: CheckCircle,
-        color: '#059669'
+        color: '#1e3a8a'
       },
       {
         id: 4,
@@ -63,7 +63,7 @@ const AdminDashboard = () => {
         message: 'New provider application: QuickWash Express',
         timestamp: '8 hours ago',
         icon: Clock,
-        color: '#f59e0b'
+        color: '#1e3a8a'
       },
       {
         id: 5,
@@ -71,28 +71,25 @@ const AdminDashboard = () => {
         message: 'Order cancelled: #WX24003',
         timestamp: '1 day ago',
         icon: AlertCircle,
-        color: '#ef4444'
+        color: '#1e3a8a'
       }
     ]);
   }, []);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `Rs ${amount.toLocaleString()}`;
   };
 
   const StatCard = ({ title, value, icon: Icon, color, change }) => (
-    <div className="stat-card">
-      <div className="stat-icon" style={{ backgroundColor: `${color}20`, color: color }}>
-        <Icon size={24} />
+    <div className="admin-stat-card">
+      <div className="admin-stat-icon" style={{ backgroundColor: `${color}20`, color: color }}>
+        <Icon size={32} />
       </div>
-      <div className="stat-content">
+      <div className="admin-stat-content">
         <h3>{title}</h3>
-        <p className="stat-number">{value}</p>
+        <p className="admin-stat-number">{value}</p>
         {change && (
-          <span className={`stat-change ${change.type}`}>
+          <span className={`admin-stat-change ${change.type}`}>
             {change.type === 'increase' ? '+' : ''}{change.value}%
           </span>
         )}
@@ -110,26 +107,26 @@ const AdminDashboard = () => {
           <p>Welcome back, {user?.firstName}! Here's what's happening with your platform.</p>
         </div>
 
-        <div className="dashboard-stats">
+        <div className="admin-dashboard-stats">
           <StatCard
             title="Total Users"
             value={stats.totalUsers.toLocaleString()}
             icon={Users}
-            color="#3b82f6"
+            color="#1e3a8a"
             change={{ type: 'increase', value: 12 }}
           />
           <StatCard
             title="Active Providers"
             value={stats.totalProviders}
             icon={Shield}
-            color="#10b981"
+            color="#1e3a8a"
             change={{ type: 'increase', value: 8 }}
           />
           <StatCard
             title="Total Orders"
             value={stats.totalOrders.toLocaleString()}
             icon={Package}
-            color="#8b5cf6"
+            color="#1e3a8a"
             change={{ type: 'increase', value: 24 }}
           />
         </div>
