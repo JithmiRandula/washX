@@ -24,8 +24,8 @@ const HomeProviders = () => {
       rating: 4.8,
       reviews: 156,
       distance: 2.5,
-      address: '123 Main Street, Downtown',
-      phone: '+1 234 567 8900',
+      address: '123 Galle Road, Colombo 03',
+      phone: '+94 11 234 5678',
       email: 'info@cleanfresh.com',
       description: 'Professional laundry service with eco-friendly products and same-day delivery.',
       services: ['Regular Wash', 'Dry Cleaning', 'Iron Service', 'Express Wash'],
@@ -40,8 +40,8 @@ const HomeProviders = () => {
       rating: 4.6,
       reviews: 89,
       distance: 1.8,
-      address: '456 Oak Avenue, City Center',
-      phone: '+1 234 567 8901',
+      address: '456 Duplication Road, Colombo 04',
+      phone: '+94 11 456 7890',
       email: 'service@quickwash.com',
       description: 'Fast and reliable laundry service specializing in express cleaning.',
       services: ['Express Wash', 'Regular Wash', 'Iron Service'],
@@ -56,8 +56,8 @@ const HomeProviders = () => {
       rating: 4.9,
       reviews: 234,
       distance: 3.2,
-      address: '789 Pine Road, Uptown',
-      phone: '+1 234 567 8902',
+      address: '789 Nawam Mawatha, Colombo 02',
+      phone: '+94 11 789 0123',
       email: 'contact@premiumdry.com',
       description: 'High-end dry cleaning service for delicate and luxury garments.',
       services: ['Dry Cleaning', 'Regular Wash', 'Suit Care', 'Leather Cleaning'],
@@ -72,8 +72,8 @@ const HomeProviders = () => {
       rating: 4.7,
       reviews: 145,
       distance: 4.1,
-      address: '321 Elm Street, Green Valley',
-      phone: '+1 234 567 8903',
+      address: '321 Peradeniya Road, Kandy',
+      phone: '+94 81 223 4567',
       email: 'hello@ecowash.com',
       description: '100% eco-friendly laundry service using organic detergents.',
       services: ['Eco Wash', 'Regular Wash', 'Green Dry Clean'],
@@ -88,8 +88,8 @@ const HomeProviders = () => {
       rating: 4.3,
       reviews: 67,
       distance: 6.8,
-      address: '555 College Avenue, University District',
-      phone: '+1 234 567 8904',
+      address: '555 Reid Avenue, Colombo 07',
+      phone: '+94 11 567 8901',
       email: 'info@unilundry.com',
       description: 'Student-friendly laundry service with affordable rates.',
       services: ['Self Service', 'Full Service', 'Wash & Fold'],
@@ -148,30 +148,95 @@ const HomeProviders = () => {
   };
 
   const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        reject(new Error('Geolocation not supported'));
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setLocation({ latitude, longitude });
+          setLocation({ latitude, longitude, method: 'gps' });
           setShowPopup(false);
-          // Fetch and sort providers based on location
-          console.log(`Location: ${latitude}, ${longitude}`);
+          console.log(`Location obtained: ${latitude}, ${longitude}`);
+          resolve();
         },
         (error) => {
           console.error('Geolocation error:', error);
-          alert('Location access denied. Please enter your location manually.');
+          let errorMessage = 'Unable to get your location. ';
+          
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'Location access was denied.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'Location information is unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'Location request timed out.';
+              break;
+            default:
+              errorMessage += 'An unknown error occurred.';
+          }
+          
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
-    } else {
-      alert('Geolocation is not supported by your browser.');
-    }
+    });
   };
 
-  const handleEnterLocation = (manualLocation) => {
-    // Convert manual location to coordinates (use a geocoding API here)
+  const handleEnterLocation = async (manualLocation) => {
     console.log(`Manual location entered: ${manualLocation}`);
-    setLocation({ latitude: 0, longitude: 0 }); // Replace with actual coordinates
-    setShowPopup(false);
+    
+    try {
+      // Using Nominatim (OpenStreetMap) for geocoding
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(manualLocation)}&limit=1`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const { lat, lon } = data[0];
+          setLocation({ 
+            latitude: parseFloat(lat), 
+            longitude: parseFloat(lon),
+            address: manualLocation,
+            method: 'manual'
+          });
+          setShowPopup(false);
+          console.log(`Location geocoded: ${lat}, ${lon}`);
+        } else {
+          alert('Location not found. Please try a different location.');
+        }
+      } else {
+        // Fallback: just use the manual location text
+        setLocation({ 
+          latitude: 0, 
+          longitude: 0, 
+          address: manualLocation,
+          method: 'manual'
+        });
+        setShowPopup(false);
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      // Fallback: still accept the manual location
+      setLocation({ 
+        latitude: 0, 
+        longitude: 0, 
+        address: manualLocation,
+        method: 'manual'
+      });
+      setShowPopup(false);
+    }
   };
 
   return (
@@ -246,10 +311,12 @@ const HomeProviders = () => {
                 onChange={(e) => handleFilterChange('serviceType', e.target.value)}
               >
                 <option value="all">All Services</option>
-                <option value="regular">Regular Wash</option>
-                <option value="express">Express Wash</option>
+                <option value="wash">Wash & Fold</option>
                 <option value="dry">Dry Cleaning</option>
-                <option value="eco">Eco-Friendly</option>
+                <option value="iron">Ironing Service</option>
+                <option value="steam">Steam Press</option>
+                <option value="premium">Premium Care</option>
+                <option value="express">Express Service</option>
               </select>
             </div>
 
@@ -331,15 +398,15 @@ const HomeProviders = () => {
                   <div className="home-pricing">
                     <div className="home-price-item">
                       <span>Regular Wash</span>
-                      <span>${provider.pricing.regular}</span>
+                      <span>Rs {provider.pricing.regular}</span>
                     </div>
                     <div className="home-price-item">
                       <span>Express Wash</span>
-                      <span>${provider.pricing.express}</span>
+                      <span>Rs {provider.pricing.express}</span>
                     </div>
                     <div className="home-price-item">
                       <span>Dry Cleaning</span>
-                      <span>${provider.pricing.dryClean}</span>
+                      <span>Rs {provider.pricing.dryClean}</span>
                     </div>
                   </div>
                 </div>
