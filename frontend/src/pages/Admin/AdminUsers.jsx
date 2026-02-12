@@ -235,22 +235,22 @@ const AdminUsers = () => {
                     </td>
                     <td>{new Date(user.joinDate).toLocaleDateString()}</td>
                     <td>{user.totalOrders}</td>
-                    <td>${user.totalSpent.toFixed(2)}</td>
+                    <td>Rs {user.totalSpent.toFixed(2)}</td>
                     <td>
-                      <div className="action-buttons">
+                      <div className="admin-user-action-buttons">
                         <button 
-                          className={`action-btn ${user.status === 'suspended' ? 'activate' : 'suspend'}`}
+                          className={`admin-user-action-btn ${user.status === 'suspended' ? 'activate' : 'suspend'}`}
                           onClick={() => handleSuspendUser(user.id)}
                           title={user.status === 'suspended' ? 'Activate User' : 'Suspend User'}
                         >
-                          {user.status === 'suspended' ? <UserCheck size={16} /> : <UserX size={16} />}
+                          {user.status === 'suspended' ? <UserCheck size={14} /> : <UserX size={14} />}
                         </button>
                         <button 
-                          className="action-btn delete"
+                          className="admin-user-action-btn delete"
                           onClick={() => handleDeleteUser(user.id)}
                           title="Delete User"
                         >
-                          <UserX size={16} />
+                          <UserX size={14} />
                         </button>
                       </div>
                     </td>

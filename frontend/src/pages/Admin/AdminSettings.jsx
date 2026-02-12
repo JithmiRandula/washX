@@ -8,9 +8,9 @@ const AdminSettings = () => {
     siteName: 'WashX',
     siteDescription: 'Premium Laundry & Dry Cleaning Services',
     contactEmail: 'admin@washx.com',
-    supportPhone: '+1-800-WASHX-01',
-    currency: 'USD',
-    timezone: 'America/New_York',
+    supportPhone: '+94-11-234-5678',
+    currency: 'LKR',
+    timezone: 'Asia/Colombo',
     emailNotifications: true,
     smsNotifications: false,
     autoApproveProviders: false,
@@ -115,6 +115,7 @@ const AdminSettings = () => {
               value={settings.currency}
               onChange={(value) => handleInputChange('currency', value)}
               options={[
+                { value: 'LKR', label: 'Sri Lankan Rupee (LKR)' },
                 { value: 'USD', label: 'US Dollar (USD)' },
                 { value: 'EUR', label: 'Euro (EUR)' },
                 { value: 'GBP', label: 'British Pound (GBP)' }
@@ -125,6 +126,7 @@ const AdminSettings = () => {
               value={settings.timezone}
               onChange={(value) => handleInputChange('timezone', value)}
               options={[
+                { value: 'Asia/Colombo', label: 'Sri Lanka Time' },
                 { value: 'America/New_York', label: 'Eastern Time' },
                 { value: 'America/Chicago', label: 'Central Time' },
                 { value: 'America/Los_Angeles', label: 'Pacific Time' },
