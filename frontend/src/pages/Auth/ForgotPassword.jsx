@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Mail } from 'lucide-react';
 import './Login.css';
 
 const ForgotPassword = () => {
@@ -33,12 +34,14 @@ const ForgotPassword = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="auth-form">
-              <div className="form-group">
+              <div className="washx-auth-form-group">
                 <label htmlFor="email">Email Address</label>
-                <div className="input-wrapper">
+                <div className="washx-auth-input-wrapper">
+                  <Mail size={20} className="washx-auth-input-icon" />
                   <input
                     type="email"
                     id="email"
+                    className="washx-auth-input-field"
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

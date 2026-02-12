@@ -51,13 +51,14 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <Mail size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="email" className="washx-auth-label">Email Address</label>
+              <div className="washx-auth-input-wrapper">
+                <Mail size={20} className="washx-auth-input-icon" />
                 <input
                   type="email"
                   id="email"
+                  className="washx-auth-input-field"
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -66,13 +67,14 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <Lock size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="password" className="washx-auth-label">Password</label>
+              <div className="washx-auth-input-wrapper">
+                <Lock size={20} className="washx-auth-input-icon" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  className="washx-auth-input-field"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -80,7 +82,7 @@ const Login = () => {
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="washx-auth-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -88,12 +90,12 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="form-options">
-              <label className="checkbox-label">
+            <div className="washx-auth-form-options">
+              <label className="washx-auth-checkbox-label">
                 <input type="checkbox" />
                 <span>Remember me</span>
               </label>
-              <Link to="/forgot-password" className="forgot-link">
+              <Link to="/forgot-password" className="washx-auth-forgot-link">
                 Forgot Password?
               </Link>
             </div>

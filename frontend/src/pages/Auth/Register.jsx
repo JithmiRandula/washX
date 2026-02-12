@@ -144,14 +144,15 @@ const Register = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="name">Full Name</label>
-              <div className="input-wrapper">
-                <User size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="name" className="washx-auth-label">Full Name</label>
+              <div className="washx-auth-input-wrapper">
+                <User size={20} className="washx-auth-input-icon" />
                 <input
                   type="text"
                   id="name"
                   name="name"
+                  className="washx-auth-input-field"
                   placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleChange}
@@ -160,14 +161,15 @@ const Register = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <Mail size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="email" className="washx-auth-label">Email Address</label>
+              <div className="washx-auth-input-wrapper">
+                <Mail size={20} className="washx-auth-input-icon" />
                 <input
                   type="email"
                   id="email"
                   name="email"
+                  className="washx-auth-input-field"
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={handleChange}
@@ -176,14 +178,15 @@ const Register = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="phone">Phone Number</label>
-              <div className="input-wrapper">
-                <Phone size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="phone" className="washx-auth-label">Phone Number</label>
+              <div className="washx-auth-input-wrapper">
+                <Phone size={20} className="washx-auth-input-icon" />
                 <input
                   type="tel"
                   id="phone"
                   name="phone"
+                  className="washx-auth-input-field"
                   placeholder="Enter your phone number"
                   value={formData.phone}
                   onChange={handleChange}
@@ -193,14 +196,15 @@ const Register = () => {
             </div>
 
             {formData.role === 'provider' && (
-              <div className="form-group">
-                <label htmlFor="address">Business Address</label>
-                <div className="input-wrapper">
-                  <MapPin size={20} />
+              <div className="washx-auth-form-group">
+                <label htmlFor="address" className="washx-auth-label">Business Address</label>
+                <div className="washx-auth-input-wrapper">
+                  <MapPin size={20} className="washx-auth-input-icon" />
                   <input
                     type="text"
                     id="address"
                     name="address"
+                    className="washx-auth-input-field"
                     placeholder="Enter your business address"
                     value={formData.address}
                     onChange={handleChange}
@@ -210,7 +214,7 @@ const Register = () => {
               </div>
             )}
 
-            <div className="form-group">
+            <div className="washx-auth-form-group">
               <button
                 type="button"
                 className="btn-location"
@@ -220,14 +224,15 @@ const Register = () => {
               </button>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <Lock size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="password" className="washx-auth-label">Password</label>
+              <div className="washx-auth-input-wrapper">
+                <Lock size={20} className="washx-auth-input-icon" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
+                  className="washx-auth-input-field"
                   placeholder="Create a password"
                   value={formData.password}
                   onChange={handleChange}
@@ -235,7 +240,7 @@ const Register = () => {
                 />
                 <button
                   type="button"
-                  className="password-toggle"
+                  className="washx-auth-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -243,14 +248,15 @@ const Register = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
-              <div className="input-wrapper">
-                <Lock size={20} />
+            <div className="washx-auth-form-group">
+              <label htmlFor="confirmPassword" className="washx-auth-label">Confirm Password</label>
+              <div className="washx-auth-input-wrapper">
+                <Lock size={20} className="washx-auth-input-icon" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="confirmPassword"
                   name="confirmPassword"
+                  className="washx-auth-input-field"
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
