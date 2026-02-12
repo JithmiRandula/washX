@@ -1,33 +1,73 @@
 .services-main-page {
   min-height: 100vh;
   background: #f8fafc;
-  padding: 2rem 0;
+  padding: 0;
 }
 
 .services-page-header {
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 2rem;
+  margin-bottom: 0;
+  padding: 4rem 2rem;
+  background-image: url('/services1.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.services-page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.services-page-header h1,
+.services-page-header p {
+  position: relative;
+  z-index: 2;
 }
 
 .services-page-header h1 {
   font-size: 3rem;
   font-weight: 700;
-  color: #1f2937;
+  color: #ffffff;
   margin-bottom: 1rem;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .services-page-header p {
   font-size: 1.2rem;
-  color: #6b7280;
+  color: #ffffff;
   max-width: 600px;
   margin: 0 auto;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.services-background-section {
+  width: 100%;
+  background-image: url('/services2.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  padding: 4rem 0 6rem 0;
 }
 
 .services-main-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 2rem;
+  position: relative;
 }
 
 .services-modern-grid {
@@ -35,6 +75,8 @@
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 2.5rem;
   margin-top: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .services-modern-card {
@@ -192,16 +234,26 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .services-main-page {
-    padding: 1rem 0;
+    padding: 0;
   }
   
   .services-page-header {
-    padding: 1rem;
-    margin-bottom: 2rem;
+    padding: 3rem 1.5rem;
+    min-height: 250px;
+    margin-bottom: 0;
   }
   
   .services-page-header h1 {
     font-size: 2rem;
+  }
+  
+  .services-page-header p {
+    font-size: 1rem;
+  }
+  
+  .services-background-section {
+    padding: 3rem 0 4rem 0;
+    background-attachment: scroll;
   }
   
   .services-main-container {

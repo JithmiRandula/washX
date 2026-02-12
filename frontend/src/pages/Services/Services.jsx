@@ -141,8 +141,9 @@ const Services = () => {
       </div>
 
       {/* ...existing code... */}
-      <div className="services-main-container">
-        <div className="services-modern-grid">
+      <div className="services-background-section">
+        <div className="services-main-container">
+          <div className="services-modern-grid">
           {services.map((service, index) => (
             <div key={index} className="services-modern-card">
               <div className="services-modern-header">
@@ -161,6 +162,7 @@ const Services = () => {
               </ul>
             </div>
           ))}
+          </div>
         </div>
       </div>
     </div>
