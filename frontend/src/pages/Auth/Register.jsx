@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Compass } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Compass, CheckCircle, X } from 'lucide-react';
 import './Login.css';
 import './Register.css';
 
@@ -19,6 +19,9 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState('');
+  const [locationSuccess, setLocationSuccess] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,23 +37,62 @@ const Register = () => {
     });
   };
 
-  const handleLocationAccess = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setFormData({
-            ...formData,
-            latitude,
-            longitude,
-          });
-        },
-        (error) => {
-          setError('Unable to fetch location. Please allow location access.');
-        }
-      );
-    } else {
+  const handleLocationAccess = async () => {
+    if (!navigator.geolocation) {
       setError('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    setLocationLoading(true);
+    setError('');
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      
+      // Try to get address using a free geocoding service
+      let address = `Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      
+      try {
+        // Using Nominatim (OpenStreetMap) - free reverse geocoding
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=en`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.display_name) {
+            address = data.display_name;
+          }
+        }
+      } catch (geocodingError) {
+        console.log('Reverse geocoding failed, using coordinates:', geocodingError);
+        // Keep the coordinate-based address as fallback
+      }
+      
+      setCurrentAddress(address);
+      setFormData(prevData => ({
+        ...prevData,
+        latitude,
+        longitude,
+        address: address
+      }));
+      
+      setLocationSuccess(true);
+      setTimeout(() => setLocationSuccess(false), 3000);
+      
+    } catch (error) {
+      console.error('Location error:', error);
+      setError('Unable to fetch location. Please ensure location access is enabled and try again.');
+    } finally {
+      setLocationLoading(false);
     }
   };
 
@@ -195,33 +237,73 @@ const Register = () => {
               </div>
             </div>
 
-            {formData.role === 'provider' && (
-              <div className="washx-auth-form-group">
-                <label htmlFor="address" className="washx-auth-label">Business Address</label>
-                <div className="washx-auth-input-wrapper">
-                  <MapPin size={20} className="washx-auth-input-icon" />
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    className="washx-auth-input-field"
-                    placeholder="Enter your business address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+            <div className="washx-auth-form-group">
+              <label htmlFor="address" className="washx-auth-label">
+                {formData.role === 'provider' ? 'Business Address' : 'Address'}
+              </label>
+              <div className="washx-auth-input-wrapper">
+                <MapPin size={20} className="washx-auth-input-icon" />
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  className="washx-auth-input-field"
+                  placeholder={formData.role === 'provider' ? 'Enter your business address' : 'Enter your address'}
+                  value={formData.address}
+                  onChange={handleChange}
+                  required={formData.role === 'provider'}
+                />
               </div>
-            )}
+            </div>
 
             <div className="washx-auth-form-group">
               <button
                 type="button"
-                className="btn-location"
+                className={`washx-location-glass-btn ${
+                  locationLoading ? 'loading' : 
+                  locationSuccess ? 'success' : ''
+                }`}
                 onClick={handleLocationAccess}
+                disabled={locationLoading}
               >
-                Use my current location
+                {locationLoading ? (
+                  <>
+                    <div className="washx-location-spinner"></div>
+                    <span>Getting location...</span>
+                  </>
+                ) : locationSuccess ? (
+                  <>
+                    <CheckCircle size={18} />
+                    <span>Location updated!</span>
+                  </>
+                ) : (
+                  <>
+                    <Compass size={18} />
+                    <span>Use my current location</span>
+                  </>
+                )}
               </button>
+              
+              {currentAddress && (
+                <div className="washx-current-address">
+                  <div className="washx-address-header">
+                    <div className="washx-address-label">Current Address:</div>
+                    <button
+                      type="button"
+                      className="washx-clear-address"
+                      onClick={() => {
+                        setCurrentAddress('');
+                        setFormData(prev => ({ ...prev, address: '' }));
+                        setLocationSuccess(false);
+                      }}
+                      title="Clear location"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="washx-address-text">{currentAddress}</div>
+                </div>
+              )}
             </div>
 
             <div className="washx-auth-form-group">
