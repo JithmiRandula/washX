@@ -235,7 +235,7 @@ const CustomerDashboard = () => {
                       <span>Pickup: {order.pickupDate}</span>
                     </div>
                     <div className="order-amount">
-                      ${order.amount}
+                      Rs {order.amount}
                     </div>
                   </div>
                 </div>

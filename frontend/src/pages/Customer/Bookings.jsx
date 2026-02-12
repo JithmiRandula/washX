@@ -180,36 +180,36 @@ const Bookings = () => {
                 </div>
               </div>
 
-              <div className="detail-info-grid">
-                <div className="detail-info-card">
-                  <h3>Order Information</h3>
-                  <div className="detail-info-item">
-                    <Package size={18} />
-                    <span>{booking.items} items</span>
+              <div className="booking-order-info-grid">
+                <div className="booking-info-box">
+                  <div className="booking-info-box-header">ORDER INFORMATION</div>
+                  <div className="booking-info-row">
+                    <Package size={16} className="booking-info-icon" />
+                    <span className="booking-info-text">{booking.items} items</span>
                   </div>
-                  <div className="detail-info-item">
-                    <Calendar size={18} />
-                    <span>Pickup: {booking.pickupDate}</span>
+                  <div className="booking-info-row">
+                    <Calendar size={16} className="booking-info-icon" />
+                    <span className="booking-info-text">Pickup: {booking.pickupDate}</span>
                   </div>
-                  <div className="detail-info-item">
-                    <Clock size={18} />
-                    <span>Delivery: {booking.deliveryDate}</span>
+                  <div className="booking-info-row">
+                    <Clock size={16} className="booking-info-icon" />
+                    <span className="booking-info-text">Delivery: {booking.deliveryDate}</span>
                   </div>
                 </div>
 
-                <div className="detail-info-card">
-                  <h3>Contact & Location</h3>
-                  <div className="detail-info-item">
-                    <MapPin size={18} />
-                    <span>{booking.address}</span>
+                <div className="booking-info-box">
+                  <div className="booking-info-box-header">CONTACT & LOCATION</div>
+                  <div className="booking-info-row">
+                    <MapPin size={16} className="booking-info-icon" />
+                    <span className="booking-info-text">{booking.address}</span>
                   </div>
-                  <div className="detail-info-item">
-                    <Phone size={18} />
-                    <span>{booking.phone}</span>
+                  <div className="booking-info-row">
+                    <Phone size={16} className="booking-info-icon" />
+                    <span className="booking-info-text">{booking.phone}</span>
                   </div>
-                  <div className="detail-info-item">
-                    <Mail size={18} />
-                    <span>{booking.email}</span>
+                  <div className="booking-info-row">
+                    <Mail size={16} className="booking-info-icon" />
+                    <span className="booking-info-text">{booking.email}</span>
                   </div>
                 </div>
               </div>
@@ -575,16 +575,16 @@ const Bookings = () => {
 
                     <div className="detail-section">
                       <h4>Order Information</h4>
-                      <div className="detail-grid">
-                        <div className="detail-item">
+                      <div className="sidebar-booking-info-grid\">
+                        <div className="sidebar-booking-info-item\">
                           <Package size={16} />
                           <span>{booking.items} items</span>
                         </div>
-                        <div className="detail-item">
+                        <div className="sidebar-booking-info-item\">
                           <Calendar size={16} />
                           <span>Pickup: {booking.pickupDate}</span>
                         </div>
-                        <div className="detail-item">
+                        <div className="sidebar-booking-info-item\">
                           <Clock size={16} />
                           <span>Delivery: {booking.deliveryDate}</span>
                         </div>
