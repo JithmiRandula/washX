@@ -1,85 +1,68 @@
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Mail, Phone, Facebook, Instagram, Twitter } from 'lucide-react';
 import './Footer.css';
 
 const Footer = () => {
   return (
-    <footer className="footer">
-      <div className="footer-container">
-        <div className="footer-grid">
-          <div className="footer-section">
-            <h3 className="footer-logo">
-              <span className="logo-icon">🧺</span>
+    <footer className="washx-footer">
+      <div className="washx-footer-container">
+        <div className="washx-footer-content">
+          
+          {/* Brand Section */}
+          <div className="washx-footer-brand">
+            <h3 className="washx-footer-logo">
               WashX
             </h3>
-            <p className="footer-description">
-              Your trusted laundry service aggregator. Connecting you with the best laundry providers in your area.
+            <p className="washx-footer-tagline">
+              Your trusted laundry service platform.
             </p>
-            <div className="social-links">
-              <a href="#" aria-label="Facebook"><Facebook size={20} /></a>
-              <a href="#" aria-label="Twitter"><Twitter size={20} /></a>
-              <a href="#" aria-label="Instagram"><Instagram size={20} /></a>
-              <a href="#" aria-label="LinkedIn"><Linkedin size={20} /></a>
+            
+            <div className="washx-social-links">
+              <a href="#" className="washx-social-link" aria-label="Facebook">
+                <Facebook size={18} />
+              </a>
+              <a href="#" className="washx-social-link" aria-label="Instagram">
+                <Instagram size={18} />
+              </a>
+              <a href="#" className="washx-social-link" aria-label="Twitter">
+                <Twitter size={18} />
+              </a>
             </div>
           </div>
 
-          <div className="footer-section">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><Link to="/services">Services</Link></li>
-              <li><Link to="/providers">Find Providers</Link></li>
-              <li><Link to="/how-it-works">How It Works</Link></li>
-              <li><Link to="/pricing">Pricing</Link></li>
-              <li><Link to="/about">About Us</Link></li>
+          {/* Quick Links */}
+          <div className="washx-footer-links">
+            <h4 className="washx-footer-title">Quick Links</h4>
+            <ul className="washx-footer-list">
+              <li><Link to="/" className="washx-footer-link">Home</Link></li>
+              <li><Link to="/services" className="washx-footer-link">Services</Link></li>
+              <li><Link to="/how-it-works" className="washx-footer-link">How It Works</Link></li>
+              <li><Link to="/register" className="washx-footer-link">Join Us</Link></li>
             </ul>
           </div>
 
-          <div className="footer-section">
-            <h4>For Business</h4>
-            <ul>
-              <li><Link to="/provider/register">Become a Provider</Link></li>
-              <li><Link to="/provider/login">Provider Login</Link></li>
-              <li><Link to="/business">Business Solutions</Link></li>
-              <li><Link to="/partnerships">Partnerships</Link></li>
-            </ul>
-          </div>
-
-          <div className="footer-section">
-            <h4>Support</h4>
-            <ul>
-              <li><Link to="/help">Help Center</Link></li>
-              <li><Link to="/contact">Contact Us</Link></li>
-              <li><Link to="/faq">FAQ</Link></li>
-              <li><Link to="/terms">Terms of Service</Link></li>
-              <li><Link to="/privacy">Privacy Policy</Link></li>
-            </ul>
-          </div>
-
-          <div className="footer-section">
-            <h4>Contact</h4>
-            <div className="contact-info">
-              <div className="contact-item">
-                <Mail size={18} />
-                <span>support@washx.com</span>
-              </div>
-              <div className="contact-item">
-                <Phone size={18} />
-                <span>+1 (555) 123-4567</span>
-              </div>
-              <div className="contact-item">
-                <MapPin size={18} />
-                <span>New York, NY 10001</span>
-              </div>
+          {/* Contact Info */}
+          <div className="washx-footer-contact">
+            <h4 className="washx-footer-title">Contact</h4>
+            <div className="washx-contact-item">
+              <Mail size={16} />
+              <span>support@washx.com</span>
+            </div>
+            <div className="washx-contact-item">
+              <Phone size={16} />
+              <span>+1 (555) 123-4567</span>
             </div>
           </div>
+
         </div>
 
-        <div className="footer-bottom">
-          <p>&copy; 2025 WashX. All rights reserved.</p>
-          <div className="footer-links">
-            <Link to="/terms">Terms</Link>
-            <Link to="/privacy">Privacy</Link>
-            <Link to="/cookies">Cookies</Link>
+        {/* Footer Bottom */}
+        <div className="washx-footer-bottom">
+          <p>&copy; 2026 WashX. All rights reserved.</p>
+          <div className="washx-footer-legal">
+            <Link to="/terms" className="washx-legal-link">Terms</Link>
+            <span className="washx-divider">•</span>
+            <Link to="/privacy" className="washx-legal-link">Privacy</Link>
           </div>
         </div>
       </div>
