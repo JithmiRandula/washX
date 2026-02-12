@@ -151,7 +151,7 @@ const ProviderServices = () => {
                 <div className="service-meta">
                   <div className="meta-item">
                     <DollarSign size={16} />
-                    <span>${service.price}</span>
+                    <span>Rs {service.price}</span>
                   </div>
                   <div className="meta-item">
                     <Clock size={16} />
@@ -224,7 +224,7 @@ const ProviderServices = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Price ($)</label>
+                    <label>Price (Rs)</label>
                     <input
                       type="number"
                       value={newService.price}

@@ -216,6 +216,53 @@
   margin-top: 1rem;
 }
 
+/* Payment Method - Card View */
+.po-payment-method {
+  margin-top: 0.5rem;
+}
+
+.po-payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+.po-payment-badge.po-online {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.po-payment-badge.po-cod {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Payment Method - Modal View */
+.po-modal-payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.po-modal-payment-badge.po-online {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.po-modal-payment-badge.po-cod {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .provider-action-btn {
   display: flex;
   align-items: center;

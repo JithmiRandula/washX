@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Eye, Check, X, Clock, MapPin, Phone } from 'lucide-react';
+import { Search, Filter, Eye, Check, X, Clock, MapPin, Phone, CreditCard, Banknote } from 'lucide-react';
 import './ProviderOrders.css';
 
 const ProviderOrders = () => {
@@ -13,6 +13,7 @@ const ProviderOrders = () => {
       items: 5,
       amount: 45,
       status: 'pending',
+      paymentMethod: 'cash_on_delivery',
       date: '2026-01-21T10:30:00',
       pickupDate: '2026-01-21T14:00:00',
       deliveryDate: '2026-01-22T10:00:00'
@@ -26,6 +27,7 @@ const ProviderOrders = () => {
       items: 3,
       amount: 25,
       status: 'ready',
+      paymentMethod: 'online_payment',
       date: '2026-01-21T09:15:00',
       pickupDate: '2026-01-21T11:00:00',
       deliveryDate: '2026-01-21T16:00:00'
@@ -39,6 +41,7 @@ const ProviderOrders = () => {
       items: 2,
       amount: 70,
       status: 'completed',
+      paymentMethod: 'online_payment',
       date: '2026-01-20T16:45:00',
       pickupDate: '2026-01-20T18:00:00',
       deliveryDate: '2026-01-21T12:00:00'
@@ -52,6 +55,7 @@ const ProviderOrders = () => {
       items: 8,
       amount: 85,
       status: 'completed',
+      paymentMethod: 'cash_on_delivery',
       date: '2026-01-19T14:20:00',
       pickupDate: '2026-01-19T16:30:00',
       deliveryDate: '2026-01-20T11:00:00'
@@ -65,6 +69,7 @@ const ProviderOrders = () => {
       items: 4,
       amount: 32,
       status: 'pending',
+      paymentMethod: 'cash_on_delivery',
       date: '2026-01-21T15:20:00',
       pickupDate: '2026-01-22T09:00:00',
       deliveryDate: '2026-01-22T17:00:00'
@@ -224,11 +229,21 @@ const ProviderOrders = () => {
 
                   <div className="provider-service-info">
                     <p className="provider-service">{order.service}</p>
-                    <p className="provider-items">{order.items} items • ${order.amount}</p>
+                    <p className="provider-items">{order.items} items • Rs {order.amount}</p>
                     <p className="provider-date">
                       <Clock size={14} />
                       {formatDate(order.date)}
                     </p>
+                  </div>
+
+                  <div className="po-payment-method">
+                    <div className={`po-payment-badge ${order.paymentMethod === 'online_payment' ? 'po-online' : 'po-cod'}`}>
+                      {order.paymentMethod === 'online_payment' ? (
+                        <><CreditCard size={14} /> Online Payment</>
+                      ) : (
+                        <><Banknote size={14} /> Cash on Delivery</>
+                      )}
+                    </div>
                   </div>
 
                   {/* Status Actions */}
@@ -330,7 +345,17 @@ const ProviderOrders = () => {
                     </div>
                     <div className="detail-item">
                       <label>Amount</label>
-                      <span>${selectedOrder.amount}</span>
+                      <span>Rs {selectedOrder.amount}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Payment Method</label>
+                      <span className={`po-modal-payment-badge ${selectedOrder.paymentMethod === 'online_payment' ? 'po-online' : 'po-cod'}`}>
+                        {selectedOrder.paymentMethod === 'online_payment' ? (
+                          <><CreditCard size={14} /> Online Payment</>
+                        ) : (
+                          <><Banknote size={14} /> Cash on Delivery</>
+                        )}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <label>Status</label>

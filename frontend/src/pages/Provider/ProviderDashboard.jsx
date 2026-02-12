@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, DollarSign, TrendingUp, Users, Clock, CheckCircle, XCircle, Plus } from 'lucide-react';
+import { Package, DollarSign, TrendingUp, Users, Clock, CheckCircle, XCircle, Plus, UserCircle, ClipboardList } from 'lucide-react';
 import './ProviderDashboard.css';
 
 const ProviderDashboard = () => {
@@ -15,7 +15,7 @@ const ProviderDashboard = () => {
 
   const stats = [
     { icon: <Package size={24} />, label: 'Total Orders', value: '156', color: '#2563eb' },
-    { icon: <DollarSign size={24} />, label: 'Revenue', value: '$8,450', color: '#10b981' },
+    { icon: <DollarSign size={24} />, label: 'Revenue', value: 'Rs 8,450', color: '#10b981' },
     { icon: <TrendingUp size={24} />, label: 'This Month', value: '+23%', color: '#8b5cf6' },
     { icon: <Users size={24} />, label: 'Customers', value: '89', color: '#f59e0b' }
   ];
@@ -97,7 +97,7 @@ const ProviderDashboard = () => {
                       <td>#{order.id}</td>
                       <td>{order.customer}</td>
                       <td>{order.items}</td>
-                      <td>${order.amount}</td>
+                      <td>Rs {order.amount}</td>
                       <td>{order.date}</td>
                       <td>
                         <span 
@@ -129,21 +129,29 @@ const ProviderDashboard = () => {
           <div className="quick-actions-provider">
             <h2>Quick Actions</h2>
             <div className="actions-grid">
-              <button className="action-btn">
-                <Package size={20} />
+              <button className="action-btn" onClick={() => navigate('/provider/services')}>
+                <div className="action-icon">
+                  <Package size={24} />
+                </div>
                 <span>Manage Services</span>
               </button>
-              <button className="action-btn">
-                <TrendingUp size={20} />
+              <button className="action-btn" onClick={() => navigate('/provider/analytics')}>
+                <div className="action-icon">
+                  <TrendingUp size={24} />
+                </div>
                 <span>View Analytics</span>
               </button>
-              <button className="action-btn">
-                <Users size={20} />
-                <span>Customer Reviews</span>
+              <button className="action-btn" onClick={() => navigate('/provider/orders')}>
+                <div className="action-icon">
+                  <ClipboardList size={24} />
+                </div>
+                <span>Manage Orders</span>
               </button>
-              <button className="action-btn">
-                <DollarSign size={20} />
-                <span>Promotions</span>
+              <button className="action-btn" onClick={() => navigate('/provider/profile')}>
+                <div className="action-icon">
+                  <UserCircle size={24} />
+                </div>
+                <span>Profile</span>
               </button>
             </div>
           </div>

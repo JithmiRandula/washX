@@ -77,6 +77,7 @@ const ProviderProfile = () => {
 
   return (
     <div className="provider-profile">
+      <ProviderNavbar />
       <div className="profile-container">
         <div className="profile-header">
           <div className="profile-info">

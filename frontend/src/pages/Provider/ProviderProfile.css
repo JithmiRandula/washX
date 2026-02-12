@@ -37,19 +37,20 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #10b981;
+  background: #1e3a8a;
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-primary:hover {
-  background: #059669;
+  background: #1e40af;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
 }
 
 .btn-secondary {
@@ -215,20 +216,24 @@
 /* Map Container */
 .map-container {
   margin-top: 1.5rem;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid #e5e7eb;
+  position: relative;
+  background: white;
 }
 
 .map-placeholder {
   height: 300px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: #f9fafb;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   color: #6b7280;
+  position: relative;
+  width: 100%;
 }
 
 .map-placeholder h3 {

@@ -5,31 +5,31 @@ const Services = () => {
     {
       title: 'Wash & Fold',
       description: 'Professional washing and folding service for your everyday laundry needs',
-      price: 'From $12/kg',
+      price: 'From Rs 12/kg',
       features: ['Deep cleaning', 'Fresh scent', 'Neatly folded', 'Same-day available']
     },
     {
       title: 'Dry Cleaning',
       description: 'Expert dry cleaning for delicate and special garments',
-      price: 'From $25/item',
+      price: 'From Rs 25/item',
       features: ['Gentle on fabrics', 'Professional care', 'Stain removal', 'Pressed finish']
     },
     {
       title: 'Ironing Service',
       description: 'Crisp and wrinkle-free clothes, professionally pressed',
-      price: 'From $8/kg',
+      price: 'From Rs 8/kg',
       features: ['Expert pressing', 'Crease-free', 'Quick turnaround', 'Hanger service']
     },
     {
       title: 'Steam Press',
       description: 'Deep steam pressing for formal wear and delicate fabrics',
-      price: 'From $20/item',
+      price: 'From Rs 20/item',
       features: ['Sanitization', 'Odor removal', 'Gentle process', 'Premium finish']
     },
     {
       title: 'Premium Care',
       description: 'Specialized care for luxury and designer garments',
-      price: 'From $35/item',
+      price: 'From Rs 35/item',
       features: ['Hand washing', 'Air drying', 'Custom care', 'Quality assured']
     },
     {
@@ -149,7 +149,7 @@ const Services = () => {
               <div className="services-modern-header">
                 <div className="services-modern-title">{service.title}</div>
                 <div className="services-modern-price-badge">
-                  <span className="services-modern-price-value">{service.price.replace('$', 'Rs ')}</span>
+                  <span className="services-modern-price-value">{service.price}</span>
                 </div>
               </div>
               <div className="services-modern-description">{service.description}</div>
