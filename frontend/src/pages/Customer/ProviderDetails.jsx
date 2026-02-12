@@ -166,7 +166,7 @@ const ProviderDetails = () => {
                   </div>
                   <div>
                     <h4>{service.name}</h4>
-                    <p className="service-price">${service.price} per {service.unit}</p>
+                    <p className="service-price">Rs {service.price} per {service.unit}</p>
                   </div>
                 </div>
                 {selectedServices.includes(service.id) && (
@@ -196,14 +196,14 @@ const ProviderDetails = () => {
                   return (
                     <div key={serviceId} className="summary-item">
                       <span>{service.name} x {quantity}</span>
-                      <span>${service.price * quantity}</span>
+                      <span>Rs {service.price * quantity}</span>
                     </div>
                   );
                 })}
               </div>
               <div className="summary-total">
                 <span>Total</span>
-                <span>${calculateTotal()}</span>
+                <span>Rs {calculateTotal()}</span>
               </div>
               <button className="btn-book" onClick={handleBookNow}>
                 Book Now

@@ -1,6 +1,48 @@
+/**
+ * Providers Page with Stripe Payment Integration
+ * 
+ * PAYMENT INTEGRATION NOTES:
+ * -------------------------
+ * This component includes a complete Stripe payment flow for online payments.
+ * 
+ * CURRENT IMPLEMENTATION (Frontend Only - Demo):
+ * - Card number formatting (XXXX XXXX XXXX XXXX)
+ * - Expiry date validation (MM/YY)
+ * - CVV input (3 digits)
+ * - Simulated payment processing
+ * - Success/failure handling
+ * 
+ * FOR PRODUCTION DEPLOYMENT:
+ * 1. Install Stripe packages:
+ *    npm install @stripe/stripe-js @stripe/react-stripe-js
+ * 
+ * 2. Create a backend endpoint to create payment intent:
+ *    POST /api/create-payment-intent
+ *    Body: { amount, currency, metadata }
+ * 
+ * 3. Replace the processStripePayment function with actual Stripe API:
+ *    - Load Stripe with publishable key
+ *    - Create PaymentIntent on backend
+ *    - Use stripe.confirmCardPayment() with client_secret
+ *    - Handle 3D Secure authentication if required
+ * 
+ * 4. Add webhook handler on backend for payment confirmations:
+ *    POST /api/webhooks/stripe
+ *    Handle: payment_intent.succeeded, payment_intent.failed
+ * 
+ * 5. Store Stripe keys securely:
+ *    - Frontend: REACT_APP_STRIPE_PUBLISHABLE_KEY
+ *    - Backend: STRIPE_SECRET_KEY (never expose to frontend)
+ * 
+ * 6. Test with Stripe test cards:
+ *    - Success: 4242 4242 4242 4242
+ *    - Decline: 4000 0000 0000 0002
+ *    - 3D Secure: 4000 0027 6000 3184
+ */
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import './Providers.css';
@@ -12,6 +54,16 @@ const Providers = () => {
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [useTransportService, setUseTransportService] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardholderName: ''
+  });
   const [bookingData, setBookingData] = useState({
     customerInfo: {
       name: '',
@@ -232,14 +284,124 @@ const Providers = () => {
   };
 
   const submitBooking = () => {
+    // Validate form
+    if (!bookingData.customerInfo.name || !bookingData.customerInfo.phone || 
+        !bookingData.customerInfo.email || !bookingData.customerInfo.address || 
+        !bookingData.pickupDate || !bookingData.pickupSlot) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Show current payment method to user
+    const currentMethod = bookingData.paymentMethod;
+    console.log('========================================');
+    console.log('PAYMENT METHOD:', currentMethod);
+    console.log('========================================');
+
+    // CRITICAL: This modal should ONLY open for "Online Payment"
+    // For "Cash on Delivery" it should process booking directly
+    
+    if (currentMethod === 'Online Payment') {
+      // ✅ CORRECT: Open payment modal for Online Payment
+      console.log('✅ Online Payment detected → OPENING PAYMENT MODAL');
+      setShowPaymentModal(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentMethod === 'Cash on Delivery') {
+      // ✅ CORRECT: Process directly for Cash on Delivery (NO MODAL)
+      console.log('✅ Cash on Delivery detected → PROCESSING DIRECTLY (NO MODAL)');
+      processBooking();
+    } else {
+      console.error('❌ Unknown payment method:', currentMethod);
+    }
+  };
+
+  const processBooking = () => {
     console.log('Booking submitted:', {
       provider: selectedProvider,
       bookingData
     });
     // Here you would typically send the booking to your backend
-    alert('Booking submitted successfully!');
+    alert(`Booking confirmed! Payment Method: ${bookingData.paymentMethod}`);
     setShowBookingForm(false);
     setSelectedProvider(null);
+    resetCardDetails();
+  };
+
+  const resetCardDetails = () => {
+    setCardDetails({
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+      cardholderName: ''
+    });
+    setShowCardForm(false);
+  };
+
+  const handleCardNumberChange = (e) => {
+    let value = e.target.value.replace(/\s/g, '');
+    if (value.length <= 16 && /^\d*$/.test(value)) {
+      // Format as XXXX XXXX XXXX XXXX
+      value = value.match(/.{1,4}/g)?.join(' ') || value;
+      setCardDetails({ ...cardDetails, cardNumber: value });
+    }
+  };
+
+  const handleExpiryChange = (e) => {
+    let value = e.target.value.replace(/\//g, '');
+    if (value.length <= 4 && /^\d*$/.test(value)) {
+      // Format as MM/YY
+      if (value.length >= 2) {
+        value = value.slice(0, 2) + '/' + value.slice(2);
+      }
+      setCardDetails({ ...cardDetails, expiryDate: value });
+    }
+  };
+
+  const handleCvvChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= 3 && /^\d*$/.test(value)) {
+      setCardDetails({ ...cardDetails, cvv: value });
+    }
+  };
+
+  const processStripePayment = async () => {
+    // Validate card details
+    if (!cardDetails.cardNumber || !cardDetails.expiryDate || 
+        !cardDetails.cvv || !cardDetails.cardholderName) {
+      alert('Please fill in all card details');
+      return;
+    }
+
+    if (cardDetails.cardNumber.replace(/\s/g, '').length !== 16) {
+      alert('Invalid card number');
+      return;
+    }
+
+    if (cardDetails.cvv.length !== 3) {
+      alert('Invalid CVV');
+      return;
+    }
+
+    setPaymentProcessing(true);
+
+    // Simulate Stripe payment processing
+    // In production, you would:
+    // 1. Create a payment intent on your backend
+    // 2. Use Stripe.js to confirm the payment
+    // 3. Handle the response
+    
+    setTimeout(() => {
+      // Simulate successful payment
+      setPaymentProcessing(false);
+      setPaymentSuccess(true);
+      
+      // After 2 seconds, process the booking
+      setTimeout(() => {
+        setShowPaymentModal(false);
+        setPaymentSuccess(false);
+        processBooking();
+      }, 2000);
+    }, 2000);
   };
 
   const handleProviderSelect = (provider) => {
@@ -346,7 +508,7 @@ const Providers = () => {
                       <h3>Service Information</h3>
                       <div className="detail-info-item">
                         <Package size={18} />
-                        <span>Price Range: ${selectedProvider.priceRange}</span>
+                        <span>Price Range: Rs {selectedProvider.priceRange}</span>
                       </div>
                       <div className="detail-info-item">
                         <MapPin size={18} />
@@ -427,6 +589,204 @@ const Providers = () => {
     );
   }
 
+  // Stripe Payment Modal — must be checked BEFORE showBookingForm
+  if (showPaymentModal) {
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="sp-overlay">
+          <div className="sp-modal">
+            {!paymentSuccess ? (
+              <>
+                <div className="sp-header">
+                  <button 
+                    className="sp-close-btn" 
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      resetCardDetails();
+                      setPaymentProcessing(false);
+                      setPaymentSuccess(false);
+                      setShowCardForm(false);
+                    }}
+                    disabled={paymentProcessing}
+                  >
+                    <X size={22} />
+                  </button>
+                </div>
+
+                <div className="sp-total-section">
+                  <span className="sp-total-label">Total due today:</span>
+                  <span className="sp-total-amount">
+                    Rs {Math.floor(bookingData.estimate.total)}
+                    <sup>.{((bookingData.estimate.total % 1) * 100).toFixed(0).padStart(2, '0')}</sup>
+                  </span>
+                </div>
+
+                {!showCardForm ? (
+                  <>
+                    <div className="sp-express-section">
+                      <h3 className="sp-express-title">Express checkout</h3>
+                    </div>
+
+                    <div className="sp-express-buttons">
+                      <button className="sp-express-btn sp-paypal-btn" disabled={paymentProcessing}>
+                        <span className="sp-paypal-text">
+                          <span className="sp-pay-blue">Pay</span><span className="sp-pal-blue">Pal</span>
+                        </span>
+                      </button>
+
+                      <button className="sp-express-btn sp-gpay-btn" disabled={paymentProcessing}>
+                        <div className="sp-gpay-content">
+                          <span className="sp-gpay-logo">G Pay</span>
+                          <span className="sp-gpay-divider">|</span>
+                          <span className="sp-gpay-card">
+                            <span className="sp-visa-badge">VISA</span>
+                            •••• 0894
+                          </span>
+                        </div>
+                      </button>
+
+                      <button className="sp-express-btn sp-apple-btn" disabled={paymentProcessing}>
+                        <span className="sp-apple-logo"> Pay</span>
+                      </button>
+
+                      <button 
+                        className="sp-card-btn"
+                        onClick={() => setShowCardForm(true)}
+                        disabled={paymentProcessing}
+                      >
+                        <span className="sp-card-btn-text">Pay with card</span>
+                        <div className="sp-card-brands">
+                          <span className="sp-brand sp-mc">
+                            <svg width="26" height="16" viewBox="0 0 26 16"><circle cx="9" cy="8" r="7" fill="#EB001B"/><circle cx="17" cy="8" r="7" fill="#F79E1B"/><path d="M13 2.4a7 7 0 0 1 0 11.2 7 7 0 0 1 0-11.2z" fill="#FF5F00"/></svg>
+                          </span>
+                          <span className="sp-brand sp-maestro">
+                            <svg width="26" height="16" viewBox="0 0 26 16"><circle cx="9" cy="8" r="7" fill="#6C6BBD"/><circle cx="17" cy="8" r="7" fill="#009DDD"/><path d="M13 2.4a7 7 0 0 1 0 11.2 7 7 0 0 1 0-11.2z" fill="#6C6BBD" opacity="0.7"/></svg>
+                          </span>
+                          <span className="sp-brand sp-visa-logo">
+                            <svg width="32" height="16" viewBox="0 0 32 16"><rect width="32" height="16" rx="2" fill="#1434CB"/><text x="16" y="11.5" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="white" textAnchor="middle">VISA</text></svg>
+                          </span>
+                          <span className="sp-brand sp-amex">
+                            <svg width="26" height="16" viewBox="0 0 26 16"><rect width="26" height="16" rx="2" fill="#006FCF"/><text x="13" y="11" fontFamily="Arial" fontSize="6" fontWeight="bold" fill="white" textAnchor="middle">AMERICAN</text><text x="13" y="7" fontFamily="Arial" fontSize="5" fill="white" textAnchor="middle">EXPRESS</text></svg>
+                          </span>
+                          <span className="sp-brand sp-jcb">
+                            <svg width="22" height="16" viewBox="0 0 22 16"><rect width="22" height="16" rx="2" fill="#0E4C96"/><text x="11" y="11" fontFamily="Arial" fontSize="7" fontWeight="bold" fill="white" textAnchor="middle">JCB</text></svg>
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="sp-card-form">
+                    <div className="sp-card-form-header">
+                      <button className="sp-back-btn" onClick={() => setShowCardForm(false)}>
+                        ← Back
+                      </button>
+                      <h3 className="sp-card-form-title">Pay with card</h3>
+                    </div>
+
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Cardholder Name</label>
+                      <input
+                        type="text"
+                        value={cardDetails.cardholderName}
+                        onChange={(e) => setCardDetails({ ...cardDetails, cardholderName: e.target.value })}
+                        placeholder="Full name on card"
+                        disabled={paymentProcessing}
+                        className="sp-input"
+                      />
+                    </div>
+
+                    <div className="sp-input-group">
+                      <label className="sp-input-label">Card Number</label>
+                      <div className="sp-input-with-icons">
+                        <input
+                          type="text"
+                          value={cardDetails.cardNumber}
+                          onChange={handleCardNumberChange}
+                          placeholder="1234 1234 1234 1234"
+                          maxLength="19"
+                          disabled={paymentProcessing}
+                          className="sp-input"
+                        />
+                        <div className="sp-input-card-icons">
+                          <svg width="24" height="16" viewBox="0 0 32 16"><rect width="32" height="16" rx="2" fill="#1434CB"/><text x="16" y="11.5" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="white" textAnchor="middle">VISA</text></svg>
+                          <svg width="20" height="14" viewBox="0 0 26 16"><circle cx="9" cy="8" r="7" fill="#EB001B"/><circle cx="17" cy="8" r="7" fill="#F79E1B"/><path d="M13 2.4a7 7 0 0 1 0 11.2 7 7 0 0 1 0-11.2z" fill="#FF5F00"/></svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="sp-input-row">
+                      <div className="sp-input-group">
+                        <label className="sp-input-label">Expiry Date</label>
+                        <input
+                          type="text"
+                          value={cardDetails.expiryDate}
+                          onChange={handleExpiryChange}
+                          placeholder="MM / YY"
+                          maxLength="5"
+                          disabled={paymentProcessing}
+                          className="sp-input"
+                        />
+                      </div>
+                      <div className="sp-input-group">
+                        <label className="sp-input-label">CVV</label>
+                        <input
+                          type="password"
+                          value={cardDetails.cvv}
+                          onChange={handleCvvChange}
+                          placeholder="CVV"
+                          maxLength="3"
+                          disabled={paymentProcessing}
+                          className="sp-input"
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      className="sp-pay-btn"
+                      onClick={processStripePayment}
+                      disabled={paymentProcessing}
+                    >
+                      {paymentProcessing ? (
+                        <>
+                          <div className="sp-spinner"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>Pay Rs {bookingData.estimate.total.toFixed(2)}</>
+                      )}
+                    </button>
+
+                    <div className="sp-secure-note">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                      <span>Your payment is secure and encrypted</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="sp-powered-by">
+                  Powered by <strong>Stripe</strong>
+                </div>
+              </>
+            ) : (
+              <div className="sp-success">
+                <div className="sp-success-icon">
+                  <CheckCircle size={80} color="#10b981" />
+                </div>
+                <h2>Payment Successful!</h2>
+                <p>Your booking is being confirmed...</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   // Booking Form Modal
   if (showBookingForm) {
     return (
@@ -459,12 +819,12 @@ const Providers = () => {
                       checked={useTransportService}
                       onChange={handleTransportToggle}
                     />
-                    Use our transport service (+${selectedProvider.transportCost || 0})
+                    Use our transport service (+Rs {selectedProvider.transportCost || 0})
                   </label>
                 </div>
 
                 <div className="total-amount">
-                  <strong>Total Amount: </strong>${bookingData.estimate.total}
+                  <strong>Total Amount: </strong>Rs {bookingData.estimate.total}
                 </div>
 
                 {/* Customer Details */}
@@ -609,28 +969,69 @@ const Providers = () => {
 
                 {/* Payment & Notes */}
                 <div className="form-group">
-                  <label>Discount / Promo Code</label>
-                  <input
-                    type="text"
-                    value={bookingData.promoCode}
-                    onChange={(e) => setAndRecalc({ ...bookingData, promoCode: e.target.value })}
-                    placeholder="e.g., SAVE10 or SAVE20"
-                  />
-                </div>
-
-                <div className="form-group">
                   <label>Payment Method</label>
-                  <div className="radio-row">
-                    <label><input type="radio" name="payment" checked={bookingData.paymentMethod === 'Cash on Delivery'} onChange={() => setAndRecalc({ ...bookingData, paymentMethod: 'Cash on Delivery' })}/> Cash on Delivery</label>
-                    <label><input type="radio" name="payment" checked={bookingData.paymentMethod === 'Online Payment'} onChange={() => setAndRecalc({ ...bookingData, paymentMethod: 'Online Payment' })}/> Online Payment</label>
+                  <div className="payment-method-options">
+                    <div 
+                      className={`payment-method-card ${bookingData.paymentMethod === 'Cash on Delivery' ? 'selected' : ''}`}
+                      onClick={() => {
+                        const newData = { ...bookingData, paymentMethod: 'Cash on Delivery' };
+                        console.log('💵 CLICKED: Cash on Delivery');
+                        console.log('Setting payment method to:', newData.paymentMethod);
+                        setAndRecalc(newData);
+                      }}
+                    >
+                      <div className="payment-method-content">
+                        <Package size={24} />
+                        <span>Cash on Delivery</span>
+                        <p className="payment-method-description">Pay when your order is delivered</p>
+                      </div>
+                      {bookingData.paymentMethod === 'Cash on Delivery' && (
+                        <div className="payment-method-selected-icon">
+                          <CheckCircle size={20} />
+                        </div>
+                      )}
+                    </div>
+                    <div 
+                      className={`payment-method-card ${bookingData.paymentMethod === 'Online Payment' ? 'selected' : ''}`}
+                      onClick={() => {
+                        const newData = { ...bookingData, paymentMethod: 'Online Payment' };
+                        setAndRecalc(newData);
+                      }}
+                    >
+                      <div className="payment-method-content">
+                        <CreditCard size={24} />
+                        <span>Online Payment</span>
+                        <small>Via Stripe</small>
+                        <p className="payment-method-description">Secure card payment</p>
+                      </div>
+                      {bookingData.paymentMethod === 'Online Payment' && (
+                        <div className="payment-method-selected-icon">
+                          <CheckCircle size={20} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label>
-                    <input type="checkbox" checked={bookingData.invoiceRequired} onChange={(e) => setAndRecalc({ ...bookingData, invoiceRequired: e.target.checked })} />
-                    &nbsp; Invoice / Receipt Required
-                  </label>
+                  
+                  {/* Payment Method Info */}
+                  {bookingData.paymentMethod === 'Cash on Delivery' && (
+                    <div className="payment-info-box payment-info-cod">
+                      <Package size={16} />
+                      <div className="payment-info-content">
+                        <strong>Cash on Delivery Selected</strong>
+                        <p>You can pay in cash when your order is delivered. Click "Book Now" to confirm your booking directly (no payment popup).</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {bookingData.paymentMethod === 'Online Payment' && (
+                    <div className="payment-info-box payment-info-online">
+                      <CreditCard size={16} />
+                      <div className="payment-info-content">
+                        <strong>Online Payment via Stripe</strong>
+                        <p>Click "Proceed to Payment" to open the secure payment popup where you can enter your card details.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -645,9 +1046,9 @@ const Providers = () => {
 
                 {/* Estimate */}
                 <div className="estimate-card">
-                  <div className="estimate-row"><span>Estimated Subtotal:</span><strong>${bookingData.estimate.subtotal.toFixed(2)}</strong></div>
-                  <div className="estimate-row"><span>Discount:</span><strong>-${bookingData.estimate.discount.toFixed(2)}</strong></div>
-                  <div className="estimate-total"><span>Total:</span><strong>${bookingData.estimate.total.toFixed(2)}</strong></div>
+                  <div className="estimate-row"><span>Estimated Subtotal:</span><strong>Rs {bookingData.estimate.subtotal.toFixed(2)}</strong></div>
+                  <div className="estimate-row"><span>Discount:</span><strong>-Rs {bookingData.estimate.discount.toFixed(2)}</strong></div>
+                  <div className="estimate-total"><span>Total:</span><strong>Rs {bookingData.estimate.total.toFixed(2)}</strong></div>
                 </div>
 
                 <div className="form-actions">
@@ -662,8 +1063,33 @@ const Providers = () => {
                     className="submit-btn"
                     disabled={!bookingData.customerInfo.name || !bookingData.customerInfo.phone || !bookingData.customerInfo.email || !bookingData.customerInfo.address || !bookingData.pickupDate || !bookingData.pickupSlot || bookingData.items.length === 0}
                   >
-                    Book Now
+                    {bookingData.paymentMethod === 'Online Payment' ? (
+                      <>
+                        <CreditCard size={18} />
+                        Proceed to Payment 💳
+                      </>
+                    ) : (
+                      <>
+                        <Package size={18} />
+                        Book Now (COD) 💵
+                      </>
+                    )}
                   </button>
+                  
+                  {/* Debug Info */}
+                  <div style={{ textAlign: 'center', fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
+                    Current: <strong>{bookingData.paymentMethod}</strong>
+                    {bookingData.paymentMethod === 'Online Payment' && (
+                      <div style={{ color: '#3b82f6', fontWeight: '600', marginTop: '0.25rem' }}>
+                        ✓ Will open payment modal
+                      </div>
+                    )}
+                    {bookingData.paymentMethod === 'Cash on Delivery' && (
+                      <div style={{ color: '#16a34a', fontWeight: '600', marginTop: '0.25rem' }}>
+                        ✓ Will process directly (no modal)
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -827,7 +1253,7 @@ const Providers = () => {
                         </div>
                         <div className="provider-detail-item">
                           <Package size={14} />
-                          <span>${provider.priceRange}</span>
+                          <span>Rs {provider.priceRange}</span>
                         </div>
                       </div>
                       
