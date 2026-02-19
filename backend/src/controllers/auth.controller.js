@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
       password,
       phone,
       role: role || 'customer',
-      address
+      address: address || ''
     });
 
     // If role is provider, create provider profile
@@ -47,11 +47,11 @@ exports.register = async (req, res) => {
         businessName: name,
         description: 'New provider - Please update your business profile',
         businessLicense: 'PENDING',
-        address: address || {
-          street: '',
-          city: '',
-          state: '',
-          zipCode: '',
+        address: {
+          street: address || 'Not provided',
+          city: 'Not provided',
+          state: 'Not provided',
+          zipCode: '00000',
           coordinates: { lat: 0, lng: 0 }
         },
         phone: phone,

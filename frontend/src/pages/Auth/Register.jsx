@@ -35,6 +35,10 @@ const Register = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user makes changes
+    if (error) {
+      setError('');
+    }
   };
 
   const handleGoogleSignup = () => {
@@ -119,7 +123,17 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const user = await register(formData);
+      // Prepare registration data
+      const registrationData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: formData.role,
+        address: formData.address
+      };
+
+      const user = await register(registrationData);
       // Redirect based on return URL or role
       if (returnTo) {
         navigate(returnTo);
@@ -257,7 +271,7 @@ const Register = () => {
                   placeholder={formData.role === 'provider' ? 'Enter your business address' : 'Enter your address'}
                   value={formData.address}
                   onChange={handleChange}
-                  required={formData.role === 'provider'}
+                  required
                 />
               </div>
             </div>

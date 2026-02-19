@@ -159,3 +159,16 @@
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.4;
 }
+
+/* Provider address fields layout */
+.washx-auth-form-group-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .washx-auth-form-group-row {
+    grid-template-columns: 1fr;
+  }
+}

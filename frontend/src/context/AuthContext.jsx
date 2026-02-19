@@ -68,16 +68,7 @@ export const AuthProvider = ({ children }) => {
         password: userData.password,
         phone: userData.phone,
         role: userData.role || 'customer',
-        address: {
-          street: userData.address || '',
-          city: '',
-          state: '',
-          zipCode: '',
-          coordinates: {
-            lat: userData.latitude || 0,
-            lng: userData.longitude || 0
-          }
-        }
+        address: userData.address || ''
       };
 
       const response = await api.post('/auth/register', registerData);
