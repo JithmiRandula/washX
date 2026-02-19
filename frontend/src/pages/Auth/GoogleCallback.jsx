@@ -13,6 +13,7 @@ const GoogleCallback = () => {
       const token = searchParams.get('token');
       const userId = searchParams.get('userId');
       const role = searchParams.get('role');
+      const needsPassword = searchParams.get('needsPassword');
       const error = searchParams.get('error');
 
       if (error) {
@@ -30,6 +31,12 @@ const GoogleCallback = () => {
       try {
         // Call the googleLogin function from AuthContext
         await googleLogin(token, userId, role);
+
+        // If new Google user needs to set password, redirect to set password page
+        if (needsPassword === 'true') {
+          navigate('/auth/set-password?firstLogin=true');
+          return;
+        }
 
         // Redirect based on role
         if (role === 'admin') {

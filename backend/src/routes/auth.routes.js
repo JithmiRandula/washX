@@ -24,6 +24,10 @@ router.post('/login', loginValidation, authController.login);
 router.get('/me', protect, authController.getMe);
 router.put('/updatepassword', protect, authController.updatePassword);
 
+// Password reset routes
+router.post('/forgot-password', authController.forgotPassword);
+router.put('/reset-password/:token', authController.resetPassword);
+
 // Google OAuth routes - only if configured
 const googleClientID = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;

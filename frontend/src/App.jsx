@@ -8,6 +8,8 @@ import Home from './pages/Home/Home';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
+import SetPassword from './pages/Auth/SetPassword';
 import GoogleCallback from './pages/Auth/GoogleCallback';
 import Services from './pages/Services/Services';
 import HowItWorks from './pages/HowItWorks/HowItWorks';
@@ -34,7 +36,7 @@ function AppContent() {
   const location = useLocation();
   const isCustomerRoute = location.pathname.startsWith('/customer');
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const isAuthRoute = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+  const isAuthRoute = ['/login', '/register', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/reset-password') || location.pathname.startsWith('/auth/set-password');
 
   return (
     <div className="app">
@@ -45,6 +47,8 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/auth/set-password" element={<SetPassword />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/services" element={<Services />} />
           <Route path="/how-it-works" element={<HowItWorks />} />

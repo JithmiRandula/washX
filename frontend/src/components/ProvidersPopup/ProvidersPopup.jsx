@@ -70,13 +70,11 @@ const ProvidersPopup = ({ onClose, onUseCurrentLocation, onEnterLocation }) => {
                 </>
               ) : (
                 <>
-                  <Navigation size={18} />
                   Use My Current Location
                 </>
               )}
             </button>
             <button className="providers-popup-button" onClick={handleEnterManually}>
-              <MapPin size={18} />
               Enter Location Manually
             </button>
           </div>

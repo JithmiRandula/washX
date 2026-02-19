@@ -29,10 +29,11 @@ if (isRealClientID && isRealSecret) {
         try {
           // Check if user already exists in our database
           let user = await User.findOne({ googleId: profile.id });
+          let isNewUser = false;
 
           if (user) {
             // User exists, return user
-            return done(null, user);
+            return done(null, { user, isNewUser: false });
           }
 
           // Check if user exists with the same email
@@ -44,7 +45,7 @@ if (isRealClientID && isRealSecret) {
             user.avatar = user.avatar || profile.photos[0]?.value;
             user.isVerified = true; // Google accounts are verified
             await user.save();
-            return done(null, user);
+            return done(null, { user, isNewUser: false });
           }
 
           // Create new user
@@ -57,7 +58,7 @@ if (isRealClientID && isRealSecret) {
             role: 'customer' // Default role
           });
 
-          return done(null, newUser);
+          return done(null, { user: newUser, isNewUser: true });
         } catch (error) {
           console.error('Google OAuth error:', error);
           return done(error, null);
