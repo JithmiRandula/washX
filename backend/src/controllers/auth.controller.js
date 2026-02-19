@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Provider = require('../models/Provider');
 const { validationResult } = require('express-validator');
 const { generateToken } = require('../utils/generateToken');
 
@@ -36,6 +37,38 @@ exports.register = async (req, res) => {
       address
     });
 
+    // If role is provider, create provider profile
+    if (user.role === 'provider') {
+      await Provider.create({
+        userId: user._id,
+        businessName: name,
+        description: 'New provider - Please update your business profile',
+        businessLicense: 'PENDING',
+        address: address || {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          coordinates: { lat: 0, lng: 0 }
+        },
+        phone: phone,
+        email: email,
+        images: [],
+        services: [],
+        operatingHours: {
+          monday: { open: '09:00', close: '18:00', isClosed: false },
+          tuesday: { open: '09:00', close: '18:00', isClosed: false },
+          wednesday: { open: '09:00', close: '18:00', isClosed: false },
+          thursday: { open: '09:00', close: '18:00', isClosed: false },
+          friday: { open: '09:00', close: '18:00', isClosed: false },
+          saturday: { open: '09:00', close: '18:00', isClosed: false },
+          sunday: { open: '', close: '', isClosed: true }
+        },
+        isVerified: false,
+        isActive: true
+      });
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -46,10 +79,13 @@ exports.register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        phone: user.phone,
+        isVerified: user.isVerified
       }
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({
       success: false,
       message: error.message
