@@ -98,6 +98,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (token, userId, role) => {
+    try {
+      // Fetch user details with the token
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user details');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        const userData = {
+          ...data.data,
+          id: userId,
+          role: role,
+          token: token
+        };
+        localStorage.setItem('washx_user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+      } else {
+        throw new Error('Failed to authenticate with Google');
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('washx_user');
     setUser(null);
@@ -113,6 +149,7 @@ export const AuthProvider = ({ children }) => {
     user,
     login,
     register,
+    googleLogin,
     logout,
     updateProfile,
     loading,

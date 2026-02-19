@@ -8,6 +8,7 @@ import Home from './pages/Home/Home';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ForgotPassword from './pages/Auth/ForgotPassword';
+import GoogleCallback from './pages/Auth/GoogleCallback';
 import Services from './pages/Services/Services';
 import HowItWorks from './pages/HowItWorks/HowItWorks';
 import HomeProviders from './pages/Home_Providers/HomeProviders';
@@ -44,6 +45,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/services" element={<Services />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/providers" element={<HomeProviders />} />

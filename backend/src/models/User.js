@@ -17,13 +17,22 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please provide a password'],
+    required: function() {
+      return !this.googleId; // Password only required if not using Google OAuth
+    },
     minlength: 6,
     select: false
   },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true // Allows null values while maintaining uniqueness for non-null values
+  },
   phone: {
     type: String,
-    required: [true, 'Please provide a phone number']
+    required: function() {
+      return !this.googleId; // Phone only required if not using Google OAuth
+    }
   },
   role: {
     type: String,

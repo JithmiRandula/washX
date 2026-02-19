@@ -35,6 +35,12 @@ const Login = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    // Redirect to backend Google OAuth route
+    const backendURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    window.location.href = `${backendURL}/api/auth/google`;
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-container">
@@ -110,7 +116,11 @@ const Login = () => {
           </div>
 
           <div className="social-login">
-            <button className="social-btn google">
+            <button 
+              type="button"
+              className="social-btn google"
+              onClick={handleGoogleLogin}
+            >
               <img src="https://www.google.com/favicon.ico" alt="Google" />
               Google
             </button>

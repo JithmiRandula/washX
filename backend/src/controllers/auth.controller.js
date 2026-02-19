@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Provider = require('../models/Provider');
 const { validationResult } = require('express-validator');
 const { generateToken } = require('../utils/generateToken');
+const passport = require('passport');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -204,5 +205,28 @@ exports.updatePassword = async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+};
+
+// @desc    Google OAuth callback
+// @route   GET /api/auth/google/callback
+// @access  Public
+exports.googleCallback = async (req, res) => {
+  try {
+    // Check if authentication was successful
+    if (!req.user) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+    }
+
+    // Generate JWT token
+    const token = generateToken(req.user._id);
+
+    // Redirect to frontend with token
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendURL}/auth/google/callback?token=${token}&userId=${req.user._id}&role=${req.user.role}`);
+  } catch (error) {
+    console.error('Google callback error:', error);
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendURL}/login?error=callback_failed`);
   }
 };

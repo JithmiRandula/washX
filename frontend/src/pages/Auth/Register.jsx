@@ -37,6 +37,12 @@ const Register = () => {
     });
   };
 
+  const handleGoogleSignup = () => {
+    // Redirect to backend Google OAuth route (same as login)
+    const backendURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    window.location.href = `${backendURL}/api/auth/google`;
+  };
+
   const handleLocationAccess = async () => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by this browser.');
@@ -351,6 +357,22 @@ const Register = () => {
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
+
+          <div className="auth-divider">
+            <span>or continue with</span>
+          </div>
+
+          <div className="social-login">
+            <button 
+              type="button"
+              className="social-btn google"
+              onClick={handleGoogleSignup}
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" />
+              Google
+            </button>
+          </div>
+
           <div className="auth-footer">
             <p>
               Already have an account?{' '}
