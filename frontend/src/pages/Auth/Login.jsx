@@ -29,7 +29,7 @@ const Login = () => {
         navigate('/customer/dashboard');
       }
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -126,28 +126,23 @@ const Login = () => {
         </div>
 
         <div className="auth-info">
-          <h2>Quick Login Options</h2>
-          <div className="demo-accounts">
-            <div className="demo-card" onClick={() => {
-              setEmail('customer@washx.com');
-              setPassword('password123');
-            }}>
-              <h3>Customer Account</h3>
-              <p>customer@washx.com</p>
+          <h2>Welcome to WashX</h2>
+          <p className="auth-info-text">
+            Your trusted laundry service platform. Sign in to access your account and enjoy our services.
+          </p>
+          <div className="auth-features">
+            <div className="feature-item">
+              <h3>Easy Booking</h3>
+              <p>Book laundry services in just a few clicks</p>
             </div>
-            <div className="demo-card" onClick={() => {
-              setEmail('provider@washx.com');
-              setPassword('password123');
-            }}>
-              <h3>Provider Account</h3>
-              <p>provider@washx.com</p>
+            <div className="feature-item">
+              <h3>Compare Prices</h3>
+              <p>See different providers and choose the best price for your laundry
+</p>
             </div>
-            <div className="demo-card" onClick={() => {
-              setEmail('admin@washx.com');
-              setPassword('password123');
-            }}>
-              <h3>Admin Account</h3>
-              <p>admin@washx.com</p>
+            <div className="feature-item">
+              <h3>Quality Service</h3>
+              <p>Professional care for your clothes</p>
             </div>
           </div>
         </div>
