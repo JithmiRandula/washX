@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import api from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -18,57 +19,82 @@ export const AuthProvider = ({ children }) => {
     // Check for stored user on mount
     const storedUser = localStorage.getItem('washx_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      // Verify token is still valid
+      verifyToken(userData.token);
     }
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    // TODO: Replace with actual API call
+  const verifyToken = async (token) => {
     try {
-      // Simulated API call
-      const response = await new Promise((resolve) => {
-        setTimeout(() => {
-          // Mock user data
-          const mockUser = {
-            id: '1',
-            email: email,
-            name: 'John Doe',
-            role: email.includes('admin') ? 'admin' : email.includes('provider') ? 'provider' : 'customer',
-            phone: '+1234567890',
-            avatar: null
-          };
-          resolve(mockUser);
-        }, 1000);
+      await api.get('/auth/me');
+    } catch (error) {
+      // Token is invalid, logout
+      logout();
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await api.post('/auth/login', {
+        email,
+        password
       });
 
-      localStorage.setItem('washx_user', JSON.stringify(response));
-      setUser(response);
-      return response;
+      if (response.data.success) {
+        const userData = {
+          ...response.data.user,
+          token: response.data.token
+        };
+        localStorage.setItem('washx_user', JSON.stringify(userData));
+        setUser(userData);
+        return userData;
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
     } catch (error) {
-      throw new Error('Login failed');
+      throw new Error(error.response?.data?.message || 'Login failed');
     }
   };
 
   const register = async (userData) => {
-    // TODO: Replace with actual API call
     try {
-      const response = await new Promise((resolve) => {
-        setTimeout(() => {
-          const newUser = {
-            id: Date.now().toString(),
-            ...userData,
-            role: userData.role || 'customer'
-          };
-          resolve(newUser);
-        }, 1000);
-      });
+      // Prepare registration data
+      const registerData = {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        phone: userData.phone,
+        role: userData.role || 'customer',
+        address: {
+          street: userData.address || '',
+          city: '',
+          state: '',
+          zipCode: '',
+          coordinates: {
+            lat: userData.latitude || 0,
+            lng: userData.longitude || 0
+          }
+        }
+      };
 
-      localStorage.setItem('washx_user', JSON.stringify(response));
-      setUser(response);
-      return response;
+      const response = await api.post('/auth/register', registerData);
+
+      if (response.data.success) {
+        const newUser = {
+          ...response.data.user,
+          token: response.data.token
+        };
+        localStorage.setItem('washx_user', JSON.stringify(newUser));
+        setUser(newUser);
+        return newUser;
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
     } catch (error) {
-      throw new Error('Registration failed');
+      throw new Error(error.response?.data?.message || 'Registration failed');
     }
   };
 

@@ -125,7 +125,7 @@ const Register = () => {
         navigate('/customer/dashboard');
       }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
