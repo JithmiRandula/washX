@@ -4,7 +4,7 @@
   padding: 2rem;
 }
 
-/* Main Dashboard Content */
+
 .dashboard-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -28,7 +28,7 @@
   font-size: 1.1rem;
 }
 
-/* Overview Stats */
+
 .overview-stats {
   margin-bottom: 2rem;
 }
