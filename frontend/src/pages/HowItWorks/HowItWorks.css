@@ -137,21 +137,35 @@
 .cta-section {
   text-align: center;
   padding: 3rem 2rem;
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.cta-section:hover {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
 }
 
 .cta-section h2 {
   font-size: 2rem;
-  color: #1f2937;
+  color: #ffffff;
   margin-bottom: 1rem;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.45);
+  font-weight: 700;
 }
 
 .cta-section p {
   font-size: 1.125rem;
-  color: #6b7280;
+  color: #f3f4f6;
   margin-bottom: 2rem;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.35);
 }
 
 .cta-buttons {
@@ -168,29 +182,39 @@
   font-weight: 600;
   font-size: 1.125rem;
   text-decoration: none;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   display: inline-block;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .btn-cta {
-  background: #2563eb;
+  background: rgba(37, 99, 235, 0.9);
   color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .btn-cta:hover {
-  background: #1d4ed8;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+  background: rgba(29, 78, 216, 1);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 .btn-cta-outline {
-  background: transparent;
-  color: #2563eb;
-  border: 2px solid #2563eb;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .btn-cta-outline:hover {
-  background: #eff6ff;
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(255, 255, 255, 0.2);
 }
 
 @media (max-width: 768px) {
