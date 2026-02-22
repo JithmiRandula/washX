@@ -45,6 +45,20 @@ const ProviderServices = () => {
       features: 'Suitable for suits, dresses, delicate fabrics',
       specialInstructions: 'Check garment care labels',
       active: false
+    },
+    {
+      id: 4,
+      name: 'Steam Press',
+      category: 'Ironing',
+      prices: [
+        { unit: 'per item', price: 150 }
+      ],
+      duration: '3 hours',
+      description: 'Professional steam pressing and ironing service for crisp, wrinkle-free clothes',
+      minOrder: '3 items',
+      features: 'Steam pressing, Starch optional, Hanger delivery',
+      specialInstructions: 'Specify starch preference',
+      active: true
     }
   ]);
 
@@ -62,7 +76,7 @@ const ProviderServices = () => {
     active: true
   });
 
-  const categories = ['Washing', 'Dry Clean', 'Iron', 'Premium'];
+  const categories = ['Washing', 'Dry Clean', 'Ironing', 'Premium'];
   const unitTypes = ['per kg', 'per piece', 'per item', 'per bundle', 'per set'];
 
   // Update price unit
@@ -95,16 +109,27 @@ const ProviderServices = () => {
 
   const handleEditService = (service) => {
     setEditingService(service);
-    setNewService({...service});
+    setNewService({
+      ...service,
+      minOrder: service.minOrder || '',
+      features: service.features || '',
+      specialInstructions: service.specialInstructions || ''
+    });
     setIsAddModalOpen(true);
   };
 
   const handleUpdateService = () => {
-    setServices(services.map(service => 
-      service.id === editingService.id 
-        ? { ...newService, prices: newService.prices.map(p => ({ ...p, price: Number(p.price) })) }
-        : service
-    ));
+    setServices(prevServices => 
+      prevServices.map(service => 
+        service.id === editingService.id 
+          ? { 
+              ...newService, 
+              id: editingService.id,
+              prices: newService.prices.map(p => ({ ...p, price: Number(p.price) })) 
+            }
+          : service
+      )
+    );
     setEditingService(null);
     setNewService({
       name: '',
@@ -160,16 +185,18 @@ const ProviderServices = () => {
                 </div>
                 <div className="service-actions">
                   <button 
-                    className="action-btn edit-btn"
+                    className="service-action-btn service-edit-btn"
                     onClick={() => handleEditService(service)}
+                    title="Edit Service"
                   >
-                    <Edit size={16} />
+                    <Edit size={14} />
                   </button>
                   <button 
-                    className="action-btn delete-btn"
+                    className="service-action-btn service-delete-btn"
                     onClick={() => handleDeleteService(service.id)}
+                    title="Delete Service"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
@@ -183,7 +210,6 @@ const ProviderServices = () => {
                 {/* Multiple Prices Display */}
                 <div className="service-prices">
                   <div className="prices-header">
-                    <DollarSign size={16} />
                     <span>Pricing</span>
                   </div>
                   <div className="prices-list">
@@ -194,6 +220,12 @@ const ProviderServices = () => {
                       </div>
                     ))}
                   </div>
+                  {service.minOrder && (
+                    <div className="min-order-info">
+                      <span className="min-order-label">Min Order:</span>
+                      <span className="min-order-value">{service.minOrder}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="service-meta">
@@ -204,6 +236,20 @@ const ProviderServices = () => {
                 </div>
 
                 <p className="service-description">{service.description}</p>
+
+                {service.features && (
+                  <div className="service-features">
+                    <h4 className="features-title">Key Features</h4>
+                    <p className="features-text">{service.features}</p>
+                  </div>
+                )}
+
+                {service.specialInstructions && (
+                  <div className="service-instructions">
+                    <h4 className="instructions-title">Special Instructions</h4>
+                    <p className="instructions-text">{service.specialInstructions}</p>
+                  </div>
+                )}
 
                 <button 
                   className={`toggle-btn ${service.active ? 'deactivate' : 'activate'}`}
