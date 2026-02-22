@@ -13,6 +13,9 @@ const ProviderServices = () => {
       ],
       duration: '2 hours',
       description: 'Standard washing service with eco-friendly detergent',
+      minOrder: '2 kg',
+      features: 'Eco-friendly detergent, Fabric softener included',
+      specialInstructions: 'Separate whites from colors',
       active: true
     },
     {
@@ -24,6 +27,9 @@ const ProviderServices = () => {
       ],
       duration: '1 hour',
       description: 'Quick washing service for urgent needs',
+      minOrder: '1 kg',
+      features: 'Fast service, Same-day delivery',
+      specialInstructions: 'Available 24/7',
       active: true
     },
     {
@@ -35,6 +41,9 @@ const ProviderServices = () => {
       ],
       duration: '4 hours',
       description: 'Professional dry cleaning for delicate items',
+      minOrder: '1 item',
+      features: 'Suitable for suits, dresses, delicate fabrics',
+      specialInstructions: 'Check garment care labels',
       active: false
     }
   ]);
@@ -47,6 +56,9 @@ const ProviderServices = () => {
     prices: [{ unit: 'per kg', price: '' }],
     duration: '',
     description: '',
+    minOrder: '',
+    features: '',
+    specialInstructions: '',
     active: true
   });
 
@@ -73,6 +85,9 @@ const ProviderServices = () => {
       prices: [{ unit: 'per kg', price: '' }],
       duration: '',
       description: '',
+      minOrder: '',
+      features: '',
+      specialInstructions: '',
       active: true
     });
     setIsAddModalOpen(false);
@@ -97,6 +112,9 @@ const ProviderServices = () => {
       prices: [{ unit: 'per kg', price: '' }],
       duration: '',
       description: '',
+      minOrder: '',
+      features: '',
+      specialInstructions: '',
       active: true
     });
     setIsAddModalOpen(false);
@@ -215,6 +233,9 @@ const ProviderServices = () => {
                       prices: [{ unit: 'per kg', price: '' }],
                       duration: '',
                       description: '',
+                      minOrder: '',
+                      features: '',
+                      specialInstructions: '',
                       active: true
                     });
                   }}
@@ -224,79 +245,127 @@ const ProviderServices = () => {
               </div>
 
               <div className="modal-body">
+                {/* Service Name */}
                 <div className="form-group">
                   <label>SERVICE NAME</label>
                   <input
                     type="text"
                     value={newService.name}
                     onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                    placeholder="Enter service name"
+                    placeholder="e.g., Premium Wash, Express Iron"
+                    className="input-with-icon"
                   />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>CATEGORY</label>
-                    <select
-                      value={newService.category}
-                      onChange={(e) => setNewService({ ...newService, category: e.target.value })}
-                    >
-                      {categories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="form-divider"></div>
+
+                {/* Category */}
+                <div className="form-group">
+                  <label>CATEGORY</label>
+                  <select
+                    value={newService.category}
+                    onChange={(e) => setNewService({ ...newService, category: e.target.value })}
+                    className="select-with-icon"
+                  >
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
+                <div className="form-divider"></div>
+
                 {/* Pricing Section */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>UNIT TYPE</label>
-                    <select
-                      value={newService.prices[0].unit}
-                      onChange={(e) => handlePriceChange(0, 'unit', e.target.value)}
-                    >
-                      {unitTypes.map((unit) => (
-                        <option key={unit} value={unit}>
-                          {unit}
-                        </option>
-                      ))}
-                    </select>
+                <div className="pricing-section">
+                  <h3 className="section-title">Pricing Details</h3>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>UNIT TYPE</label>
+                      <select
+                        value={newService.prices[0].unit}
+                        onChange={(e) => handlePriceChange(0, 'unit', e.target.value)}
+                      >
+                        {unitTypes.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>PRICE (RS)</label>
+                      <input
+                        type="number"
+                        value={newService.prices[0].price}
+                        onChange={(e) => handlePriceChange(0, 'price', e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
-                    <label>PRICE (RS)</label>
+                    <label>MINIMUM ORDER</label>
                     <input
-                      type="number"
-                      value={newService.prices[0].price}
-                      onChange={(e) => handlePriceChange(0, 'price', e.target.value)}
-                      placeholder="Enter price"
+                      type="text"
+                      value={newService.minOrder}
+                      onChange={(e) => setNewService({ ...newService, minOrder: e.target.value })}
+                      placeholder="e.g., 2 kg, 5 pieces, 1 item"
                     />
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label>DURATION</label>
-                  <input
-                    type="text"
-                    value={newService.duration}
-                    onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
-                    placeholder="e.g., 2 hours, 30 minutes"
-                  />
+                <div className="form-divider"></div>
+
+                {/* Service Details */}
+                <div className="service-details-section">
+                  <h3 className="section-title">Service Details</h3>
+                  <div className="form-group">
+                    <label>TURNAROUND TIME</label>
+                    <input
+                      type="text"
+                      value={newService.duration}
+                      onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
+                      placeholder="e.g., 2 hours, 24 hours, 1-2 days"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>DESCRIPTION</label>
+                    <textarea
+                      value={newService.description}
+                      onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                      placeholder="Describe your service, what makes it special..."
+                      rows="3"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>KEY FEATURES</label>
+                    <textarea
+                      value={newService.features}
+                      onChange={(e) => setNewService({ ...newService, features: e.target.value })}
+                      placeholder="e.g., Eco-friendly detergent, Fabric softener included, Professional equipment"
+                      rows="2"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>SPECIAL INSTRUCTIONS</label>
+                    <textarea
+                      value={newService.specialInstructions}
+                      onChange={(e) => setNewService({ ...newService, specialInstructions: e.target.value })}
+                      placeholder="e.g., Separate whites from colors, Available 24/7, Check care labels"
+                      rows="2"
+                    />
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label>DESCRIPTION</label>
-                  <textarea
-                    value={newService.description}
-                    onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                    placeholder="Enter service description"
-                    rows="3"
-                  />
-                </div>
+                <div className="form-divider"></div>
 
+                {/* Service Status */}
                 <div className="checkbox-group">
                   <label className="checkbox-label">
                     <input
@@ -305,7 +374,9 @@ const ProviderServices = () => {
                       onChange={(e) => setNewService({ ...newService, active: e.target.checked })}
                     />
                     <span className="checkmark"></span>
-                    Service is active
+                    <span className="checkbox-text">
+                      Service is active and visible to customers
+                    </span>
                   </label>
                 </div>
               </div>
@@ -322,6 +393,9 @@ const ProviderServices = () => {
                       prices: [{ unit: 'per kg', price: '' }],
                       duration: '',
                       description: '',
+                      minOrder: '',
+                      features: '',
+                      specialInstructions: '',
                       active: true
                     });
                   }}
