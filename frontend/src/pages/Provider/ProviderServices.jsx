@@ -8,7 +8,9 @@ const ProviderServices = () => {
       id: 1,
       name: 'Regular Wash',
       category: 'Washing',
-      price: 15,
+      prices: [
+        { unit: 'per kg', price: 250 }
+      ],
       duration: '2 hours',
       description: 'Standard washing service with eco-friendly detergent',
       active: true
@@ -17,7 +19,9 @@ const ProviderServices = () => {
       id: 2,
       name: 'Express Wash',
       category: 'Washing',
-      price: 25,
+      prices: [
+        { unit: 'per kg', price: 400 }
+      ],
       duration: '1 hour',
       description: 'Quick washing service for urgent needs',
       active: true
@@ -26,7 +30,9 @@ const ProviderServices = () => {
       id: 3,
       name: 'Dry Cleaning',
       category: 'Dry Clean',
-      price: 35,
+      prices: [
+        { unit: 'per item', price: 350 }
+      ],
       duration: '4 hours',
       description: 'Professional dry cleaning for delicate items',
       active: false
@@ -38,25 +44,33 @@ const ProviderServices = () => {
   const [newService, setNewService] = useState({
     name: '',
     category: 'Washing',
-    price: '',
+    prices: [{ unit: 'per kg', price: '' }],
     duration: '',
     description: '',
     active: true
   });
 
   const categories = ['Washing', 'Dry Clean', 'Iron', 'Premium'];
+  const unitTypes = ['per kg', 'per piece', 'per item', 'per bundle', 'per set'];
+
+  // Update price unit
+  const handlePriceChange = (index, field, value) => {
+    const updatedPrices = [...newService.prices];
+    updatedPrices[index] = { ...updatedPrices[index], [field]: value };
+    setNewService({ ...newService, prices: updatedPrices });
+  };
 
   const handleAddService = () => {
     const service = {
       id: Date.now(),
       ...newService,
-      price: Number(newService.price)
+      prices: newService.prices.map(p => ({ ...p, price: Number(p.price) }))
     };
     setServices([...services, service]);
     setNewService({
       name: '',
       category: 'Washing',
-      price: '',
+      prices: [{ unit: 'per kg', price: '' }],
       duration: '',
       description: '',
       active: true
@@ -66,21 +80,21 @@ const ProviderServices = () => {
 
   const handleEditService = (service) => {
     setEditingService(service);
-    setNewService(service);
+    setNewService({...service});
     setIsAddModalOpen(true);
   };
 
   const handleUpdateService = () => {
     setServices(services.map(service => 
       service.id === editingService.id 
-        ? { ...newService, price: Number(newService.price) }
+        ? { ...newService, prices: newService.prices.map(p => ({ ...p, price: Number(p.price) })) }
         : service
     ));
     setEditingService(null);
     setNewService({
       name: '',
       category: 'Washing',
-      price: '',
+      prices: [{ unit: 'per kg', price: '' }],
       duration: '',
       description: '',
       active: true
@@ -148,11 +162,23 @@ const ProviderServices = () => {
                   <span>{service.category}</span>
                 </div>
                 
-                <div className="service-meta">
-                  <div className="meta-item">
+                {/* Multiple Prices Display */}
+                <div className="service-prices">
+                  <div className="prices-header">
                     <DollarSign size={16} />
-                    <span>Rs {service.price}</span>
+                    <span>Pricing</span>
                   </div>
+                  <div className="prices-list">
+                    {service.prices.map((priceItem, idx) => (
+                      <div key={idx} className="price-item">
+                        <span className="price-unit">{priceItem.unit}</span>
+                        <span className="price-value">Rs {priceItem.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="service-meta">
                   <div className="meta-item">
                     <Clock size={16} />
                     <span>{service.duration}</span>
@@ -186,7 +212,7 @@ const ProviderServices = () => {
                     setNewService({
                       name: '',
                       category: 'Washing',
-                      price: '',
+                      prices: [{ unit: 'per kg', price: '' }],
                       duration: '',
                       description: '',
                       active: true
@@ -199,7 +225,7 @@ const ProviderServices = () => {
 
               <div className="modal-body">
                 <div className="form-group">
-                  <label>Service Name</label>
+                  <label>SERVICE NAME</label>
                   <input
                     type="text"
                     value={newService.name}
@@ -210,7 +236,7 @@ const ProviderServices = () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Category</label>
+                    <label>CATEGORY</label>
                     <select
                       value={newService.category}
                       onChange={(e) => setNewService({ ...newService, category: e.target.value })}
@@ -222,20 +248,37 @@ const ProviderServices = () => {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Pricing Section */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>UNIT TYPE</label>
+                    <select
+                      value={newService.prices[0].unit}
+                      onChange={(e) => handlePriceChange(0, 'unit', e.target.value)}
+                    >
+                      {unitTypes.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   <div className="form-group">
-                    <label>Price (Rs)</label>
+                    <label>PRICE (RS)</label>
                     <input
                       type="number"
-                      value={newService.price}
-                      onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                      value={newService.prices[0].price}
+                      onChange={(e) => handlePriceChange(0, 'price', e.target.value)}
                       placeholder="Enter price"
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>Duration</label>
+                  <label>DURATION</label>
                   <input
                     type="text"
                     value={newService.duration}
@@ -245,7 +288,7 @@ const ProviderServices = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Description</label>
+                  <label>DESCRIPTION</label>
                   <textarea
                     value={newService.description}
                     onChange={(e) => setNewService({ ...newService, description: e.target.value })}
@@ -276,7 +319,7 @@ const ProviderServices = () => {
                     setNewService({
                       name: '',
                       category: 'Washing',
-                      price: '',
+                      prices: [{ unit: 'per kg', price: '' }],
                       duration: '',
                       description: '',
                       active: true
