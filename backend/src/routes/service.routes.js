@@ -1,22 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
+const {
+  getServices,
+  getService,
+  createService,
+  updateService,
+  deleteService,
+  getProviderServices,
+  getMyServices,
+  toggleServiceStatus
+} = require('../controllers/service.controller');
 
-// Placeholder controller (to be implemented)
-const serviceController = {
-  getServices: (req, res) => res.json({ success: true, message: 'Get all services' }),
-  getService: (req, res) => res.json({ success: true, message: 'Get service by ID' }),
-  createService: (req, res) => res.json({ success: true, message: 'Create service' }),
-  updateService: (req, res) => res.json({ success: true, message: 'Update service' }),
-  deleteService: (req, res) => res.json({ success: true, message: 'Delete service' }),
-  getProviderServices: (req, res) => res.json({ success: true, message: 'Get services by provider' })
-};
+// Public routes
+router.get('/', getServices);
+router.get('/provider/:providerId', getProviderServices);
 
-router.get('/', serviceController.getServices);
-router.get('/provider/:providerId', serviceController.getProviderServices);
-router.get('/:id', serviceController.getService);
-router.post('/', protect, authorize('provider', 'admin'), serviceController.createService);
-router.put('/:id', protect, authorize('provider', 'admin'), serviceController.updateService);
-router.delete('/:id', protect, authorize('provider', 'admin'), serviceController.deleteService);
+// Protected routes (Provider/Admin) - must come before /:id
+router.get('/my-services', protect, authorize('provider', 'admin'), getMyServices);
+router.post('/', protect, authorize('provider', 'admin'), createService);
+router.patch('/:id/toggle', protect, authorize('provider', 'admin'), toggleServiceStatus);
+router.put('/:id', protect, authorize('provider', 'admin'), updateService);
+router.delete('/:id', protect, authorize('provider', 'admin'), deleteService);
+
+// Public route with dynamic ID - must come last
+router.get('/:id', getService);
 
 module.exports = router;

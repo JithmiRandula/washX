@@ -18,22 +18,36 @@ const serviceSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['wash-and-fold', 'dry-cleaning', 'ironing', 'wash-and-iron', 'specialty']
+    enum: ['Washing', 'Dry Clean', 'Ironing', 'Premium']
   },
-  price: {
-    type: Number,
-    required: [true, 'Please provide a price']
-  },
-  priceUnit: {
+  prices: [{
+    unit: {
+      type: String,
+      enum: ['per kg', 'per piece', 'per item', 'per bundle', 'per set'],
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true
+    }
+  }],
+  duration: {
     type: String,
-    enum: ['per-kg', 'per-item', 'per-load'],
-    default: 'per-kg'
+    required: true // e.g., "2 hours", "24 hours"
   },
-  turnaroundTime: {
-    type: Number,
-    required: true // in hours
+  minOrder: {
+    type: String,
+    default: '' // e.g., "2 kg", "3 items"
   },
-  isActive: {
+  features: {
+    type: String,
+    default: '' // Comma-separated features
+  },
+  specialInstructions: {
+    type: String,
+    default: ''
+  },
+  active: {
     type: Boolean,
     default: true
   }

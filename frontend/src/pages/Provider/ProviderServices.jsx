@@ -1,66 +1,12 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Package, Clock, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, Package, Clock } from 'lucide-react';
+import { serviceAPI } from '../../utils/api';
 import './ProviderServices.css';
 
 const ProviderServices = () => {
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      name: 'Regular Wash',
-      category: 'Washing',
-      prices: [
-        { unit: 'per kg', price: 250 }
-      ],
-      duration: '2 hours',
-      description: 'Standard washing service with eco-friendly detergent',
-      minOrder: '2 kg',
-      features: 'Eco-friendly detergent, Fabric softener included',
-      specialInstructions: 'Separate whites from colors',
-      active: true
-    },
-    {
-      id: 2,
-      name: 'Express Wash',
-      category: 'Washing',
-      prices: [
-        { unit: 'per kg', price: 400 }
-      ],
-      duration: '1 hour',
-      description: 'Quick washing service for urgent needs',
-      minOrder: '1 kg',
-      features: 'Fast service, Same-day delivery',
-      specialInstructions: 'Available 24/7',
-      active: true
-    },
-    {
-      id: 3,
-      name: 'Dry Cleaning',
-      category: 'Dry Clean',
-      prices: [
-        { unit: 'per item', price: 350 }
-      ],
-      duration: '4 hours',
-      description: 'Professional dry cleaning for delicate items',
-      minOrder: '1 item',
-      features: 'Suitable for suits, dresses, delicate fabrics',
-      specialInstructions: 'Check garment care labels',
-      active: false
-    },
-    {
-      id: 4,
-      name: 'Steam Press',
-      category: 'Ironing',
-      prices: [
-        { unit: 'per item', price: 150 }
-      ],
-      duration: '3 hours',
-      description: 'Professional steam pressing and ironing service for crisp, wrinkle-free clothes',
-      minOrder: '3 items',
-      features: 'Steam pressing, Starch optional, Hanger delivery',
-      specialInstructions: 'Specify starch preference',
-      active: true
-    }
-  ]);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -79,6 +25,25 @@ const ProviderServices = () => {
   const categories = ['Washing', 'Dry Clean', 'Ironing', 'Premium'];
   const unitTypes = ['per kg', 'per piece', 'per item', 'per bundle', 'per set'];
 
+  // Load services on component mount
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await serviceAPI.getMyServices();
+      setServices(response.data);
+    } catch (err) {
+      setError(err.message || 'Failed to load services');
+      console.error('Error loading services:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Update price unit
   const handlePriceChange = (index, field, value) => {
     const updatedPrices = [...newService.prices];
@@ -86,25 +51,32 @@ const ProviderServices = () => {
     setNewService({ ...newService, prices: updatedPrices });
   };
 
-  const handleAddService = () => {
-    const service = {
-      id: Date.now(),
-      ...newService,
-      prices: newService.prices.map(p => ({ ...p, price: Number(p.price) }))
-    };
-    setServices([...services, service]);
-    setNewService({
-      name: '',
-      category: 'Washing',
-      prices: [{ unit: 'per kg', price: '' }],
-      duration: '',
-      description: '',
-      minOrder: '',
-      features: '',
-      specialInstructions: '',
-      active: true
-    });
-    setIsAddModalOpen(false);
+  const handleAddService = async () => {
+    try {
+      const serviceData = {
+        ...newService,
+        prices: newService.prices.map(p => ({ ...p, price: Number(p.price) }))
+      };
+      
+      const response = await serviceAPI.createService(serviceData);
+      setServices([...services, response.data]);
+      
+      setNewService({
+        name: '',
+        category: 'Washing',
+        prices: [{ unit: 'per kg', price: '' }],
+        duration: '',
+        description: '',
+        minOrder: '',
+        features: '',
+        specialInstructions: '',
+        active: true
+      });
+      setIsAddModalOpen(false);
+    } catch (err) {
+      setError(err.message || 'Failed to create service');
+      console.error('Error creating service:', err);
+    }
   };
 
   const handleEditService = (service) => {
@@ -118,41 +90,64 @@ const ProviderServices = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleUpdateService = () => {
-    setServices(prevServices => 
-      prevServices.map(service => 
-        service.id === editingService.id 
-          ? { 
-              ...newService, 
-              id: editingService.id,
-              prices: newService.prices.map(p => ({ ...p, price: Number(p.price) })) 
-            }
-          : service
-      )
-    );
-    setEditingService(null);
-    setNewService({
-      name: '',
-      category: 'Washing',
-      prices: [{ unit: 'per kg', price: '' }],
-      duration: '',
-      description: '',
-      minOrder: '',
-      features: '',
-      specialInstructions: '',
-      active: true
-    });
-    setIsAddModalOpen(false);
+  const handleUpdateService = async () => {
+    try {
+      const serviceData = {
+        ...newService,
+        prices: newService.prices.map(p => ({ ...p, price: Number(p.price) }))
+      };
+      
+      const response = await serviceAPI.updateService(editingService._id, serviceData);
+      
+      setServices(prevServices => 
+        prevServices.map(service => 
+          service._id === editingService._id ? response.data : service
+        )
+      );
+      
+      setEditingService(null);
+      setNewService({
+        name: '',
+        category: 'Washing',
+        prices: [{ unit: 'per kg', price: '' }],
+        duration: '',
+        description: '',
+        minOrder: '',
+        features: '',
+        specialInstructions: '',
+        active: true
+      });
+      setIsAddModalOpen(false);
+    } catch (err) {
+      setError(err.message || 'Failed to update service');
+      console.error('Error updating service:', err);
+    }
   };
 
-  const handleDeleteService = (id) => {
-    setServices(services.filter(service => service.id !== id));
+  const handleDeleteService = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this service?')) {
+      return;
+    }
+    
+    try {
+      await serviceAPI.deleteService(id);
+      setServices(services.filter(service => service._id !== id));
+    } catch (err) {
+      setError(err.message || 'Failed to delete service');
+      console.error('Error deleting service:', err);
+    }
   };
 
-  const toggleServiceStatus = (id) => {
-    setServices(services.map(service =>
-      service.id === id ? { ...service, active: !service.active } : service
-    ));
+  const toggleServiceStatus = async (id) => {
+    try {
+      const response = await serviceAPI.toggleServiceStatus(id);
+      setServices(services.map(service =>
+        service._id === id ? response.data : service
+      ));
+    } catch (err) {
+      setError(err.message || 'Failed to toggle service status');
+      console.error('Error toggling service status:', err);
+    }
   };
 
   return (
@@ -172,34 +167,61 @@ const ProviderServices = () => {
           </button>
         </div>
 
-        {/* Services Grid */}
-        <div className="services-grid">
-          {services.map((service) => (
-            <div key={service.id} className="service-card">
-              <div className="service-header">
-                <div className="service-info">
-                  <h3>{service.name}</h3>
-                  <span className={`service-status ${service.active ? 'active' : 'inactive'}`}>
-                    {service.active ? 'Active' : 'Inactive'}
-                  </span>
+        {/* Error Message */}
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading services...</p>
+          </div>
+        ) : services.length === 0 ? (
+          <div className="empty-state">
+            <Package size={48} />
+            <h3>No Services Yet</h3>
+            <p>Get started by adding your first laundry service</p>
+            <button 
+              className="btn-primary"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus size={20} />
+              Add Your First Service
+            </button>
+          </div>
+        ) : (
+          /* Services Grid */
+          <div className="services-grid">
+            {services.map((service) => (
+              <div key={service._id} className="service-card">
+                <div className="service-header">
+                  <div className="service-info">
+                    <h3>{service.name}</h3>
+                    <span className={`service-status ${service.active ? 'active' : 'inactive'}`}>
+                      {service.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="service-actions">
+                    <button 
+                      className="service-action-btn service-edit-btn"
+                      onClick={() => handleEditService(service)}
+                      title="Edit Service"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button 
+                      className="service-action-btn service-delete-btn"
+                      onClick={() => handleDeleteService(service._id)}
+                      title="Delete Service"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div className="service-actions">
-                  <button 
-                    className="service-action-btn service-edit-btn"
-                    onClick={() => handleEditService(service)}
-                    title="Edit Service"
-                  >
-                    <Edit size={14} />
-                  </button>
-                  <button 
-                    className="service-action-btn service-delete-btn"
-                    onClick={() => handleDeleteService(service.id)}
-                    title="Delete Service"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
 
               <div className="service-details">
                 <div className="service-category">
@@ -253,14 +275,15 @@ const ProviderServices = () => {
 
                 <button 
                   className={`toggle-btn ${service.active ? 'deactivate' : 'activate'}`}
-                  onClick={() => toggleServiceStatus(service.id)}
+                  onClick={() => toggleServiceStatus(service._id)}
                 >
                   {service.active ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* Add/Edit Service Modal */}
         {isAddModalOpen && (

@@ -140,3 +140,66 @@ export const getProviderById = async (id) => {
     }, 300);
   });
 };
+
+// Service API functions
+export const serviceAPI = {
+  // Get all services for logged-in provider
+  getMyServices: async () => {
+    try {
+      const response = await api.get('/services/my-services');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Get services by provider ID (public)
+  getProviderServices: async (providerId) => {
+    try {
+      const response = await api.get(`/services/provider/${providerId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Create new service
+  createService: async (serviceData) => {
+    try {
+      const response = await api.post('/services', serviceData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Update service
+  updateService: async (serviceId, serviceData) => {
+    try {
+      const response = await api.put(`/services/${serviceId}`, serviceData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Delete service
+  deleteService: async (serviceId) => {
+    try {
+      const response = await api.delete(`/services/${serviceId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Toggle service active status
+  toggleServiceStatus: async (serviceId) => {
+    try {
+      const response = await api.patch(`/services/${serviceId}/toggle`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
+};
