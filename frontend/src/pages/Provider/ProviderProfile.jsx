@@ -53,13 +53,41 @@ const ProviderProfile = () => {
           latitude: providerData.address?.coordinates?.lat || 0,
           longitude: providerData.address?.coordinates?.lng || 0,
           businessHours: {
-            monday: providerData.operatingHours?.monday || { open: '09:00', close: '18:00', closed: false },
-            tuesday: providerData.operatingHours?.tuesday || { open: '09:00', close: '18:00', closed: false },
-            wednesday: providerData.operatingHours?.wednesday || { open: '09:00', close: '18:00', closed: false },
-            thursday: providerData.operatingHours?.thursday || { open: '09:00', close: '18:00', closed: false },
-            friday: providerData.operatingHours?.friday || { open: '09:00', close: '18:00', closed: false },
-            saturday: providerData.operatingHours?.saturday || { open: '09:00', close: '18:00', closed: false },
-            sunday: providerData.operatingHours?.sunday || { open: '', close: '', closed: true }
+            monday: {
+              open: providerData.operatingHours?.monday?.open || '09:00',
+              close: providerData.operatingHours?.monday?.close || '18:00',
+              closed: providerData.operatingHours?.monday?.isClosed || false
+            },
+            tuesday: {
+              open: providerData.operatingHours?.tuesday?.open || '09:00',
+              close: providerData.operatingHours?.tuesday?.close || '18:00',
+              closed: providerData.operatingHours?.tuesday?.isClosed || false
+            },
+            wednesday: {
+              open: providerData.operatingHours?.wednesday?.open || '09:00',
+              close: providerData.operatingHours?.wednesday?.close || '18:00',
+              closed: providerData.operatingHours?.wednesday?.isClosed || false
+            },
+            thursday: {
+              open: providerData.operatingHours?.thursday?.open || '09:00',
+              close: providerData.operatingHours?.thursday?.close || '18:00',
+              closed: providerData.operatingHours?.thursday?.isClosed || false
+            },
+            friday: {
+              open: providerData.operatingHours?.friday?.open || '09:00',
+              close: providerData.operatingHours?.friday?.close || '18:00',
+              closed: providerData.operatingHours?.friday?.isClosed || false
+            },
+            saturday: {
+              open: providerData.operatingHours?.saturday?.open || '09:00',
+              close: providerData.operatingHours?.saturday?.close || '18:00',
+              closed: providerData.operatingHours?.saturday?.isClosed || false
+            },
+            sunday: {
+              open: providerData.operatingHours?.sunday?.open || '',
+              close: providerData.operatingHours?.sunday?.close || '',
+              closed: providerData.operatingHours?.sunday?.isClosed !== false // Default Sunday to closed if not explicitly set
+            }
           },
           description: providerData.description || '',
           businessLicense: providerData.businessLicense || '',
@@ -93,6 +121,50 @@ const ProviderProfile = () => {
     try {
       setSaveLoading(true);
       
+      // Validate required fields
+      const requiredFields = {
+        'Business Name': tempProfile.businessName,
+        'Description': tempProfile.description,
+        'Business License': tempProfile.businessLicense,
+        'Street Address': tempProfile.address,
+        'City': tempProfile.city,
+        'State': tempProfile.state,
+        'ZIP Code': tempProfile.zipCode,
+        'Phone': tempProfile.phone,
+        'Email': tempProfile.email
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value || value.trim() === '')
+        .map(([field, _]) => field);
+
+      if (missingFields.length > 0) {
+        alert(`Please fill in the following required fields:\n- ${missingFields.join('\n- ')}`);
+        setSaveLoading(false);
+        return;
+      }
+
+      // Validate business hours for days that are not closed
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const invalidHours = [];
+      
+      days.forEach(day => {
+        const hours = tempProfile.businessHours[day];
+        if (!hours.closed) {
+          if (!hours.open || !hours.close) {
+            invalidHours.push(day.charAt(0).toUpperCase() + day.slice(1));
+          } else if (hours.open >= hours.close) {
+            invalidHours.push(`${day.charAt(0).toUpperCase() + day.slice(1)} (closing time must be after opening time)`);
+          }
+        }
+      });
+
+      if (invalidHours.length > 0) {
+        alert(`Please fix the following business hours:\n- ${invalidHours.join('\n- ')}`);
+        setSaveLoading(false);
+        return;
+      }
+      
       // Transform data back to API format
       const updateData = {
         businessName: tempProfile.businessName,
@@ -112,42 +184,44 @@ const ProviderProfile = () => {
         email: tempProfile.email,
         operatingHours: {
           monday: { 
-            open: tempProfile.businessHours.monday.open, 
-            close: tempProfile.businessHours.monday.close, 
+            open: tempProfile.businessHours.monday.closed ? '' : tempProfile.businessHours.monday.open, 
+            close: tempProfile.businessHours.monday.closed ? '' : tempProfile.businessHours.monday.close, 
             isClosed: tempProfile.businessHours.monday.closed 
           },
           tuesday: { 
-            open: tempProfile.businessHours.tuesday.open, 
-            close: tempProfile.businessHours.tuesday.close, 
+            open: tempProfile.businessHours.tuesday.closed ? '' : tempProfile.businessHours.tuesday.open, 
+            close: tempProfile.businessHours.tuesday.closed ? '' : tempProfile.businessHours.tuesday.close, 
             isClosed: tempProfile.businessHours.tuesday.closed 
           },
           wednesday: { 
-            open: tempProfile.businessHours.wednesday.open, 
-            close: tempProfile.businessHours.wednesday.close, 
+            open: tempProfile.businessHours.wednesday.closed ? '' : tempProfile.businessHours.wednesday.open, 
+            close: tempProfile.businessHours.wednesday.closed ? '' : tempProfile.businessHours.wednesday.close, 
             isClosed: tempProfile.businessHours.wednesday.closed 
           },
           thursday: { 
-            open: tempProfile.businessHours.thursday.open, 
-            close: tempProfile.businessHours.thursday.close, 
+            open: tempProfile.businessHours.thursday.closed ? '' : tempProfile.businessHours.thursday.open, 
+            close: tempProfile.businessHours.thursday.closed ? '' : tempProfile.businessHours.thursday.close, 
             isClosed: tempProfile.businessHours.thursday.closed 
           },
           friday: { 
-            open: tempProfile.businessHours.friday.open, 
-            close: tempProfile.businessHours.friday.close, 
+            open: tempProfile.businessHours.friday.closed ? '' : tempProfile.businessHours.friday.open, 
+            close: tempProfile.businessHours.friday.closed ? '' : tempProfile.businessHours.friday.close, 
             isClosed: tempProfile.businessHours.friday.closed 
           },
           saturday: { 
-            open: tempProfile.businessHours.saturday.open, 
-            close: tempProfile.businessHours.saturday.close, 
+            open: tempProfile.businessHours.saturday.closed ? '' : tempProfile.businessHours.saturday.open, 
+            close: tempProfile.businessHours.saturday.closed ? '' : tempProfile.businessHours.saturday.close, 
             isClosed: tempProfile.businessHours.saturday.closed 
           },
           sunday: { 
-            open: tempProfile.businessHours.sunday.open, 
-            close: tempProfile.businessHours.sunday.close, 
+            open: tempProfile.businessHours.sunday.closed ? '' : tempProfile.businessHours.sunday.open, 
+            close: tempProfile.businessHours.sunday.closed ? '' : tempProfile.businessHours.sunday.close, 
             isClosed: tempProfile.businessHours.sunday.closed 
           }
         }
       };
+
+      console.log('Sending update data:', updateData); // Debug log
 
       const response = await api.put(`/providers/${providerId}/profile`, updateData);
       
@@ -155,9 +229,13 @@ const ProviderProfile = () => {
         setProfile(tempProfile);
         setIsEditing(false);
         alert('Profile updated successfully!');
+        
+        // Refresh the profile data from server to ensure sync
+        await fetchProviderProfile();
       }
     } catch (error) {
       console.error('Error saving profile:', error);
+      console.error('Error details:', error.response?.data); // Debug log
       alert(error.response?.data?.message || 'Error saving profile');
     } finally {
       setSaveLoading(false);
@@ -174,14 +252,28 @@ const ProviderProfile = () => {
   };
 
   const handleHoursChange = (day, field, value) => {
+    const updatedDay = {
+      ...tempProfile.businessHours[day],
+      [field]: value
+    };
+
+    // If closing the business for the day, clear the open/close times
+    if (field === 'closed' && value === true) {
+      updatedDay.open = '';
+      updatedDay.close = '';
+    }
+    
+    // If opening the business for the day and times are empty, set default times
+    if (field === 'closed' && value === false) {
+      if (!updatedDay.open) updatedDay.open = '09:00';
+      if (!updatedDay.close) updatedDay.close = '18:00';
+    }
+
     setTempProfile({
       ...tempProfile,
       businessHours: {
         ...tempProfile.businessHours,
-        [day]: {
-          ...tempProfile.businessHours[day],
-          [field]: value
-        }
+        [day]: updatedDay
       }
     });
   };
@@ -418,6 +510,20 @@ const ProviderProfile = () => {
                 )}
               </div>
 
+              <div className="form-group">
+                <label>Business License Number</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={tempProfile.businessLicense}
+                    onChange={(e) => handleInputChange('businessLicense', e.target.value)}
+                    placeholder="Enter your business license number"
+                  />
+                ) : (
+                  <span>{profile.businessLicense}</span>
+                )}
+              </div>
+
               <div className="form-group full-width">
                 <label>Business Description</label>
                 {isEditing ? (
@@ -464,6 +570,20 @@ const ProviderProfile = () => {
                   />
                 ) : (
                   <span>{profile.city}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>State</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={tempProfile.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    placeholder="e.g., CA, NY, TX"
+                  />
+                ) : (
+                  <span>{profile.state}</span>
                 )}
               </div>
 
