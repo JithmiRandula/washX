@@ -1,48 +1,153 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { MapPin, Camera, Edit, Save, X, Clock, Phone, Mail, Star, Upload } from 'lucide-react';
 import './ProviderProfile.css';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 
 const ProviderProfile = () => {
+  const { providerId } = useParams();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saveLoading, setSaveLoading] = useState(false);
   const fileInputRef = useRef(null);
-  const [profile, setProfile] = useState({
-    businessName: 'Clean & Fresh Laundry',
-    ownerName: 'John Smith',
-    email: 'john@cleanfresh.com',
-    phone: '+1 234 567 8900',
-    address: '123 Main Street, Downtown',
-    city: 'New York',
-    zipCode: '10001',
-    latitude: 40.7128,
-    longitude: -74.0060,
-    businessHours: {
-      monday: { open: '08:00', close: '20:00', closed: false },
-      tuesday: { open: '08:00', close: '20:00', closed: false },
-      wednesday: { open: '08:00', close: '20:00', closed: false },
-      thursday: { open: '08:00', close: '20:00', closed: false },
-      friday: { open: '08:00', close: '20:00', closed: false },
-      saturday: { open: '09:00', close: '18:00', closed: false },
-      sunday: { open: '10:00', close: '16:00', closed: false }
-    },
-    description: 'Professional laundry service with over 10 years of experience. We use eco-friendly products and offer same-day service.',
-    services: ['Regular Wash', 'Dry Cleaning', 'Express Wash', 'Iron Service'],
-    rating: 4.8,
-    totalReviews: 156,
-    logoUrl: null // Add logo URL
-  });
+  const [profile, setProfile] = useState(null);
+  const [tempProfile, setTempProfile] = useState(null);
 
-  const [tempProfile, setTempProfile] = useState(profile);
+  // Fetch provider profile on mount
+  useEffect(() => {
+    fetchProviderProfile();
+  }, [providerId]);
+
+  const fetchProviderProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/providers/${providerId}`);
+      
+      if (response.data.success) {
+        const providerData = response.data.data;
+        
+        // Transform data to match our state structure
+        const formattedProfile = {
+          businessName: providerData.businessName || '',
+          ownerName: user?.name || '',
+          email: providerData.email || '',
+          phone: providerData.phone || '',
+          address: providerData.address?.street || '',
+          city: providerData.address?.city || '',
+          zipCode: providerData.address?.zipCode || '',
+          state: providerData.address?.state || '',
+          latitude: providerData.address?.coordinates?.lat || 0,
+          longitude: providerData.address?.coordinates?.lng || 0,
+          businessHours: {
+            monday: providerData.operatingHours?.monday || { open: '09:00', close: '18:00', closed: false },
+            tuesday: providerData.operatingHours?.tuesday || { open: '09:00', close: '18:00', closed: false },
+            wednesday: providerData.operatingHours?.wednesday || { open: '09:00', close: '18:00', closed: false },
+            thursday: providerData.operatingHours?.thursday || { open: '09:00', close: '18:00', closed: false },
+            friday: providerData.operatingHours?.friday || { open: '09:00', close: '18:00', closed: false },
+            saturday: providerData.operatingHours?.saturday || { open: '09:00', close: '18:00', closed: false },
+            sunday: providerData.operatingHours?.sunday || { open: '', close: '', closed: true }
+          },
+          description: providerData.description || '',
+          businessLicense: providerData.businessLicense || '',
+          rating: providerData.rating?.average || 0,
+          totalReviews: providerData.rating?.count || 0,
+          logoUrl: providerData.images && providerData.images.length > 0 
+            ? `http://localhost:5001${providerData.images[0]}` 
+            : null
+        };
+        
+        setProfile(formattedProfile);
+        setTempProfile(formattedProfile);
+      }
+    } catch (error) {
+      console.error('Error fetching provider profile:', error);
+      alert('Error loading profile data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEdit = () => {
     setTempProfile(profile);
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    setProfile(tempProfile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setSaveLoading(true);
+      
+      // Transform data back to API format
+      const updateData = {
+        businessName: tempProfile.businessName,
+        description: tempProfile.description,
+        businessLicense: tempProfile.businessLicense,
+        address: {
+          street: tempProfile.address,
+          city: tempProfile.city,
+          state: tempProfile.state,
+          zipCode: tempProfile.zipCode,
+          coordinates: {
+            lat: tempProfile.latitude,
+            lng: tempProfile.longitude
+          }
+        },
+        phone: tempProfile.phone,
+        email: tempProfile.email,
+        operatingHours: {
+          monday: { 
+            open: tempProfile.businessHours.monday.open, 
+            close: tempProfile.businessHours.monday.close, 
+            isClosed: tempProfile.businessHours.monday.closed 
+          },
+          tuesday: { 
+            open: tempProfile.businessHours.tuesday.open, 
+            close: tempProfile.businessHours.tuesday.close, 
+            isClosed: tempProfile.businessHours.tuesday.closed 
+          },
+          wednesday: { 
+            open: tempProfile.businessHours.wednesday.open, 
+            close: tempProfile.businessHours.wednesday.close, 
+            isClosed: tempProfile.businessHours.wednesday.closed 
+          },
+          thursday: { 
+            open: tempProfile.businessHours.thursday.open, 
+            close: tempProfile.businessHours.thursday.close, 
+            isClosed: tempProfile.businessHours.thursday.closed 
+          },
+          friday: { 
+            open: tempProfile.businessHours.friday.open, 
+            close: tempProfile.businessHours.friday.close, 
+            isClosed: tempProfile.businessHours.friday.closed 
+          },
+          saturday: { 
+            open: tempProfile.businessHours.saturday.open, 
+            close: tempProfile.businessHours.saturday.close, 
+            isClosed: tempProfile.businessHours.saturday.closed 
+          },
+          sunday: { 
+            open: tempProfile.businessHours.sunday.open, 
+            close: tempProfile.businessHours.sunday.close, 
+            isClosed: tempProfile.businessHours.sunday.closed 
+          }
+        }
+      };
+
+      const response = await api.put(`/providers/${providerId}/profile`, updateData);
+      
+      if (response.data.success) {
+        setProfile(tempProfile);
+        setIsEditing(false);
+        alert('Profile updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert(error.response?.data?.message || 'Error saving profile');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -90,9 +195,6 @@ const ProviderProfile = () => {
     setUploading(true);
 
     try {
-      // For now, we'll use a mock provider ID. In production, get this from auth context
-      const providerId = '507f1f77bcf86cd799439011'; // Replace with actual provider ID from context
-      
       const formData = new FormData();
       formData.append('image', file);
 
@@ -106,6 +208,7 @@ const ProviderProfile = () => {
         const imageUrl = `http://localhost:5001${response.data.data}`;
         setProfile({ ...profile, logoUrl: imageUrl });
         setTempProfile({ ...tempProfile, logoUrl: imageUrl });
+        alert('Logo uploaded successfully!');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -127,6 +230,17 @@ const ProviderProfile = () => {
     sunday: 'Sunday'
   };
 
+  if (loading || !profile) {
+    return (
+      <div className="provider-profile">
+        <div className="profile-container" style={{ textAlign: 'center', padding: '4rem' }}>
+          <div className="spinner"></div>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="provider-profile">
       <div className="profile-container">
@@ -143,13 +257,13 @@ const ProviderProfile = () => {
             </button>
           ) : (
             <div className="edit-actions">
-              <button className="btn-secondary" onClick={handleCancel}>
+              <button className="btn-secondary" onClick={handleCancel} disabled={saveLoading}>
                 <X size={20} />
                 Cancel
               </button>
-              <button className="btn-primary" onClick={handleSave}>
+              <button className="btn-primary" onClick={handleSave} disabled={saveLoading}>
                 <Save size={20} />
-                Save Changes
+                {saveLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           )}

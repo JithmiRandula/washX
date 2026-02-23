@@ -21,6 +21,8 @@ const ProviderNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const providerId = user?.providerId;
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -28,27 +30,27 @@ const ProviderNavbar = () => {
 
   const navigationItems = [
     { 
-      path: '/provider/dashboard', 
+      path: `/provider/${providerId}/dashboard`, 
       label: 'Dashboard', 
       icon: LayoutDashboard 
     },
     { 
-      path: '/provider/services', 
+      path: `/provider/${providerId}/services`, 
       label: 'Services', 
       icon: Package 
     },
     { 
-      path: '/provider/orders', 
+      path: `/provider/${providerId}/orders`, 
       label: 'Orders', 
       icon: Package 
     },
     { 
-      path: '/provider/analytics', 
+      path: `/provider/${providerId}/analytics`, 
       label: 'Analytics', 
       icon: BarChart3 
     },
     { 
-      path: '/provider/profile', 
+      path: `/provider/${providerId}/profile`, 
       label: 'Profile', 
       icon: User 
     }
@@ -59,7 +61,7 @@ const ProviderNavbar = () => {
       <div className="navbar-container">
         {/* Logo Section */}
         <div className="navbar-brand">
-          <Link to="/provider/dashboard" className="brand-link">
+          <Link to={`/provider/${providerId}/dashboard`} className="brand-link">
             <div className="brand-logo">
               <span className="wash-text">Wash</span>
               <span className="x-text">X</span>

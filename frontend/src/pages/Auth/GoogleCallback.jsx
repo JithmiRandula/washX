@@ -14,6 +14,7 @@ const GoogleCallback = () => {
       const userId = searchParams.get('userId');
       const role = searchParams.get('role');
       const needsPassword = searchParams.get('needsPassword');
+      const providerId = searchParams.get('providerId');
       const error = searchParams.get('error');
 
       if (error) {
@@ -30,7 +31,13 @@ const GoogleCallback = () => {
 
       try {
         // Call the googleLogin function from AuthContext
-        await googleLogin(token, userId, role);
+        const userData = await googleLogin(token, userId, role);
+        
+        // Update user data with providerId if available
+        if (providerId) {
+          userData.providerId = providerId;
+          localStorage.setItem('washx_user', JSON.stringify(userData));
+        }
 
         // If new Google user needs to set password, redirect to set password page
         if (needsPassword === 'true') {
@@ -42,7 +49,11 @@ const GoogleCallback = () => {
         if (role === 'admin') {
           navigate('/admin/dashboard');
         } else if (role === 'provider') {
-          navigate('/provider/dashboard');
+          if (providerId) {
+            navigate(`/provider/${providerId}/dashboard`);
+          } else {
+            navigate('/login?error=provider_profile_missing');
+          }
         } else {
           navigate('/customer/dashboard');
         }

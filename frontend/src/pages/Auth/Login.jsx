@@ -24,7 +24,12 @@ const Login = () => {
       if (user.role === 'admin') {
         navigate('/admin/dashboard');
       } else if (user.role === 'provider') {
-        navigate('/provider/dashboard');
+        // Redirect to provider's unique dashboard
+        if (user.providerId) {
+          navigate(`/provider/${user.providerId}/dashboard`);
+        } else {
+          setError('Provider profile not found. Please contact support.');
+        }
       } else {
         navigate('/customer/dashboard');
       }

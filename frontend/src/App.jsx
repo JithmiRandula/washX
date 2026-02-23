@@ -89,9 +89,9 @@ function AppContent() {
             } 
           />
           
-          {/* Provider Routes */}
+          {/* Provider Routes - Dynamic with providerId */}
           <Route 
-            path="/provider/dashboard" 
+            path="/provider/:providerId/dashboard" 
             element={
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderDashboard />
@@ -99,7 +99,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/provider/services" 
+            path="/provider/:providerId/services" 
             element={
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderServices />
@@ -107,7 +107,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/provider/orders" 
+            path="/provider/:providerId/orders" 
             element={
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderOrders />
@@ -115,7 +115,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/provider/analytics" 
+            path="/provider/:providerId/analytics" 
             element={
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderAnalytics />
@@ -123,7 +123,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/provider/profile" 
+            path="/provider/:providerId/profile" 
             element={
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderProfile />

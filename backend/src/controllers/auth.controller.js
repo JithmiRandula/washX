@@ -75,6 +75,12 @@ exports.register = async (req, res) => {
     // Generate token
     const token = generateToken(user._id);
 
+    // If provider, get provider profile
+    let providerProfile = null;
+    if (user.role === 'provider') {
+      providerProfile = await Provider.findOne({ userId: user._id });
+    }
+
     res.status(201).json({
       success: true,
       token,
@@ -85,7 +91,8 @@ exports.register = async (req, res) => {
         role: user.role,
         phone: user.phone,
         isVerified: user.isVerified
-      }
+      },
+      providerId: providerProfile ? providerProfile._id : null
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -148,6 +155,12 @@ exports.login = async (req, res) => {
     // Generate token
     const token = generateToken(user._id);
 
+    // If provider, get provider profile
+    let providerProfile = null;
+    if (user.role === 'provider') {
+      providerProfile = await Provider.findOne({ userId: user._id });
+    }
+
     res.status(200).json({
       success: true,
       token,
@@ -156,7 +169,8 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role
-      }
+      },
+      providerId: providerProfile ? providerProfile._id : null
     });
   } catch (error) {
     res.status(500).json({
@@ -275,16 +289,25 @@ exports.googleCallback = async (req, res) => {
     // Generate JWT token
     const token = generateToken(user._id);
 
+    // If provider, get provider profile
+    let providerParam = '';
+    if (user.role === 'provider') {
+      const providerProfile = await Provider.findOne({ userId: user._id });
+      if (providerProfile) {
+        providerParam = `&providerId=${providerProfile._id}`;
+      }
+    }
+
     // Redirect to frontend with token
     const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
     
     // If new Google user, redirect to set password page
     if (isNewUser) {
-      return res.redirect(`${frontendURL}/auth/google/callback?token=${token}&userId=${user._id}&role=${user.role}&needsPassword=true`);
+      return res.redirect(`${frontendURL}/auth/google/callback?token=${token}&userId=${user._id}&role=${user.role}&needsPassword=true${providerParam}`);
     }
     
     // Existing user, normal redirect
-    res.redirect(`${frontendURL}/auth/google/callback?token=${token}&userId=${user._id}&role=${user.role}`);
+    res.redirect(`${frontendURL}/auth/google/callback?token=${token}&userId=${user._id}&role=${user.role}${providerParam}`);
   } catch (error) {
     console.error('Google callback error:', error);
     const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';

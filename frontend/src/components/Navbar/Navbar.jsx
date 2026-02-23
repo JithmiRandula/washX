@@ -42,7 +42,7 @@ const Navbar = () => {
 
   const getDashboardLink = () => {
     if (isAdmin) return '/admin/dashboard';
-    if (isProvider) return '/provider/dashboard';
+    if (isProvider && user?.providerId) return `/provider/${user.providerId}/dashboard`;
     if (isCustomer) return '/customer/dashboard';
     return '/';
   };
@@ -74,19 +74,19 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Link to="/provider/dashboard" className="navbar-link" onClick={() => setIsOpen(false)}>
+              <Link to={`/provider/${user?.providerId}/dashboard`} className="navbar-link" onClick={() => setIsOpen(false)}>
                 Dashboard
               </Link>
-              <Link to="/provider/services" className="navbar-link" onClick={() => setIsOpen(false)}>
+              <Link to={`/provider/${user?.providerId}/services`} className="navbar-link" onClick={() => setIsOpen(false)}>
                 Services
               </Link>
-              <Link to="/provider/orders" className="navbar-link" onClick={() => setIsOpen(false)}>
+              <Link to={`/provider/${user?.providerId}/orders`} className="navbar-link" onClick={() => setIsOpen(false)}>
                 Orders
               </Link>
-              <Link to="/provider/analytics" className="navbar-link" onClick={() => setIsOpen(false)}>
+              <Link to={`/provider/${user?.providerId}/analytics`} className="navbar-link" onClick={() => setIsOpen(false)}>
                 Analytics
               </Link>
-              <Link to="/provider/profile" className="navbar-link" onClick={() => setIsOpen(false)}>
+              <Link to={`/provider/${user?.providerId}/profile`} className="navbar-link" onClick={() => setIsOpen(false)}>
                 Profile
               </Link>
             </>

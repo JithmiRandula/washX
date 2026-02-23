@@ -114,12 +114,12 @@ exports.createProvider = async (req, res) => {
   }
 };
 
-// @desc    Update provider
-// @route   PUT /api/providers/:id
+// @desc    Update provider (with route param verification)
+// @route   PUT /api/providers/:providerId/profile
 // @access  Private (Provider/Admin)
 exports.updateProvider = async (req, res) => {
   try {
-    let provider = await Provider.findById(req.params.id);
+    const provider = await Provider.findById(req.params.providerId);
 
     if (!provider) {
       return res.status(404).json({
@@ -130,16 +130,25 @@ exports.updateProvider = async (req, res) => {
 
     // Make sure user owns the provider profile or is admin
     if (provider.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
         message: 'Not authorized to update this provider'
       });
     }
 
-    provider = await Provider.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
+    // Update provider fields
+    const allowedUpdates = [
+      'businessName', 'description', 'businessLicense', 'address',
+      'phone', 'email', 'operatingHours', 'isActive'
+    ];
+
+    Object.keys(req.body).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        provider[key] = req.body[key];
+      }
     });
+
+    await provider.save();
 
     res.json({
       success: true,
@@ -154,11 +163,11 @@ exports.updateProvider = async (req, res) => {
 };
 
 // @desc    Upload provider logo/image
-// @route   POST /api/providers/:id/upload
+// @route   POST /api/providers/:providerId/upload
 // @access  Private (Provider/Admin)
 exports.uploadImage = async (req, res) => {
   try {
-    const provider = await Provider.findById(req.params.id);
+    const provider = await Provider.findById(req.params.providerId);
 
     if (!provider) {
       return res.status(404).json({
@@ -169,7 +178,7 @@ exports.uploadImage = async (req, res) => {
 
     // Make sure user owns the provider profile or is admin
     if (provider.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
         message: 'Not authorized to update this provider'
       });
@@ -185,8 +194,13 @@ exports.uploadImage = async (req, res) => {
     // Create the image URL
     const imageUrl = `/uploads/providers/${req.file.filename}`;
 
-    // Add image to provider's images array
-    provider.images.push(imageUrl);
+    // Set as logo (first image or replace first image)
+    if (provider.images.length === 0) {
+      provider.images.push(imageUrl);
+    } else {
+      provider.images[0] = imageUrl; // Replace logo
+    }
+    
     await provider.save();
 
     res.json({

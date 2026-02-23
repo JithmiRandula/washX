@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Package, DollarSign, TrendingUp, Users, Clock, CheckCircle, XCircle, Plus, UserCircle, ClipboardList } from 'lucide-react';
 import './ProviderDashboard.css';
 
 const ProviderDashboard = () => {
   const { user } = useAuth();
+  const { providerId } = useParams();
   const navigate = useNavigate();
   const [orders] = useState([
     { id: '1', customer: 'John Doe', status: 'pending', amount: 45, items: 3, date: '2025-12-08' },
@@ -44,7 +45,7 @@ const ProviderDashboard = () => {
             <h1>Provider Dashboard</h1>
             <p>Welcome back! Here's your business overview</p>
           </div>
-          <Link to="/provider/services" className="btn-primary">
+          <Link to={`/provider/${providerId}/services`} className="btn-primary">
             <Plus size={20} />
             Add New Service
           </Link>
@@ -129,25 +130,25 @@ const ProviderDashboard = () => {
           <div className="quick-actions-provider">
             <h2>Quick Actions</h2>
             <div className="actions-grid">
-              <button className="action-btn" onClick={() => navigate('/provider/services')}>
+              <button className="action-btn" onClick={() => navigate(`/provider/${providerId}/services`)}>
                 <div className="action-icon">
                   <Package size={24} />
                 </div>
                 <span>Manage Services</span>
               </button>
-              <button className="action-btn" onClick={() => navigate('/provider/analytics')}>
+              <button className="action-btn" onClick={() => navigate(`/provider/${providerId}/analytics`)}>
                 <div className="action-icon">
                   <TrendingUp size={24} />
                 </div>
                 <span>View Analytics</span>
               </button>
-              <button className="action-btn" onClick={() => navigate('/provider/orders')}>
+              <button className="action-btn" onClick={() => navigate(`/provider/${providerId}/orders`)}>
                 <div className="action-icon">
                   <ClipboardList size={24} />
                 </div>
                 <span>Manage Orders</span>
               </button>
-              <button className="action-btn" onClick={() => navigate('/provider/profile')}>
+              <button className="action-btn" onClick={() => navigate(`/provider/${providerId}/profile`)}>
                 <div className="action-icon">
                   <UserCircle size={24} />
                 </div>
