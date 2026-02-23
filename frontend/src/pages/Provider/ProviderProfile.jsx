@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { MapPin, Camera, Edit, Save, X, Clock, Phone, Mail, Star } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { MapPin, Camera, Edit, Save, X, Clock, Phone, Mail, Star, Upload } from 'lucide-react';
 import './ProviderProfile.css';
+import api from '../../utils/api';
 
 const ProviderProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const [profile, setProfile] = useState({
     businessName: 'Clean & Fresh Laundry',
     ownerName: 'John Smith',
@@ -26,7 +29,8 @@ const ProviderProfile = () => {
     description: 'Professional laundry service with over 10 years of experience. We use eco-friendly products and offer same-day service.',
     services: ['Regular Wash', 'Dry Cleaning', 'Express Wash', 'Iron Service'],
     rating: 4.8,
-    totalReviews: 156
+    totalReviews: 156,
+    logoUrl: null // Add logo URL
   });
 
   const [tempProfile, setTempProfile] = useState(profile);
@@ -61,6 +65,54 @@ const ProviderProfile = () => {
         }
       }
     });
+  };
+
+  const handleLogoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size should be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // For now, we'll use a mock provider ID. In production, get this from auth context
+      const providerId = '507f1f77bcf86cd799439011'; // Replace with actual provider ID from context
+      
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.post(`/providers/${providerId}/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data.success) {
+        const imageUrl = `http://localhost:5001${response.data.data}`;
+        setProfile({ ...profile, logoUrl: imageUrl });
+        setTempProfile({ ...tempProfile, logoUrl: imageUrl });
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(error.response?.data?.message || 'Error uploading image');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -110,9 +162,33 @@ const ProviderProfile = () => {
             
             <div className="business-header">
               <div className="business-logo">
-                <div className="logo-placeholder">
-                  <Camera size={32} />
-                  <span>Upload Logo</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <div className="logo-placeholder" onClick={handleLogoClick}>
+                  {uploading ? (
+                    <div className="uploading-state">
+                      <div className="spinner"></div>
+                      <span>Uploading...</span>
+                    </div>
+                  ) : profile.logoUrl ? (
+                    <div className="logo-image-container">
+                      <img src={profile.logoUrl} alt="Business Logo" className="logo-image" />
+                      <div className="logo-overlay">
+                        <Camera size={24} />
+                        <span>Change Logo</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Camera size={32} />
+                      <span>Upload Logo</span>
+                    </>
+                  )}
                 </div>
               </div>
               
