@@ -172,62 +172,110 @@ const seedData = async () => {
         providerId: providers[0]._id,
         name: 'Wash & Fold',
         description: 'Standard washing and folding service for everyday clothes',
-        category: 'wash-and-fold',
-        price: 5.99,
-        priceUnit: 'per-kg',
-        turnaroundTime: 24,
-        isActive: true
+        category: 'Washing',
+        prices: [{ unit: 'per kg', price: 5.99 }],
+        duration: '24 hours',
+        minOrder: '2 kg',
+        features: [
+          'Fabric-safe detergents',
+          'Expert folding',
+          'Quality checked',
+          'Sorted by color'
+        ],
+        specialInstructions: 'Separate whites and colors for best results',
+        active: true
       },
       {
         providerId: providers[0]._id,
         name: 'Express Wash & Fold',
         description: 'Fast washing and folding service - ready in 12 hours',
-        category: 'wash-and-fold',
-        price: 8.99,
-        priceUnit: 'per-kg',
-        turnaroundTime: 12,
-        isActive: true
+        category: 'Express',
+        prices: [{ unit: 'per kg', price: 8.99 }],
+        duration: '12 hours',
+        minOrder: '3 kg',
+        features: [
+          'Same-day service',
+          'Priority handling',
+          'Premium detergents',
+          'Rush processing'
+        ],
+        specialInstructions: 'Available for orders placed before 12 PM',
+        active: true
       },
       {
         providerId: providers[0]._id,
         name: 'Ironing Service',
         description: 'Professional ironing for crisp, wrinkle-free clothes',
-        category: 'ironing',
-        price: 3.99,
-        priceUnit: 'per-item',
-        turnaroundTime: 24,
-        isActive: true
+        category: 'Ironing',
+        prices: [{ unit: 'per piece', price: 3.99 }],
+        duration: '24 hours',
+        minOrder: '5 pieces',
+        features: [
+          'Steam ironing',
+          'Crease-free finish',
+          'Hanger service',
+          'Starch option available'
+        ],
+        specialInstructions: '',
+        active: true
       },
       // Services for Premium Clean Services
       {
         providerId: providers[1]._id,
         name: 'Dry Cleaning',
         description: 'Premium dry cleaning for delicate garments',
-        category: 'dry-cleaning',
-        price: 12.99,
-        priceUnit: 'per-item',
-        turnaroundTime: 48,
-        isActive: true
+        category: 'Dry Clean',
+        prices: [
+          { unit: 'per piece', price: 12.99 },
+          { unit: 'per set', price: 29.99 }
+        ],
+        duration: '48 hours',
+        minOrder: '1 piece',
+        features: [
+          'Eco-friendly solvents',
+          'Stain treatment',
+          'Quality inspection',
+          'Protective packaging'
+        ],
+        specialInstructions: 'Special care for delicate fabrics',
+        active: true
       },
       {
         providerId: providers[1]._id,
         name: 'Wash & Iron Premium',
         description: 'Complete wash and iron service with premium care',
-        category: 'wash-and-iron',
-        price: 9.99,
-        priceUnit: 'per-kg',
-        turnaroundTime: 36,
-        isActive: true
+        category: 'Premium',
+        prices: [{ unit: 'per kg', price: 9.99 }],
+        duration: '36 hours',
+        minOrder: '3 kg',
+        features: [
+          'Premium detergents',
+          'Hand ironing',
+          'Packaging included',
+          'Fabric softener'
+        ],
+        specialInstructions: '',
+        active: true
       },
       {
         providerId: providers[1]._id,
         name: 'Specialty Cleaning',
         description: 'Specialized cleaning for wedding dresses, suits, and delicate items',
-        category: 'specialty',
-        price: 25.99,
-        priceUnit: 'per-item',
-        turnaroundTime: 72,
-        isActive: true
+        category: 'Premium',
+        prices: [
+          { unit: 'per item', price: 25.99 },
+          { unit: 'per bundle', price: 45.99 }
+        ],
+        duration: '3-5 days',
+        minOrder: '1 item',
+        features: [
+          'Deep cleaning',
+          'Sanitization',
+          'Odor removal',
+          'UV treatment'
+        ],
+        specialInstructions: 'Provide item dimensions if possible',
+        active: true
       }
     ]);
     console.log(`✅ Created ${services.length} services`);

@@ -59,6 +59,7 @@ app.use('/api/providers', require('./routes/provider.routes'));
 app.use('/api/services', require('./routes/service.routes'));
 app.use('/api/bookings', require('./routes/booking.routes'));
 app.use('/api/reviews', require('./routes/review.routes'));
+app.use('/api/provider-services', require('./routes/providerService.routes'));
 
 // Health check route
 app.get('/api/health', (req, res) => {

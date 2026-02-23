@@ -18,7 +18,7 @@ const serviceSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Washing', 'Dry Clean', 'Ironing', 'Premium']
+    enum: ['Washing', 'Dry Clean', 'Ironing', 'Premium', 'Express']
   },
   prices: [{
     unit: {
@@ -28,21 +28,21 @@ const serviceSchema = new mongoose.Schema({
     },
     price: {
       type: Number,
-      required: true
+      required: true,
+      min: 0
     }
   }],
   duration: {
     type: String,
-    required: true // e.g., "2 hours", "24 hours"
+    required: true // e.g., "2 hours", "24 hours", "2-3 days"
   },
   minOrder: {
     type: String,
     default: '' // e.g., "2 kg", "3 items"
   },
-  features: {
-    type: String,
-    default: '' // Comma-separated features
-  },
+  features: [{
+    type: String
+  }],
   specialInstructions: {
     type: String,
     default: ''
@@ -54,5 +54,9 @@ const serviceSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Index for faster queries
+serviceSchema.index({ providerId: 1, active: 1 });
+serviceSchema.index({ category: 1 });
 
 module.exports = mongoose.model('Service', serviceSchema);
