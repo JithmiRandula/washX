@@ -55,10 +55,18 @@ const SetPassword = () => {
             navigate('/admin/dashboard');
             break;
           case 'provider':
-            navigate('/provider/dashboard');
+            if (user?.providerId) {
+              navigate(`/provider/${user.providerId}/dashboard`);
+            } else {
+              navigate('/');
+            }
             break;
           default:
-            navigate('/customer/dashboard');
+            if (user?.customerId) {
+              navigate(`/customer/${user.customerId}/dashboard`);
+            } else {
+              navigate('/');
+            }
         }
       }
     } catch (err) {
@@ -75,10 +83,18 @@ const SetPassword = () => {
         navigate('/admin/dashboard');
         break;
       case 'provider':
-        navigate('/provider/dashboard');
+        if (user?.providerId) {
+          navigate(`/provider/${user.providerId}/dashboard`);
+        } else {
+          navigate('/');
+        }
         break;
       default:
-        navigate('/customer/dashboard');
+        if (user?.customerId) {
+          navigate(`/customer/${user.customerId}/dashboard`);
+        } else {
+          navigate('/');
+        }
     }
   };
 

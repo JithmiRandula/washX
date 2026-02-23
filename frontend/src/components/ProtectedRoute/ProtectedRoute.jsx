@@ -4,7 +4,7 @@ import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, loading } = useAuth();
-  const { providerId } = useParams();
+  const { providerId, customerId } = useParams();
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
@@ -20,6 +20,11 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   // For provider routes, verify the providerId matches the logged-in user's providerId
   if (providerId && user.role === 'provider' && user.providerId !== providerId) {
+    return <Navigate to="/" replace />;
+  }
+
+  // For customer routes, verify the customerId matches the logged-in user's customerId
+  if (customerId && user.role === 'customer' && user.customerId !== customerId) {
     return <Navigate to="/" replace />;
   }
 

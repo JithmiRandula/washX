@@ -55,9 +55,9 @@ function AppContent() {
           <Route path="/providers" element={<HomeProviders />} />
           <Route path="/provider/:id" element={<ProviderDetails />} />
           
-          {/* Customer Routes */}
+          {/* Customer Routes - Dynamic with customerId */}
           <Route 
-            path="/customer/dashboard" 
+            path="/customer/:customerId/dashboard" 
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerDashboard />
@@ -65,7 +65,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/customer/findproviders" 
+            path="/customer/:customerId/findproviders" 
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <Providers />
@@ -73,7 +73,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/customer/mybooking" 
+            path="/customer/:customerId/mybooking" 
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <Bookings />
@@ -81,7 +81,7 @@ function AppContent() {
             } 
           />
           <Route 
-            path="/customer/profile" 
+            path="/customer/:customerId/profile" 
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerProfile />

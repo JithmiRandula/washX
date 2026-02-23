@@ -140,9 +140,19 @@ const Register = () => {
       } else if (user.role === 'admin') {
         navigate('/admin/dashboard');
       } else if (user.role === 'provider') {
-        navigate('/provider/dashboard');
+        if (user.providerId) {
+          navigate(`/provider/${user.providerId}/dashboard`);
+        } else {
+          navigate('/');
+        }
+      } else if (user.role === 'customer') {
+        if (user.customerId) {
+          navigate(`/customer/${user.customerId}/dashboard`);
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/customer/dashboard');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');

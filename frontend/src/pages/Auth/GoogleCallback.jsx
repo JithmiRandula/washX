@@ -54,8 +54,14 @@ const GoogleCallback = () => {
           } else {
             navigate('/login?error=provider_profile_missing');
           }
+        } else if (role === 'customer') {
+          if (userId) {
+            navigate(`/customer/${userId}/dashboard`);
+          } else {
+            navigate('/login?error=customer_profile_missing');
+          }
         } else {
-          navigate('/customer/dashboard');
+          navigate('/');
         }
       } catch (err) {
         console.error('Login error:', err);

@@ -92,7 +92,8 @@ exports.register = async (req, res) => {
         phone: user.phone,
         isVerified: user.isVerified
       },
-      providerId: providerProfile ? providerProfile._id : null
+      providerId: providerProfile ? providerProfile._id : null,
+      customerId: user.role === 'customer' ? user._id : null
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -170,7 +171,8 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role
       },
-      providerId: providerProfile ? providerProfile._id : null
+      providerId: providerProfile ? providerProfile._id : null,
+      customerId: user.role === 'customer' ? user._id : null
     });
   } catch (error) {
     res.status(500).json({

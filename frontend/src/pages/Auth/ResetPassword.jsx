@@ -62,10 +62,18 @@ const ResetPassword = () => {
                 navigate('/admin/dashboard');
                 break;
               case 'provider':
-                navigate('/provider/dashboard');
+                if (response.data.providerId) {
+                  navigate(`/provider/${response.data.providerId}/dashboard`);
+                } else {
+                  navigate('/');
+                }
                 break;
               default:
-                navigate('/customer/dashboard');
+                if (response.data.customerId) {
+                  navigate(`/customer/${response.data.customerId}/dashboard`);
+                } else {
+                  navigate('/');
+                }
             }
           }, 2000);
         }

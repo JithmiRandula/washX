@@ -30,8 +30,15 @@ const Login = () => {
         } else {
           setError('Provider profile not found. Please contact support.');
         }
+      } else if (user.role === 'customer') {
+        // Redirect to customer's unique dashboard
+        if (user.customerId) {
+          navigate(`/customer/${user.customerId}/dashboard`);
+        } else {
+          setError('Customer profile not found. Please contact support.');
+        }
       } else {
-        navigate('/customer/dashboard');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Invalid email or password');

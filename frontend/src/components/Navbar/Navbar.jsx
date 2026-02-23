@@ -43,7 +43,7 @@ const Navbar = () => {
   const getDashboardLink = () => {
     if (isAdmin) return '/admin/dashboard';
     if (isProvider && user?.providerId) return `/provider/${user.providerId}/dashboard`;
-    if (isCustomer) return '/customer/dashboard';
+    if (isCustomer && user?.customerId) return `/customer/${user.customerId}/dashboard`;
     return '/';
   };
 
@@ -111,11 +111,11 @@ const Navbar = () => {
                   </Link>
                   {isCustomer && (
                     <>
-                      <Link to="/customer/orders" className="dropdown-item">
+                      <Link to={`/customer/${user?.customerId}/mybooking`} className="dropdown-item">
                         <ShoppingBag size={18} />
                         <span>My Orders</span>
                       </Link>
-                      <Link to="/customer/profile" className="dropdown-item">
+                      <Link to={`/customer/${user?.customerId}/profile`} className="dropdown-item">
                         <User size={18} />
                         <span>Profile</span>
                       </Link>

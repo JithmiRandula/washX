@@ -47,7 +47,8 @@ export const AuthProvider = ({ children }) => {
         const userData = {
           ...response.data.user,
           token: response.data.token,
-          providerId: response.data.providerId // Store providerId
+          providerId: response.data.providerId, // Store providerId
+          customerId: response.data.customerId // Store customerId
         };
         localStorage.setItem('washx_user', JSON.stringify(userData));
         setUser(userData);
@@ -78,7 +79,8 @@ export const AuthProvider = ({ children }) => {
         const newUser = {
           ...response.data.user,
           token: response.data.token,
-          providerId: response.data.providerId // Store providerId
+          providerId: response.data.providerId, // Store providerId
+          customerId: response.data.customerId // Store customerId
         };
         localStorage.setItem('washx_user', JSON.stringify(newUser));
         setUser(newUser);

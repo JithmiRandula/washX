@@ -10,11 +10,13 @@ const CustomerNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const customerId = user?.customerId;
+
   const navItems = [
-    { path: '/customer/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/customer/findproviders', label: 'Find Providers', icon: <Search size={20} /> },
-    { path: '/customer/mybooking', label: 'My Booking', icon: <Package size={20} /> },
-    { path: '/customer/profile', label: 'Profile', icon: <User size={20} /> }
+    { path: `/customer/${customerId}/dashboard`, label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { path: `/customer/${customerId}/findproviders`, label: 'Find Providers', icon: <Search size={20} /> },
+    { path: `/customer/${customerId}/mybooking`, label: 'My Booking', icon: <Package size={20} /> },
+    { path: `/customer/${customerId}/profile`, label: 'Profile', icon: <User size={20} /> }
   ];
 
   const handleLogout = () => {
@@ -28,7 +30,7 @@ const CustomerNavbar = () => {
   return (
     <nav className="customer-navbar">
       <div className="customer-navbar-container">
-        <Link to="/customer/dashboard" className="customer-navbar-logo">
+        <Link to={`/customer/${customerId}/dashboard`} className="customer-navbar-logo">
           <img src="/washx logo.png" alt="WashX" className="customer-logo-image" />
         </Link>
 
