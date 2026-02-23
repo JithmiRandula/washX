@@ -11,6 +11,7 @@ const ProviderProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const fileInputRef = useRef(null);
   const [profile, setProfile] = useState(null);
@@ -18,15 +19,25 @@ const ProviderProfile = () => {
 
   // Fetch provider profile on mount
   useEffect(() => {
-    fetchProviderProfile();
+    if (providerId) {
+      fetchProviderProfile();
+    }
   }, [providerId]);
 
   const fetchProviderProfile = async () => {
+    if (!providerId) {
+      console.error('Provider ID is missing');
+      setError('Provider ID is missing. Please login again.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get(`/providers/${providerId}`);
       
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
         const providerData = response.data.data;
         
         // Transform data to match our state structure
@@ -52,6 +63,7 @@ const ProviderProfile = () => {
           },
           description: providerData.description || '',
           businessLicense: providerData.businessLicense || '',
+          services: providerData.services || [], // Add services array
           rating: providerData.rating?.average || 0,
           totalReviews: providerData.rating?.count || 0,
           logoUrl: providerData.images && providerData.images.length > 0 
@@ -61,10 +73,12 @@ const ProviderProfile = () => {
         
         setProfile(formattedProfile);
         setTempProfile(formattedProfile);
+      } else {
+        setError('Failed to load profile data');
       }
     } catch (error) {
       console.error('Error fetching provider profile:', error);
-      alert('Error loading profile data');
+      setError(error.response?.data?.message || 'Error loading profile data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -234,8 +248,37 @@ const ProviderProfile = () => {
     return (
       <div className="provider-profile">
         <div className="profile-container" style={{ textAlign: 'center', padding: '4rem' }}>
-          <div className="spinner"></div>
-          <p>Loading profile...</p>
+          {loading ? (
+            <>
+              <div className="spinner"></div>
+              <p>Loading profile...</p>
+            </>
+          ) : error ? (
+            <>
+              <div style={{ color: '#dc2626', fontSize: '1.2rem', marginBottom: '1rem' }}>
+                ⚠️ Error Loading Profile
+              </div>
+              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>{error}</p>
+              <button 
+                className="btn-primary" 
+                onClick={() => fetchProviderProfile()}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                Try Again
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ color: '#6b7280' }}>No profile data available</p>
+              <button 
+                className="btn-primary" 
+                onClick={() => fetchProviderProfile()}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}
+              >
+                Reload Profile
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -457,53 +500,58 @@ const ProviderProfile = () => {
             <h2>Business Hours</h2>
             
             <div className="hours-grid">
-              {days.map((day) => (
-                <div key={day} className="hour-row">
-                  <div className="day-label">
-                    <Clock size={16} />
-                    <span>{dayLabels[day]}</span>
+              {days.map((day) => {
+                const dayHours = profile.businessHours?.[day] || { open: '09:00', close: '18:00', closed: false };
+                const tempDayHours = tempProfile.businessHours?.[day] || { open: '09:00', close: '18:00', closed: false };
+                
+                return (
+                  <div key={day} className="hour-row">
+                    <div className="day-label">
+                      <Clock size={16} />
+                      <span>{dayLabels[day]}</span>
+                    </div>
+                    
+                    {isEditing ? (
+                      <div className="hour-inputs">
+                        <label className="closed-label">
+                          <input
+                            type="checkbox"
+                            checked={tempDayHours.closed}
+                            onChange={(e) => handleHoursChange(day, 'closed', e.target.checked)}
+                          />
+                          Closed
+                        </label>
+                        
+                        {!tempDayHours.closed && (
+                          <div className="time-inputs">
+                            <input
+                              type="time"
+                              value={tempDayHours.open}
+                              onChange={(e) => handleHoursChange(day, 'open', e.target.value)}
+                            />
+                            <span>to</span>
+                            <input
+                              type="time"
+                              value={tempDayHours.close}
+                              onChange={(e) => handleHoursChange(day, 'close', e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="hour-display">
+                        {dayHours.closed ? (
+                          <span className="closed">Closed</span>
+                        ) : (
+                          <span>
+                            {dayHours.open} - {dayHours.close}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  
-                  {isEditing ? (
-                    <div className="hour-inputs">
-                      <label className="closed-label">
-                        <input
-                          type="checkbox"
-                          checked={tempProfile.businessHours[day].closed}
-                          onChange={(e) => handleHoursChange(day, 'closed', e.target.checked)}
-                        />
-                        Closed
-                      </label>
-                      
-                      {!tempProfile.businessHours[day].closed && (
-                        <div className="time-inputs">
-                          <input
-                            type="time"
-                            value={tempProfile.businessHours[day].open}
-                            onChange={(e) => handleHoursChange(day, 'open', e.target.value)}
-                          />
-                          <span>to</span>
-                          <input
-                            type="time"
-                            value={tempProfile.businessHours[day].close}
-                            onChange={(e) => handleHoursChange(day, 'close', e.target.value)}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="hour-display">
-                      {profile.businessHours[day].closed ? (
-                        <span className="closed">Closed</span>
-                      ) : (
-                        <span>
-                          {profile.businessHours[day].open} - {profile.businessHours[day].close}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -511,11 +559,17 @@ const ProviderProfile = () => {
           <div className="profile-section">
             <h2>Services Offered</h2>
             <div className="services-list">
-              {profile.services.map((service, index) => (
-                <span key={index} className="service-tag">
-                  {service}
-                </span>
-              ))}
+              {profile.services && profile.services.length > 0 ? (
+                profile.services.map((service, index) => (
+                  <span key={index} className="service-tag">
+                    {typeof service === 'string' ? service : service.name || 'Service'}
+                  </span>
+                ))
+              ) : (
+                <p style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                  No services added yet. Add services to display them here.
+                </p>
+              )}
             </div>
           </div>
         </div>
