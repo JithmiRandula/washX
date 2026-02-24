@@ -95,7 +95,7 @@ const ProviderProfile = () => {
           rating: providerData.rating?.average || 0,
           totalReviews: providerData.rating?.count || 0,
           logoUrl: providerData.images && providerData.images.length > 0 
-            ? `http://localhost:5001${providerData.images[0]}` 
+            ? providerData.images[0] // Cloudinary returns full URL
             : null
         };
         
@@ -304,6 +304,7 @@ const ProviderProfile = () => {
       const formData = new FormData();
       formData.append('image', file);
 
+      console.log('💾 Uploading image to Cloudinary...');
       const response = await api.post(`/providers/${providerId}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -311,13 +312,19 @@ const ProviderProfile = () => {
       });
 
       if (response.data.success) {
-        const imageUrl = `http://localhost:5001${response.data.data}`;
+        const imageUrl = response.data.data; // Cloudinary returns full URL
+        console.log('✅ Image uploaded successfully:', imageUrl);
+        
         setProfile({ ...profile, logoUrl: imageUrl });
         setTempProfile({ ...tempProfile, logoUrl: imageUrl });
+        
         alert('Logo uploaded successfully!');
+        
+        // Refresh provider data to ensure sync
+        await fetchProviderProfile();
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ Upload error:', error);
       alert(error.response?.data?.message || 'Error uploading image');
     } finally {
       setUploading(false);
@@ -410,7 +417,7 @@ const ProviderProfile = () => {
             <h2>Business Information</h2>
             
             <div className="business-header">
-              <div className="business-logo">
+              <div className="provider-logo-wrapper">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -418,27 +425,27 @@ const ProviderProfile = () => {
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />
-                <div className="logo-placeholder" onClick={handleLogoClick}>
-                  {uploading ? (
-                    <div className="uploading-state">
+                {uploading ? (
+                  <div className="provider-logo-placeholder">
+                    <div className="provider-logo-uploading">
                       <div className="spinner"></div>
                       <span>Uploading...</span>
                     </div>
-                  ) : profile.logoUrl ? (
-                    <div className="logo-image-container">
-                      <img src={profile.logoUrl} alt="Business Logo" className="logo-image" />
-                      <div className="logo-overlay">
-                        <Camera size={24} />
-                        <span>Change Logo</span>
-                      </div>
+                  </div>
+                ) : profile.logoUrl ? (
+                  <div className="provider-logo-image-wrapper" onClick={handleLogoClick}>
+                    <img src={profile.logoUrl} alt="Business Logo" className="provider-logo-img" />
+                    <div className="provider-logo-hover-overlay">
+                      <Camera size={24} />
+                      <span>Change Logo</span>
                     </div>
-                  ) : (
-                    <>
-                      <Camera size={32} />
-                      <span>Upload Logo</span>
-                    </>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="provider-logo-placeholder" onClick={handleLogoClick}>
+                    <Camera size={32} />
+                    <span>Upload Logo</span>
+                  </div>
+                )}
               </div>
               
               <div className="business-details">
@@ -464,76 +471,81 @@ const ProviderProfile = () => {
               </div>
             </div>
 
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Owner Name</label>
+            <div className="provider-info-grid">
+              <div className="provider-info-item">
+                <label className="provider-info-label">OWNER NAME</label>
                 {isEditing ? (
                   <input
                     type="text"
+                    className="provider-info-input"
                     value={tempProfile.ownerName}
                     onChange={(e) => handleInputChange('ownerName', e.target.value)}
                   />
                 ) : (
-                  <span>{profile.ownerName}</span>
+                  <div className="provider-info-value">{profile.ownerName}</div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>Email</label>
+              <div className="provider-info-item">
+                <label className="provider-info-label">EMAIL</label>
                 {isEditing ? (
                   <input
                     type="email"
+                    className="provider-info-input"
                     value={tempProfile.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                   />
                 ) : (
-                  <span className="contact-info">
-                    <Mail size={16} />
+                  <div className="provider-info-value provider-info-with-icon">
+                    <Mail size={18} />
                     {profile.email}
-                  </span>
+                  </div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>Phone</label>
+              <div className="provider-info-item">
+                <label className="provider-info-label">PHONE</label>
                 {isEditing ? (
                   <input
                     type="tel"
+                    className="provider-info-input"
                     value={tempProfile.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
                   />
                 ) : (
-                  <span className="contact-info">
-                    <Phone size={16} />
+                  <div className="provider-info-value provider-info-with-icon">
+                    <Phone size={18} />
                     {profile.phone}
-                  </span>
+                  </div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>Business License Number</label>
+              <div className="provider-info-item">
+                <label className="provider-info-label">BUSINESS LICENSE NUMBER</label>
                 {isEditing ? (
                   <input
                     type="text"
+                    className="provider-info-input"
                     value={tempProfile.businessLicense}
                     onChange={(e) => handleInputChange('businessLicense', e.target.value)}
                     placeholder="Enter your business license number"
                   />
                 ) : (
-                  <span>{profile.businessLicense}</span>
+                  <div className="provider-info-value provider-license-badge">{profile.businessLicense}</div>
                 )}
               </div>
 
-              <div className="form-group full-width">
-                <label>Business Description</label>
+              <div className="provider-info-item provider-info-full-width">
+                <label className="provider-info-label">BUSINESS DESCRIPTION</label>
                 {isEditing ? (
                   <textarea
+                    className="provider-info-textarea"
                     value={tempProfile.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows="3"
                   />
                 ) : (
-                  <p>{profile.description}</p>
+                  <div className="provider-info-description">{profile.description}</div>
                 )}
               </div>
             </div>
@@ -543,60 +555,64 @@ const ProviderProfile = () => {
           <div className="profile-section">
             <h2>Location & Address</h2>
             
-            <div className="form-grid">
-              <div className="form-group full-width">
-                <label>Street Address</label>
+            <div className="provider-location-grid">
+              <div className="provider-info-item provider-info-full-width">
+                <label className="provider-info-label">STREET ADDRESS</label>
                 {isEditing ? (
                   <input
                     type="text"
+                    className="provider-info-input"
                     value={tempProfile.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
                   />
                 ) : (
-                  <span className="contact-info">
-                    <MapPin size={16} />
+                  <div className="provider-info-value provider-info-with-icon">
+                    <MapPin size={18} />
                     {profile.address}
-                  </span>
+                  </div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>City</label>
+              <div className="provider-info-item">
+                <label className="provider-info-label">CITY</label>
                 {isEditing ? (
                   <input
                     type="text"
+                    className="provider-info-input"
                     value={tempProfile.city}
                     onChange={(e) => handleInputChange('city', e.target.value)}
                   />
                 ) : (
-                  <span>{profile.city}</span>
+                  <div className="provider-info-value">{profile.city}</div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>State</label>
+              <div className="provider-info-item">
+                <label className="provider-info-label">STATE</label>
                 {isEditing ? (
                   <input
                     type="text"
+                    className="provider-info-input"
                     value={tempProfile.state}
                     onChange={(e) => handleInputChange('state', e.target.value)}
                     placeholder="e.g., CA, NY, TX"
                   />
                 ) : (
-                  <span>{profile.state}</span>
+                  <div className="provider-info-value">{profile.state}</div>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>ZIP Code</label>
+              <div className="provider-info-item">
+                <label className="provider-info-label">ZIP CODE</label>
                 {isEditing ? (
                   <input
                     type="text"
+                    className="provider-info-input"
                     value={tempProfile.zipCode}
                     onChange={(e) => handleInputChange('zipCode', e.target.value)}
                   />
                 ) : (
-                  <span>{profile.zipCode}</span>
+                  <div className="provider-info-value">{profile.zipCode}</div>
                 )}
               </div>
             </div>
