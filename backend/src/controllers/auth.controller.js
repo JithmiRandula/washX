@@ -42,34 +42,44 @@ exports.register = async (req, res) => {
 
     // If role is provider, create provider profile
     if (user.role === 'provider') {
-      await Provider.create({
-        userId: user._id,
-        businessName: name,
-        description: 'New provider - Please update your business profile',
-        businessLicense: 'PENDING',
-        address: {
-          street: address || 'Not provided',
-          city: 'Not provided',
-          state: 'Not provided',
-          zipCode: '00000',
-          coordinates: { lat: 0, lng: 0 }
-        },
-        phone: phone,
-        email: email,
-        images: [],
-        services: [],
-        operatingHours: {
-          monday: { open: '09:00', close: '18:00', isClosed: false },
-          tuesday: { open: '09:00', close: '18:00', isClosed: false },
-          wednesday: { open: '09:00', close: '18:00', isClosed: false },
-          thursday: { open: '09:00', close: '18:00', isClosed: false },
-          friday: { open: '09:00', close: '18:00', isClosed: false },
-          saturday: { open: '09:00', close: '18:00', isClosed: false },
-          sunday: { open: '', close: '', isClosed: true }
-        },
-        isVerified: false,
-        isActive: true
-      });
+      try {
+        const providerData = {
+          userId: user._id,
+          businessName: name,
+          description: 'New provider - Please update your business profile',
+          businessLicense: 'PENDING',
+          address: {
+            street: address || 'Not provided',
+            city: 'Not provided',
+            state: 'Not provided',
+            zipCode: '00000',
+            coordinates: { lat: 0, lng: 0 }
+          },
+          phone: phone,
+          email: email,
+          images: [],
+          services: [],
+          operatingHours: {
+            monday: { open: '09:00', close: '18:00', isClosed: false },
+            tuesday: { open: '09:00', close: '18:00', isClosed: false },
+            wednesday: { open: '09:00', close: '18:00', isClosed: false },
+            thursday: { open: '09:00', close: '18:00', isClosed: false },
+            friday: { open: '09:00', close: '18:00', isClosed: false },
+            saturday: { open: '09:00', close: '18:00', isClosed: false },
+            sunday: { open: '', close: '', isClosed: true }
+          },
+          isVerified: false,
+          isActive: true
+        };
+        
+        const newProvider = await Provider.create(providerData);
+        console.log('✅ Provider profile created:', newProvider.businessName, '- ID:', newProvider._id);
+      } catch (providerError) {
+        console.error('❌ Error creating provider profile:', providerError);
+        // If provider creation fails, delete the user to maintain consistency
+        await User.findByIdAndDelete(user._id);
+        throw new Error('Failed to create provider profile: ' + providerError.message);
+      }
     }
 
     // Generate token

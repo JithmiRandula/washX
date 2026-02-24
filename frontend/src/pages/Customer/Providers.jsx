@@ -40,11 +40,12 @@
  *    - 3D Secure: 4000 0027 6000 3184
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
+import api from '../../utils/api';
 import './Providers.css';
 
 const Providers = () => {
@@ -98,73 +99,59 @@ const Providers = () => {
     serviceType: 'all'
   });
 
-  // Sample providers data with detailed information
-  const [providers] = useState([
-    {
-      id: '1',
-      name: 'CleanWash Express',
-      image: '/api/placeholder/300/200',
-      rating: 4.5,
-      address: '123 Main St, Downtown',
-      phone: '+1 234-567-8900',
-      email: 'info@cleanwash.com',
-      distance: 2.3,
-      services: ['Dry Cleaning', 'Wash & Fold', 'Express Service'],
-      priceRange: '15-45',
-      description: 'Professional dry cleaning with eco-friendly solvents and premium fabric care. Our state-of-the-art facility uses advanced cleaning technologies to ensure your garments receive the highest quality treatment. We specialize in delicate fabrics, designer clothing, and everyday wear with expert stain removal, precise pressing, and careful handling.',
-      available: true,
-      reviews: 124,
-      specialties: ['Silk Care', 'Leather Cleaning', 'Eco-Friendly']
-    },
-    {
-      id: '2',
-      name: 'Premium Laundry Care',
-      image: '/api/placeholder/300/200',
-      rating: 4.8,
-      address: '456 Oak Ave, Midtown',
-      phone: '+1 234-567-8901',
-      email: 'contact@premium.com',
-      distance: 1.8,
-      services: ['Premium Care', 'Steam Press', 'Alterations'],
-      priceRange: '20-75',
-      description: 'Premium laundry service with hand-pressed finishing and stain removal. We offer the finest quality cleaning for luxury garments and business attire with personalized attention to detail.',
-      available: true,
-      reviews: 89,
-      specialties: ['Luxury Garments', 'Hand Pressing', 'Same Day Service']
-    },
-    {
-      id: '3',
-      name: 'Express Wash Co.',
-      image: '/api/placeholder/300/200',
-      rating: 4.3,
-      address: '789 Pine St, Uptown',
-      phone: '+1 234-567-8902',
-      email: 'hello@expresswash.com',
-      distance: 3.1,
-      services: ['Express Service', 'Ironing', 'Commercial Cleaning'],
-      priceRange: '12-35',
-      description: 'Fast and efficient laundry service with same-day delivery options. Perfect for busy professionals who need reliable and quick turnaround times.',
-      available: true,
-      reviews: 156,
-      specialties: ['Same Day', 'Bulk Orders', '24/7 Pickup']
-    },
-    {
-      id: '4',
-      name: 'EcoClean Solutions',
-      image: '/api/placeholder/300/200',
-      rating: 4.6,
-      address: '321 Green Ave, Eco District',
-      phone: '+1 234-567-8903',
-      email: 'info@ecoclean.com',
-      distance: 2.9,
-      services: ['Eco-Friendly Cleaning', 'Organic Care', 'Green Pressing'],
-      priceRange: '18-50',
-      description: 'Environmentally conscious cleaning using only biodegradable and eco-friendly products. Safe for your clothes and the planet.',
-      available: true,
-      reviews: 78,
-      specialties: ['Eco-Friendly', 'Sensitive Skin Safe', 'Organic Products']
-    }
-  ]);
+  // Providers data from API
+  const [providers, setProviders] = useState([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [providersError, setProvidersError] = useState(null);
+
+  // Fetch providers from API
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setProvidersLoading(true);
+        setProvidersError(null);
+        console.log('🔍 Fetching providers from API...');
+        const response = await api.get('/providers');
+        
+        console.log('✅ Received providers:', response.data.count);
+        
+        if (response.data.success) {
+          // Transform backend data to match frontend structure
+          const transformedProviders = response.data.data.map(provider => {
+            console.log('📦 Transforming provider:', provider.businessName);
+            return {
+              id: provider._id,
+              name: provider.businessName,
+              image: provider.images && provider.images.length > 0 
+                ? `http://localhost:5001${provider.images[0]}` 
+                : '/wash1.jpg',
+              rating: provider.rating?.average || 0,
+              address: `${provider.address?.street || ''}, ${provider.address?.city || ''}`,
+              phone: provider.phone,
+              email: provider.email,
+              distance: 2.5, // Default distance, can be calculated based on user location
+              services: [], // Will be populated if needed
+              priceRange: '15-45', // Default price range
+              description: provider.description || 'No description available',
+              available: provider.isActive,
+              reviews: provider.rating?.count || 0,
+              specialties: []
+            };
+          });
+          
+          console.log('✅ Transformed providers:', transformedProviders.length);
+          setProviders(transformedProviders);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching providers:', error);
+        setProvidersError(error.response?.data?.message || 'Failed to fetch providers');
+      } finally {
+        setProvidersLoading(false);
+      }
+    };
+
+    fetchProviders();
+  }, []);
 
   const filteredProviders = providers.filter(provider => {
     if (filters.search && !provider.name.toLowerCase().includes(filters.search.toLowerCase())) {
@@ -1194,9 +1181,18 @@ const Providers = () => {
 
             {/* Providers Grid */}
             <div className="providers-grid">
-              {loading ? (
+              {providersLoading ? (
                 <div className="loading-container">
                   <LoadingSpinner size="large" />
+                </div>
+              ) : providersError ? (
+                <div className="no-bookings">
+                  <Package size={48} />
+                  <h3>Error Loading Providers</h3>
+                  <p>{providersError}</p>
+                  <button onClick={() => window.location.reload()} className="btn-clear">
+                    Retry
+                  </button>
                 </div>
               ) : filteredProviders.length === 0 ? (
                 <div className="no-bookings">
@@ -1215,12 +1211,13 @@ const Providers = () => {
                   >
                     <div className="provider-image-container">
                       <img 
-                        src="/wash1.jpg" 
+                        src={provider.image || '/wash1.jpg'} 
                         alt={provider.name}
                         className="provider-card-image"
+                        onError={(e) => { e.target.src = '/wash1.jpg'; }}
                       />
                       <div className="provider-status-tag">
-                        <span className="status-available">Available</span>
+                        <span className="status-available">{provider.available ? 'Available' : 'Unavailable'}</span>
                       </div>
                     </div>
                     
@@ -1236,7 +1233,11 @@ const Providers = () => {
                             color="#fbbf24"
                           />
                         ))}
-                        <span>{provider.rating}</span>
+                        <span>
+                          {provider.rating > 0 
+                            ? `${provider.rating.toFixed(1)} (${provider.reviews} reviews)` 
+                            : 'No reviews yet'}
+                        </span>
                       </div>
                       
                       <p className="provider-description">
