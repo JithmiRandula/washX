@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Mail, Phone, MapPin, Edit, Save, X, Camera, Shield, CreditCard, Bell, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Edit, Save, X, Camera, Shield, CreditCard, Bell, Eye, EyeOff, Plus } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import api from '../../utils/api';
 import './CustomerProfile.css';
@@ -23,6 +23,14 @@ const CustomerProfile = () => {
     current: false,
     new: false,
     confirm: false
+  });
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    cardType: 'Visa',
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    isDefault: false
   });
 
   useEffect(() => {
@@ -178,6 +186,90 @@ const CustomerProfile = () => {
     } catch (error) {
       console.error('Error changing password:', error);
       showMessage('error', error.response?.data?.message || 'Failed to change password');
+    }
+  };
+
+  const handleAddPaymentMethod = async (e) => {
+    e.preventDefault();
+
+    // Validate card number (basic validation - 16 digits)
+    const cardNumberClean = paymentForm.cardNumber.replace(/\s/g, '');
+    if (cardNumberClean.length !== 16 || !/^\d+$/.test(cardNumberClean)) {
+      showMessage('error', 'Please enter a valid 16-digit card number');
+      return;
+    }
+
+    // Validate expiry date (MM/YY format)
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(paymentForm.expiryDate)) {
+      showMessage('error', 'Please enter expiry date in MM/YY format');
+      return;
+    }
+
+    // Validate CVV (3 or 4 digits)
+    if (paymentForm.cvv.length < 3 || paymentForm.cvv.length > 4 || !/^\d+$/.test(paymentForm.cvv)) {
+      showMessage('error', 'Please enter a valid CVV (3 or 4 digits)');
+      return;
+    }
+
+    try {
+      const last4 = cardNumberClean.slice(-4);
+      
+      const response = await api.post('/users/payment-methods', {
+        type: 'card',
+        cardType: paymentForm.cardType,
+        last4: last4,
+        expiryDate: paymentForm.expiryDate,
+        isDefault: paymentForm.isDefault,
+        stripePaymentMethodId: '' // This would be from Stripe in production
+      });
+
+      if (response.data.success) {
+        setProfile(prev => ({ ...prev, paymentMethods: response.data.data }));
+        setShowPaymentModal(false);
+        setPaymentForm({
+          cardType: 'Visa',
+          cardNumber: '',
+          expiryDate: '',
+          cvv: '',
+          isDefault: false
+        });
+        showMessage('success', 'Payment method added successfully');
+      }
+    } catch (error) {
+      console.error('Error adding payment method:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to add payment method');
+    }
+  };
+
+  const handleRemovePaymentMethod = async (paymentMethodId) => {
+    if (!window.confirm('Are you sure you want to remove this payment method?')) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/users/payment-methods/${paymentMethodId}`);
+
+      if (response.data.success) {
+        setProfile(prev => ({ ...prev, paymentMethods: response.data.data }));
+        showMessage('success', 'Payment method removed successfully');
+      }
+    } catch (error) {
+      console.error('Error removing payment method:', error);
+      showMessage('error', 'Failed to remove payment method');
+    }
+  };
+
+  const handleSetDefaultPaymentMethod = async (paymentMethodId) => {
+    try {
+      const response = await api.put(`/users/payment-methods/${paymentMethodId}/default`);
+
+      if (response.data.success) {
+        setProfile(prev => ({ ...prev, paymentMethods: response.data.data }));
+        showMessage('success', 'Default payment method updated');
+      }
+    } catch (error) {
+      console.error('Error setting default payment method:', error);
+      showMessage('error', 'Failed to set default payment method');
     }
   };
 
@@ -589,9 +681,24 @@ const CustomerProfile = () => {
                           </div>
                         </div>
                         <div className="payment-actions">
-                          {method.isDefault && <span className="payment-default">Default</span>}
-                          <button className="payment-edit">Edit</button>
-                          {!method.isDefault && <button className="payment-remove">Remove</button>}
+                          {method.isDefault ? (
+                            <span className="payment-default">Default</span>
+                          ) : (
+                            <button 
+                              className="payment-set-default"
+                              onClick={() => handleSetDefaultPaymentMethod(method._id)}
+                            >
+                              Set as Default
+                            </button>
+                          )}
+                          {!method.isDefault && (
+                            <button 
+                              className="payment-remove"
+                              onClick={() => handleRemovePaymentMethod(method._id)}
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -601,8 +708,12 @@ const CustomerProfile = () => {
                     </div>
                   )}
 
-                  <button className="add-payment-btn">
-                    + Add New Payment Method
+                  <button 
+                    className="add-payment-btn"
+                    onClick={() => setShowPaymentModal(true)}
+                  >
+                    <Plus size={20} />
+                    Add New Payment Method
                   </button>
                 </div>
               </div>
@@ -611,6 +722,117 @@ const CustomerProfile = () => {
         </div>
         </div>
       </div>
+
+      {/* Payment Method Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Payment Method</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowPaymentModal(false)}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddPaymentMethod} className="payment-form">
+              <div className="profile-form-group">
+                <label>Card Type</label>
+                <select
+                  value={paymentForm.cardType}
+                  onChange={(e) => setPaymentForm(prev => ({ ...prev, cardType: e.target.value }))}
+                  className="profile-input"
+                  required
+                >
+                  <option value="Visa">Visa</option>
+                  <option value="Mastercard">Mastercard</option>
+                  <option value="American Express">American Express</option>
+                  <option value="Discover">Discover</option>
+                </select>
+              </div>
+
+              <div className="profile-form-group">
+                <label>Card Number</label>
+                <input
+                  type="text"
+                  value={paymentForm.cardNumber}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                    const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                    setPaymentForm(prev => ({ ...prev, cardNumber: formatted }));
+                  }}
+                  className="profile-input"
+                  placeholder="1234 5678 9012 3456"
+                  required
+                />
+              </div>
+
+              <div className="payment-form-row">
+                <div className="profile-form-group">
+                  <label>Expiry Date</label>
+                  <input
+                    type="text"
+                    value={paymentForm.expiryDate}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length >= 2) {
+                        value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                      }
+                      setPaymentForm(prev => ({ ...prev, expiryDate: value }));
+                    }}
+                    className="profile-input"
+                    placeholder="MM/YY"
+                    maxLength={5}
+                    required
+                  />
+                </div>
+
+                <div className="profile-form-group">
+                  <label>CVV</label>
+                  <input
+                    type="text"
+                    value={paymentForm.cvv}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setPaymentForm(prev => ({ ...prev, cvv: value }));
+                    }}
+                    className="profile-input"
+                    placeholder="123"
+                    maxLength={4}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="profile-form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={paymentForm.isDefault}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, isDefault: e.target.checked }))}
+                  />
+                  <span>Set as default payment method</span>
+                </label>
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="modal-cancel-btn"
+                  onClick={() => setShowPaymentModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="modal-submit-btn">
+                  Add Payment Method
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };
