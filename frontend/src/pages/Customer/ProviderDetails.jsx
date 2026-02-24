@@ -24,6 +24,8 @@ const ProviderDetails = () => {
   const loadProvider = async () => {
     try {
       const data = await getProviderById(id);
+      console.log('🎯 Provider data received in ProviderDetails:', data);
+      console.log('🖼️ Provider image field:', data?.image);
       setProvider(data);
     } catch (error) {
       console.error('Error loading provider:', error);

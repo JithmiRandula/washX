@@ -133,12 +133,27 @@ export const getProviders = async (filters = {}) => {
 };
 
 export const getProviderById = async (id) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const provider = mockProviders.find(p => p.id === id);
-      resolve(provider);
-    }, 300);
-  });
+  try {
+    const response = await api.get(`/providers/${id}`);
+    console.log('🔍 Raw provider response:', response.data);
+    const provider = response.data.data; // Backend returns { success: true, data: provider }
+    console.log('📦 Provider data:', provider);
+    console.log('🖼️ Provider images:', provider.images);
+    
+    // Transform images array to single image field (same as Providers.jsx)
+    return {
+      ...provider,
+      id: provider._id,
+      name: provider.businessName,
+      image: provider.images && provider.images.length > 0 
+        ? provider.images[0] // Cloudinary URL
+        : '/wash1.jpg', // Fallback
+      description: provider.description || 'No description available',
+    };
+  } catch (error) {
+    console.error('Error fetching provider:', error);
+    throw error;
+  }
 };
 
 // Service API functions

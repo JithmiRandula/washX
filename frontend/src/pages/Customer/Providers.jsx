@@ -119,6 +119,7 @@ const Providers = () => {
           // Transform backend data to match frontend structure
           const transformedProviders = response.data.data.map(provider => {
             console.log('📦 Transforming provider:', provider.businessName);
+            console.log('🖼️ Provider images array:', provider.images);
             return {
               id: provider._id,
               name: provider.businessName,
@@ -438,8 +439,8 @@ const Providers = () => {
                     {/* Provider Image with overlay */}
                     <div className="detail-inner-image-section">
                       <img 
-                        src="/wash1.jpg" 
-                        alt="Laundry Service"
+                        src={selectedProvider.image} 
+                        alt={selectedProvider.name}
                         className="detail-inner-laundry-image"
                       />
                       <div className="detail-image-overlay">
