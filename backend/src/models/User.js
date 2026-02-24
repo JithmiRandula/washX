@@ -35,6 +35,14 @@ const userSchema = new mongoose.Schema({
       return !this.googleId; // Phone only required if not using Google OAuth
     }
   },
+  dateOfBirth: {
+    type: Date
+  },
+  gender: {
+    type: String,
+    enum: ['Male', 'Female', 'Other', 'Prefer not to say'],
+    default: 'Prefer not to say'
+  },
   role: {
     type: String,
     enum: ['customer', 'provider', 'admin'],
@@ -54,6 +62,39 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  preferences: {
+    notifications: {
+      type: Boolean,
+      default: true
+    },
+    emailUpdates: {
+      type: Boolean,
+      default: true
+    },
+    smsAlerts: {
+      type: Boolean,
+      default: false
+    },
+    promotionalEmails: {
+      type: Boolean,
+      default: true
+    }
+  },
+  paymentMethods: [{
+    type: {
+      type: String,
+      enum: ['card', 'bank'],
+      default: 'card'
+    },
+    cardType: String, // Visa, Mastercard, Amex, etc.
+    last4: String,
+    expiryDate: String,
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
+    stripePaymentMethodId: String
+  }],
   isVerified: {
     type: Boolean,
     default: false
