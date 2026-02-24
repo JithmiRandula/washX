@@ -123,7 +123,7 @@ const Providers = () => {
               id: provider._id,
               name: provider.businessName,
               image: provider.images && provider.images.length > 0 
-                ? `http://localhost:5001${provider.images[0]}` 
+                ? provider.images[0] // Cloudinary returns full URL
                 : '/wash1.jpg',
               rating: provider.rating?.average || 0,
               address: `${provider.address?.street || ''}, ${provider.address?.city || ''}`,

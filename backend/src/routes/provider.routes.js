@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const providerController = require('../controllers/provider.controller');
-const upload = require('../config/multer');
+const { upload } = require('../config/cloudinary');
 
 // Public routes
 router.get('/', providerController.getProviders);

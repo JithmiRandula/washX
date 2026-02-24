@@ -1,5 +1,6 @@
 const Provider = require('../models/Provider');
 const User = require('../models/User');
+const { deleteImage, getPublicIdFromUrl } = require('../config/cloudinary');
 
 // @desc    Get all providers
 // @route   GET /api/providers
@@ -191,8 +192,24 @@ exports.uploadImage = async (req, res) => {
       });
     }
 
-    // Create the image URL
-    const imageUrl = `/uploads/providers/${req.file.filename}`;
+    // Get Cloudinary URL from uploaded file
+    const imageUrl = req.file.path; // Cloudinary returns full URL in path
+    
+    console.log('✅ Image uploaded to Cloudinary:', imageUrl);
+
+    // Delete old image from Cloudinary if exists
+    if (provider.images.length > 0 && provider.images[0]) {
+      const oldPublicId = getPublicIdFromUrl(provider.images[0]);
+      if (oldPublicId) {
+        try {
+          await deleteImage(oldPublicId);
+          console.log('🗑️ Old image deleted from Cloudinary:', oldPublicId);
+        } catch (deleteError) {
+          console.error('Error deleting old image:', deleteError);
+          // Continue even if deletion fails
+        }
+      }
+    }
 
     // Set as logo (first image or replace first image)
     if (provider.images.length === 0) {
@@ -205,9 +222,11 @@ exports.uploadImage = async (req, res) => {
 
     res.json({
       success: true,
-      data: imageUrl
+      data: imageUrl,
+      message: 'Image uploaded successfully'
     });
   } catch (error) {
+    console.error('❌ Upload error:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error',
