@@ -1,49 +1,184 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Mail, Phone, MapPin, Edit, Save, X, Camera, Shield, CreditCard, Bell } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Edit, Save, X, Camera, Shield, CreditCard, Bell, Eye, EyeOff } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
+import api from '../../utils/api';
 import './CustomerProfile.css';
 
 const CustomerProfile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile: updateAuthProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: user?.name || 'John Doe',
-    email: user?.email || 'john.doe@email.com',
-    phone: user?.phone || '+1 (555) 123-4567',
-    address: user?.address || '123 Main Street, Downtown, NY 10001',
-    dateOfBirth: user?.dateOfBirth || '1990-05-15',
-    gender: user?.gender || 'Male',
-    preferences: {
-      notifications: true,
-      emailUpdates: true,
-      smsAlerts: false,
-      promotionalEmails: true
-    }
-  });
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [tempProfile, setTempProfile] = useState({});
   const [activeTab, setActiveTab] = useState('profile');
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await api.get('/users/profile');
+      if (response.data.success) {
+        setProfile(response.data.data);
+        setTempProfile(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      showMessage('error', 'Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+  };
+
+  const handleInputChange = (field, value) => {
+    setTempProfile(prev => ({
       ...prev,
-      [name]: value
+      [field]: value
     }));
   };
 
-  const handlePreferenceChange = (preference) => {
-    setFormData(prev => ({
+  const handleAddressChange = (field, value) => {
+    setTempProfile(prev => ({
       ...prev,
-      preferences: {
-        ...prev.preferences,
-        [preference]: !prev.preferences[preference]
+      address: {
+        ...prev.address,
+        [field]: value
       }
     }));
   };
 
-  const handleSave = () => {
-    updateProfile(formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      const response = await api.put('/users/profile', {
+        name: tempProfile.name,
+        phone: tempProfile.phone,
+        dateOfBirth: tempProfile.dateOfBirth,
+        gender: tempProfile.gender,
+        address: tempProfile.address
+      });
+
+      if (response.data.success) {
+        setProfile(response.data.data);
+        setTempProfile(response.data.data);
+        updateAuthProfile(response.data.data);
+        setIsEditing(false);
+        showMessage('success', 'Profile updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      showMessage('error', 'Image size should be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showMessage('error', 'Please upload an image file');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    setUploading(true);
+    try {
+      const response = await api.post('/users/profile/photo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data.success) {
+        setProfile(prev => ({ ...prev, avatar: response.data.data.avatar }));
+        setTempProfile(prev => ({ ...prev, avatar: response.data.data.avatar }));
+        updateAuthProfile({ avatar: response.data.data.avatar });
+        showMessage('success', 'Profile photo updated successfully');
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to upload photo');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePreferenceChange = async (preference) => {
+    try {
+      const newPreferences = {
+        ...profile.preferences,
+        [preference]: !profile.preferences[preference]
+      };
+
+      const response = await api.put('/users/preferences', {
+        preferences: newPreferences
+      });
+
+      if (response.data.success) {
+        setProfile(prev => ({ ...prev, preferences: response.data.data }));
+        setTempProfile(prev => ({ ...prev, preferences: response.data.data }));
+        showMessage('success', 'Preferences updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      showMessage('error', 'Failed to update preferences');
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showMessage('error', 'New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      showMessage('error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      const response = await api.put('/users/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      if (response.data.success) {
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        showMessage('success', 'Password changed successfully');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to change password');
+    }
   };
 
   const profileTabs = [
@@ -52,6 +187,28 @@ const CustomerProfile = () => {
     { id: 'security', label: 'Security', icon: <Shield size={18} /> },
     { id: 'payment', label: 'Payment Methods', icon: <CreditCard size={18} /> }
   ];
+
+  if (loading) {
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="profile-page">
+          <div className="loading-spinner">Loading profile...</div>
+        </div>
+      </>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="profile-page">
+          <div className="error-message">Failed to load profile</div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -62,6 +219,12 @@ const CustomerProfile = () => {
           <h1>Profile Settings</h1>
           <p>Manage your account information and preferences</p>
         </div>
+
+        {message.text && (
+          <div className={`profile-message ${message.type}`}>
+            {message.text}
+          </div>
+        )}
 
         {/* Profile Tabs */}
         <div className="profile-tabs">
@@ -95,12 +258,23 @@ const CustomerProfile = () => {
 
                 <div className="profile-avatar-section">
                   <div className="profile-avatar-large">
-                    <User size={60} />
+                    {profile.avatar ? (
+                      <img src={profile.avatar} alt="Profile" />
+                    ) : (
+                      <User size={60} />
+                    )}
                   </div>
-                  <button className="profile-avatar-btn">
+                  <label className="profile-avatar-btn">
                     <Camera size={16} />
-                    Change Photo
-                  </button>
+                    {uploading ? 'Uploading...' : 'Change Photo'}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handlePhotoChange}
+                      style={{ display: 'none' }}
+                      disabled={uploading}
+                    />
+                  </label>
                 </div>
 
                 <div className="profile-form">
@@ -110,29 +284,19 @@ const CustomerProfile = () => {
                       {isEditing ? (
                         <input
                           type="text"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
+                          value={tempProfile.name || ''}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
                           className="profile-input"
                         />
                       ) : (
-                        <div className="profile-display-value">{formData.name}</div>
+                        <div className="profile-display-value">{profile.name}</div>
                       )}
                     </div>
 
                     <div className="profile-form-group">
                       <label>Email Address</label>
-                      {isEditing ? (
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className="profile-input"
-                        />
-                      ) : (
-                        <div className="profile-display-value">{formData.email}</div>
-                      )}
+                      <div className="profile-display-value">{profile.email}</div>
+                      <small className="profile-note">Email cannot be changed</small>
                     </div>
 
                     <div className="profile-form-group">
@@ -140,13 +304,12 @@ const CustomerProfile = () => {
                       {isEditing ? (
                         <input
                           type="tel"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleInputChange}
+                          value={tempProfile.phone || ''}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
                           className="profile-input"
                         />
                       ) : (
-                        <div className="profile-display-value">{formData.phone}</div>
+                        <div className="profile-display-value">{profile.phone || 'Not provided'}</div>
                       )}
                     </div>
 
@@ -155,28 +318,14 @@ const CustomerProfile = () => {
                       {isEditing ? (
                         <input
                           type="date"
-                          name="dateOfBirth"
-                          value={formData.dateOfBirth}
-                          onChange={handleInputChange}
+                          value={tempProfile.dateOfBirth ? new Date(tempProfile.dateOfBirth).toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                           className="profile-input"
                         />
                       ) : (
-                        <div className="profile-display-value">{formData.dateOfBirth}</div>
-                      )}
-                    </div>
-
-                    <div className="profile-form-group profile-form-group-full">
-                      <label>Address</label>
-                      {isEditing ? (
-                        <textarea
-                          name="address"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          className="profile-input profile-textarea"
-                          rows={3}
-                        />
-                      ) : (
-                        <div className="profile-display-value">{formData.address}</div>
+                        <div className="profile-display-value">
+                          {profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : 'Not provided'}
+                        </div>
                       )}
                     </div>
 
@@ -184,9 +333,8 @@ const CustomerProfile = () => {
                       <label>Gender</label>
                       {isEditing ? (
                         <select
-                          name="gender"
-                          value={formData.gender}
-                          onChange={handleInputChange}
+                          value={tempProfile.gender || 'Prefer not to say'}
+                          onChange={(e) => handleInputChange('gender', e.target.value)}
                           className="profile-input"
                         >
                           <option value="Male">Male</option>
@@ -195,7 +343,63 @@ const CustomerProfile = () => {
                           <option value="Prefer not to say">Prefer not to say</option>
                         </select>
                       ) : (
-                        <div className="profile-display-value">{formData.gender}</div>
+                        <div className="profile-display-value">{profile.gender || 'Prefer not to say'}</div>
+                      )}
+                    </div>
+
+                    <div className="profile-form-group profile-form-group-full">
+                      <label>Street Address</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={tempProfile.address?.street || ''}
+                          onChange={(e) => handleAddressChange('street', e.target.value)}
+                          className="profile-input"
+                        />
+                      ) : (
+                        <div className="profile-display-value">{profile.address?.street || 'Not provided'}</div>
+                      )}
+                    </div>
+
+                    <div className="profile-form-group">
+                      <label>City</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={tempProfile.address?.city || ''}
+                          onChange={(e) => handleAddressChange('city', e.target.value)}
+                          className="profile-input"
+                        />
+                      ) : (
+                        <div className="profile-display-value">{profile.address?.city || 'Not provided'}</div>
+                      )}
+                    </div>
+
+                    <div className="profile-form-group">
+                      <label>State</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={tempProfile.address?.state || ''}
+                          onChange={(e) => handleAddressChange('state', e.target.value)}
+                          className="profile-input"
+                        />
+                      ) : (
+                        <div className="profile-display-value">{profile.address?.state || 'Not provided'}</div>
+                      )}
+                    </div>
+
+                    <div className="profile-form-group">
+                      <label>ZIP Code</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={tempProfile.address?.zipCode || ''}
+                          onChange={(e) => handleAddressChange('zipCode', e.target.value)}
+                          className="profile-input"
+                        />
+                      ) : (
+                        <div className="profile-display-value">{profile.address?.zipCode || 'Not provided'}</div>
                       )}
                     </div>
                   </div>
@@ -221,7 +425,7 @@ const CustomerProfile = () => {
                     <label className="preference-toggle">
                       <input
                         type="checkbox"
-                        checked={formData.preferences.notifications}
+                        checked={profile.preferences?.notifications || false}
                         onChange={() => handlePreferenceChange('notifications')}
                       />
                       <span className="toggle-slider"></span>
@@ -236,7 +440,7 @@ const CustomerProfile = () => {
                     <label className="preference-toggle">
                       <input
                         type="checkbox"
-                        checked={formData.preferences.emailUpdates}
+                        checked={profile.preferences?.emailUpdates || false}
                         onChange={() => handlePreferenceChange('emailUpdates')}
                       />
                       <span className="toggle-slider"></span>
@@ -251,7 +455,7 @@ const CustomerProfile = () => {
                     <label className="preference-toggle">
                       <input
                         type="checkbox"
-                        checked={formData.preferences.smsAlerts}
+                        checked={profile.preferences?.smsAlerts || false}
                         onChange={() => handlePreferenceChange('smsAlerts')}
                       />
                       <span className="toggle-slider"></span>
@@ -266,7 +470,7 @@ const CustomerProfile = () => {
                     <label className="preference-toggle">
                       <input
                         type="checkbox"
-                        checked={formData.preferences.promotionalEmails}
+                        checked={profile.preferences?.promotionalEmails || false}
                         onChange={() => handlePreferenceChange('promotionalEmails')}
                       />
                       <span className="toggle-slider"></span>
@@ -285,31 +489,82 @@ const CustomerProfile = () => {
                   <p>Manage your account security</p>
                 </div>
                 
-                <div className="security-options">
-                  <div className="security-item">
-                    <div className="security-info">
-                      <h4>Change Password</h4>
-                      <p>Update your account password</p>
-                    </div>
-                    <button className="security-btn">Change Password</button>
+                {profile?.googleId ? (
+                  <div className="security-info-box">
+                    <p>⚠️ You signed in with Google. Password change is not available for Google accounts.</p>
                   </div>
+                ) : (
+                  <form onSubmit={handlePasswordChange} className="password-form">
+                    <div className="profile-form-group">
+                      <label>Current Password</label>
+                      <div className="password-input-wrapper">
+                        <input
+                          type={showPassword.current ? "text" : "password"}
+                          value={passwordData.currentPassword}
+                          onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                          className="profile-input"
+                          required
+                          placeholder="Enter current password"
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowPassword(prev => ({ ...prev, current: !prev.current }))}
+                        >
+                          {showPassword.current ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                    </div>
 
-                  <div className="security-item">
-                    <div className="security-info">
-                      <h4>Two-Factor Authentication</h4>
-                      <p>Add an extra layer of security to your account</p>
+                    <div className="profile-form-group">
+                      <label>New Password</label>
+                      <div className="password-input-wrapper">
+                        <input
+                          type={showPassword.new ? "text" : "password"}
+                          value={passwordData.newPassword}
+                          onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                          className="profile-input"
+                          required
+                          minLength={6}
+                          placeholder="Enter new password (min 6 characters)"
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowPassword(prev => ({ ...prev, new: !prev.new }))}
+                        >
+                          {showPassword.new ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
                     </div>
-                    <button className="security-btn secondary">Enable 2FA</button>
-                  </div>
 
-                  <div className="security-item">
-                    <div className="security-info">
-                      <h4>Login Activity</h4>
-                      <p>View recent login attempts and devices</p>
+                    <div className="profile-form-group">
+                      <label>Confirm New Password</label>
+                      <div className="password-input-wrapper">
+                        <input
+                          type={showPassword.confirm ? "text" : "password"}
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          className="profile-input"
+                          required
+                          minLength={6}
+                          placeholder="Confirm new password"
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowPassword(prev => ({ ...prev, confirm: !prev.confirm }))}
+                        >
+                          {showPassword.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
                     </div>
-                    <button className="security-btn secondary">View Activity</button>
-                  </div>
-                </div>
+
+                    <button type="submit" className="security-btn">
+                      Change Password
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           )}
@@ -323,33 +578,28 @@ const CustomerProfile = () => {
                 </div>
                 
                 <div className="payment-methods">
-                  <div className="payment-item">
-                    <div className="payment-info">
-                      <CreditCard size={24} />
-                      <div>
-                        <h4>Visa ending in 1234</h4>
-                        <p>Expires 12/2027</p>
+                  {profile.paymentMethods && profile.paymentMethods.length > 0 ? (
+                    profile.paymentMethods.map((method, index) => (
+                      <div key={method._id || index} className="payment-item">
+                        <div className="payment-info">
+                          <CreditCard size={24} />
+                          <div>
+                            <h4>{method.cardType} ending in {method.last4}</h4>
+                            <p>Expires {method.expiryDate}</p>
+                          </div>
+                        </div>
+                        <div className="payment-actions">
+                          {method.isDefault && <span className="payment-default">Default</span>}
+                          <button className="payment-edit">Edit</button>
+                          {!method.isDefault && <button className="payment-remove">Remove</button>}
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="no-payment-methods">
+                      <p>No payment methods added yet</p>
                     </div>
-                    <div className="payment-actions">
-                      <span className="payment-default">Default</span>
-                      <button className="payment-edit">Edit</button>
-                    </div>
-                  </div>
-
-                  <div className="payment-item">
-                    <div className="payment-info">
-                      <CreditCard size={24} />
-                      <div>
-                        <h4>Mastercard ending in 5678</h4>
-                        <p>Expires 08/2026</p>
-                      </div>
-                    </div>
-                    <div className="payment-actions">
-                      <button className="payment-edit">Edit</button>
-                      <button className="payment-remove">Remove</button>
-                    </div>
-                  </div>
+                  )}
 
                   <button className="add-payment-btn">
                     + Add New Payment Method
