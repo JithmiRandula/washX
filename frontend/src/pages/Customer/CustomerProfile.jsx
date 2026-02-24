@@ -241,8 +241,12 @@ const CustomerProfile = () => {
     }
   };
 
-  const handleRemovePaymentMethod = async (paymentMethodId) => {
-    if (!window.confirm('Are you sure you want to remove this payment method?')) {
+  const handleRemovePaymentMethod = async (paymentMethodId, isDefault) => {
+    const message = isDefault 
+      ? 'This is your default payment method. Are you sure you want to remove it?'
+      : 'Are you sure you want to remove this payment method?';
+    
+    if (!window.confirm(message)) {
       return;
     }
 
@@ -691,14 +695,12 @@ const CustomerProfile = () => {
                               Set as Default
                             </button>
                           )}
-                          {!method.isDefault && (
-                            <button 
-                              className="payment-remove"
-                              onClick={() => handleRemovePaymentMethod(method._id)}
-                            >
-                              Remove
-                            </button>
-                          )}
+                          <button 
+                            className="payment-remove"
+                            onClick={() => handleRemovePaymentMethod(method._id, method.isDefault)}
+                          >
+                            Remove
+                          </button>
                         </div>
                       </div>
                     ))

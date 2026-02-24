@@ -310,10 +310,29 @@ exports.removePaymentMethod = async (req, res) => {
       });
     }
 
+    // Check if the payment method being removed is the default
+    const methodToRemove = user.paymentMethods.find(
+      method => method._id.toString() === paymentMethodId
+    );
+
+    if (!methodToRemove) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment method not found'
+      });
+    }
+
+    const wasDefault = methodToRemove.isDefault;
+
     // Remove payment method
     user.paymentMethods = user.paymentMethods.filter(
       method => method._id.toString() !== paymentMethodId
     );
+
+    // If the removed method was default and there are other methods, set the first one as default
+    if (wasDefault && user.paymentMethods.length > 0) {
+      user.paymentMethods[0].isDefault = true;
+    }
 
     await user.save();
 
