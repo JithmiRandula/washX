@@ -14,17 +14,19 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  const userRole = typeof user.role === 'string' ? user.role.toLowerCase() : user.role;
+  const allowed = allowedRoles.map(r => (typeof r === 'string' ? r.toLowerCase() : r));
+  if (allowedRoles.length > 0 && !allowed.includes(userRole)) {
     return <Navigate to="/" replace />;
   }
 
   // For provider routes, verify the providerId matches the logged-in user's providerId
-  if (providerId && user.role === 'provider' && user.providerId !== providerId) {
+  if (providerId && userRole === 'provider' && user.providerId !== providerId) {
     return <Navigate to="/" replace />;
   }
 
   // For customer routes, verify the customerId matches the logged-in user's customerId
-  if (customerId && user.role === 'customer' && user.customerId !== customerId) {
+  if (customerId && userRole === 'customer' && user.customerId !== customerId) {
     return <Navigate to="/" replace />;
   }
 

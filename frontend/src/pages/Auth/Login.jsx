@@ -20,20 +20,23 @@ const Login = () => {
 
     try {
       const user = await login(email, password);
+      const role = (user.role || '').toString().toLowerCase();
       // Redirect based on role
-      if (user.role === 'admin') {
+      if (role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (user.role === 'provider') {
+      } else if (role === 'provider') {
         // Redirect to provider's unique dashboard
-        if (user.providerId) {
-          navigate(`/provider/${user.providerId}/dashboard`);
+        const providerId = user.providerId || user.id || user._id || user.Id || user.userId || user.UserId;
+        if (providerId) {
+          navigate(`/provider/${providerId}/dashboard`);
         } else {
           setError('Provider profile not found. Please contact support.');
         }
-      } else if (user.role === 'customer') {
+      } else if (role === 'customer') {
         // Redirect to customer's unique dashboard
-        if (user.customerId) {
-          navigate(`/customer/${user.customerId}/dashboard`);
+        const customerId = user.customerId || user.id || user._id || user.Id || user.userId || user.UserId;
+        if (customerId) {
+          navigate(`/customer/${customerId}/dashboard`);
         } else {
           setError('Customer profile not found. Please contact support.');
         }
@@ -49,7 +52,7 @@ const Login = () => {
 
   const handleGoogleLogin = () => {
     // Redirect to backend Google OAuth route
-    const backendURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const backendURL = import.meta.env.VITE_API_URL || 'http://localhost:5218';
     window.location.href = `${backendURL}/api/auth/google`;
   };
 

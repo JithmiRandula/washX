@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Compass, CheckCircle, X } from 'lucide-react';
@@ -22,7 +22,7 @@ const Register = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [currentAddress, setCurrentAddress] = useState('');
   const [locationSuccess, setLocationSuccess] = useState(false);
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,7 +43,7 @@ const Register = () => {
 
   const handleGoogleSignup = () => {
     // Redirect to backend Google OAuth route (same as login)
-    const backendURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    const backendURL = import.meta.env.VITE_API_URL || 'http://localhost:5218';
     window.location.href = `${backendURL}/api/auth/google`;
   };
 
@@ -133,21 +133,30 @@ const Register = () => {
         address: formData.address
       };
 
-      const user = await register(registrationData);
-      // Redirect based on return URL or role
-      if (returnTo) {
-        navigate(returnTo);
-      } else if (user.role === 'admin') {
+      await register(registrationData);
+
+      // Auto-login after successful register (ensures token + customerId/providerId exist)
+      const loggedUser = await login(formData.email, formData.password);
+      const role = (loggedUser.role || '').toString().toLowerCase();
+
+      console.log('SUCCESS (registered + logged in):', loggedUser);
+      alert('Registered Successfully!');
+
+      if (role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (user.role === 'provider') {
-        if (user.providerId) {
-          navigate(`/provider/${user.providerId}/dashboard`);
+      } else if (role === 'provider') {
+        const providerId =
+          loggedUser.providerId || loggedUser.id || loggedUser._id || loggedUser.Id || loggedUser.userId || loggedUser.UserId;
+        if (providerId) {
+          navigate(`/provider/${providerId}/dashboard`);
         } else {
           navigate('/');
         }
-      } else if (user.role === 'customer') {
-        if (user.customerId) {
-          navigate(`/customer/${user.customerId}/dashboard`);
+      } else if (role === 'customer') {
+        const customerId =
+          loggedUser.customerId || loggedUser.id || loggedUser._id || loggedUser.Id || loggedUser.userId || loggedUser.UserId;
+        if (customerId) {
+          navigate(`/customer/${customerId}/dashboard`);
         } else {
           navigate('/');
         }
@@ -155,8 +164,11 @@ const Register = () => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
-    } finally {
+      console.log("ERROR:", err);
+      console.log("ERROR RESPONSE:", err.response?.data);
+
+      setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');
+      alert("Registration Failed");    } finally {
       setLoading(false);
     }
   };
@@ -286,6 +298,7 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Location UI (disabled for now; enable later)
             <div className="washx-auth-form-group">
               <button
                 type="button"
@@ -313,7 +326,7 @@ const Register = () => {
                   </>
                 )}
               </button>
-              
+
               {currentAddress && (
                 <div className="washx-current-address">
                   <div className="washx-address-header">
@@ -335,6 +348,7 @@ const Register = () => {
                 </div>
               )}
             </div>
+            */}
 
             <div className="washx-auth-form-group">
               <label htmlFor="password" className="washx-auth-label">Password</label>
