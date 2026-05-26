@@ -54,6 +54,18 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
 
         var token = _tokenService.CreateToken(user);
 
+        int? providerId = null;
+        int? customerId = null;
+
+        if (user.Role.Equals("provider", StringComparison.OrdinalIgnoreCase))
+        {
+            providerId = await _repo.GetProviderIdByUserId(user.UserId);
+        }
+        else if (user.Role.Equals("customer", StringComparison.OrdinalIgnoreCase))
+        {
+            customerId = await _repo.GetCustomerIdByUserId(user.UserId);
+        }
+
         return new
         {
             success = true,
@@ -65,7 +77,9 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
                 phone = user.Phone,
                 role = user.Role
             },
-            token
+            token,
+            providerId,
+            customerId
         };
     }
 

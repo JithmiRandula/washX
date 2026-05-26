@@ -25,6 +25,8 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ServiceRepository>();
 builder.Services.AddScoped<LaundryService>();
+builder.Services.AddScoped<ProviderRepository>();
+builder.Services.AddScoped<ProviderService>();
 
 builder.Services.AddHttpLogging(_ => { });
 

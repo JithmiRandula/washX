@@ -1,10 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Laundry.DAL.Repositories;
+using Laundry.Models;
 
-namespace Laundry.BLL.Services.Auth
+namespace Laundry.BLL.Services.Auth;
+
+public sealed class ProviderService(ProviderRepository repository)
 {
-    internal class ProviderService
+    private readonly ProviderRepository _repository = repository;
+
+    public Task<ProviderProfile?> GetProviderProfile(int providerId)
     {
+        return _repository.GetProviderProfile(providerId);
     }
 }
