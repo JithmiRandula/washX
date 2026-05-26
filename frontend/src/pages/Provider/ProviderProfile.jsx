@@ -43,57 +43,57 @@ const ProviderProfile = () => {
         // Transform data to match our state structure
         const formattedProfile = {
           businessName: providerData.businessName || '',
-          ownerName: user?.name || '',
-          email: providerData.email || '',
+          ownerName: providerData.name || user?.name || '',
+          email: providerData.email || user?.email || '',
           phone: providerData.phone || '',
-          address: providerData.address?.street || '',
-          city: providerData.address?.city || '',
-          zipCode: providerData.address?.zipCode || '',
-          state: providerData.address?.state || '',
-          latitude: providerData.address?.coordinates?.lat || 0,
-          longitude: providerData.address?.coordinates?.lng || 0,
+          address: providerData.businessAddress || '',
+          city: '',
+          zipCode: '',
+          state: '',
+          latitude: Number(providerData.latitude ?? 0),
+          longitude: Number(providerData.longitude ?? 0),
           businessHours: {
             monday: {
-              open: providerData.operatingHours?.monday?.open || '09:00',
-              close: providerData.operatingHours?.monday?.close || '18:00',
-              closed: providerData.operatingHours?.monday?.isClosed || false
+              open: '09:00',
+              close: '18:00',
+              closed: false
             },
             tuesday: {
-              open: providerData.operatingHours?.tuesday?.open || '09:00',
-              close: providerData.operatingHours?.tuesday?.close || '18:00',
-              closed: providerData.operatingHours?.tuesday?.isClosed || false
+              open: '09:00',
+              close: '18:00',
+              closed: false
             },
             wednesday: {
-              open: providerData.operatingHours?.wednesday?.open || '09:00',
-              close: providerData.operatingHours?.wednesday?.close || '18:00',
-              closed: providerData.operatingHours?.wednesday?.isClosed || false
+              open: '09:00',
+              close: '18:00',
+              closed: false
             },
             thursday: {
-              open: providerData.operatingHours?.thursday?.open || '09:00',
-              close: providerData.operatingHours?.thursday?.close || '18:00',
-              closed: providerData.operatingHours?.thursday?.isClosed || false
+              open: '09:00',
+              close: '18:00',
+              closed: false
             },
             friday: {
-              open: providerData.operatingHours?.friday?.open || '09:00',
-              close: providerData.operatingHours?.friday?.close || '18:00',
-              closed: providerData.operatingHours?.friday?.isClosed || false
+              open: '09:00',
+              close: '18:00',
+              closed: false
             },
             saturday: {
-              open: providerData.operatingHours?.saturday?.open || '09:00',
-              close: providerData.operatingHours?.saturday?.close || '18:00',
-              closed: providerData.operatingHours?.saturday?.isClosed || false
+              open: '09:00',
+              close: '18:00',
+              closed: false
             },
             sunday: {
-              open: providerData.operatingHours?.sunday?.open || '',
-              close: providerData.operatingHours?.sunday?.close || '',
-              closed: providerData.operatingHours?.sunday?.isClosed !== false // Default Sunday to closed if not explicitly set
+              open: '',
+              close: '',
+              closed: true
             }
           },
           description: providerData.description || '',
           businessLicense: providerData.businessLicense || '',
           services: providerData.services || [], // Add services array
-          rating: providerData.rating?.average || 0,
-          totalReviews: providerData.rating?.count || 0,
+          rating: Number(providerData.rating ?? 0),
+          totalReviews: 0,
           logoUrl: providerData.images && providerData.images.length > 0 
             ? providerData.images[0] // Cloudinary returns full URL
             : null

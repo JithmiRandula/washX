@@ -83,4 +83,28 @@ public sealed class UserRepository(SqlHelper sql)
             },
             System.Data.CommandType.StoredProcedure);
     }
+
+    public Task<int?> GetProviderIdByUserId(int userId)
+    {
+        SqlParameter[] parameters =
+        [
+            new("@UserId", userId)
+        ];
+
+        return _sql.ExecuteScalarAsync<int?>(
+            "SELECT ProviderId FROM Providers WHERE UserId = @UserId",
+            parameters);
+    }
+
+    public Task<int?> GetCustomerIdByUserId(int userId)
+    {
+        SqlParameter[] parameters =
+        [
+            new("@UserId", userId)
+        ];
+
+        return _sql.ExecuteScalarAsync<int?>(
+            "SELECT CustomerId FROM Customers WHERE UserId = @UserId",
+            parameters);
+    }
 }
