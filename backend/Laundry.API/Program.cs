@@ -3,6 +3,9 @@ using Laundry.DAL.Repositories;
 using Laundry.BLL.Services.Auth;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,12 +16,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAuthorization();
 
 // DB + DI
 builder.Services.AddSingleton<SqlHelper>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<ServiceRepository>();
+builder.Services.AddScoped<LaundryService>();
 
 builder.Services.AddHttpLogging(_ => { });
 
@@ -28,14 +34,34 @@ builder.Services.AddHttpLogging(_ => { });
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var jwtKey = builder.Configuration["Jwt:Key"];
+    if (string.IsNullOrWhiteSpace(jwtKey))
+        throw new InvalidOperationException("JWT key is missing (Jwt:Key)");
+
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(2)
+    };
 })
 .AddCookie()
 .AddGoogle(options =>
 {
-    options.ClientId = builder.Configuration["Google:ClientId"];
-    options.ClientSecret = builder.Configuration["Google:ClientSecret"];
+    options.ClientId = builder.Configuration["Google:ClientId"]
+        ?? throw new InvalidOperationException("Google ClientId is missing (Google:ClientId)");
+    options.ClientSecret = builder.Configuration["Google:ClientSecret"]
+        ?? throw new InvalidOperationException("Google ClientSecret is missing (Google:ClientSecret)");
     options.CallbackPath = "/api/auth/google-callback";
 });
 
@@ -48,7 +74,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

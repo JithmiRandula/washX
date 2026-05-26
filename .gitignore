@@ -52,3 +52,53 @@ Thumbs.db
 .cache/
 .temp/
 tmp/
+
+# Visual Studio
+.vs/
+*.user
+*.rsuser
+*.sln.docstates
+
+# Build folders
+bin/
+obj/
+
+# Debug files
+*.pdb
+
+# Executables & libraries
+*.exe
+*.dll
+
+# NuGet
+*.nupkg
+project.assets.json
+project.nuget.cache
+
+# ASP.NET Core
+appsettings.Development.json
+*.runtimeconfig.json
+*.deps.json
+*.staticwebassets.endpoints.json
+
+# Generated cache files
+*.cache
+*.vsidx
+*.sourcelink.json
+
+# Rider / JetBrains
+.idea/
+
+# Copilot cache
+CopilotSnapshots/
+
+# Design time/build cache
+*.Up2Date
+*.editorconfig
+
+# SQL Client native runtime files
+runtimes/
+
+# Visual Studio indexes/layout
+DocumentLayout.json
+DocumentLayout.backup.json
