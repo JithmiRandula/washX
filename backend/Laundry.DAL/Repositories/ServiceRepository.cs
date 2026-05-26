@@ -1,6 +1,7 @@
 using Laundry.DAL.DbHelper;
 using Laundry.Models;
 using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace Laundry.DAL.Repositories;
 
@@ -51,7 +52,8 @@ public sealed class ServiceRepository(SqlHelper sql)
                 SpecialInstructions = reader.IsDBNull(reader.GetOrdinal("SpecialInstructions"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("SpecialInstructions"))
-            });
+            },
+            commandType: CommandType.StoredProcedure);
     }
 
     public Task<int> UpdateService(int serviceId, Service service)
@@ -70,7 +72,7 @@ public sealed class ServiceRepository(SqlHelper sql)
             new("@SpecialInstructions", (object?)service.SpecialInstructions ?? DBNull.Value)
         ];
 
-        return _sql.ExecuteNonQueryAsync("sp_UpdateService", parameters);
+        return _sql.ExecuteNonQueryAsync("sp_UpdateService", parameters, CommandType.StoredProcedure);
     }
 
     public Task<int> DeleteService(int serviceId)
@@ -80,6 +82,6 @@ public sealed class ServiceRepository(SqlHelper sql)
             new("@ServiceId", serviceId)
         ];
 
-        return _sql.ExecuteNonQueryAsync("sp_DeleteService", parameters);
+        return _sql.ExecuteNonQueryAsync("sp_DeleteService", parameters, CommandType.StoredProcedure);
     }
 }

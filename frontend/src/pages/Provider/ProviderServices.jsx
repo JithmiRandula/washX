@@ -8,6 +8,9 @@ const ProviderServices = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const PAGE_SIZE = 3;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [newService, setNewService] = useState({
@@ -62,12 +65,22 @@ const ProviderServices = () => {
         active: true
       }));
       setServices(mapped);
+      setCurrentPage(1);
     } catch (err) {
       setError((typeof err === 'string' ? err : err?.message) || 'Failed to load services');
     } finally {
       setLoading(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(services.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+  const pagedServices = services.slice(startIndex, startIndex + PAGE_SIZE);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const handlePriceChange = (index, field, value) => {
     const updatedPrices = [...newService.prices];
@@ -148,7 +161,12 @@ const ProviderServices = () => {
     if (!window.confirm('Are you sure you want to delete this service?')) return;
     try {
       await serviceAPI.deleteService(id);
-      setServices(services.filter(s => s._id !== id));
+      setServices((prev) => {
+        const next = prev.filter((s) => s._id !== id);
+        const nextTotalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
+        setCurrentPage((p) => Math.min(p, nextTotalPages));
+        return next;
+      });
     } catch (err) {
       setError((typeof err === 'string' ? err : err?.message) || 'Failed to delete service');
     }
@@ -205,8 +223,9 @@ const ProviderServices = () => {
             </button>
           </div>
         ) : (
-          <div className="ps-grid">
-            {services.map((service) => {
+          <>
+            <div className="ps-grid">
+              {pagedServices.map((service) => {
               const cat = categoryColors[service.category] || categoryColors['Washing'];
               return (
                 <div key={service._id} className={`ps-card ${service.active ? '' : 'ps-card--inactive'}`}>
@@ -300,8 +319,44 @@ const ProviderServices = () => {
                   </button>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="ps-pagination-wrap">
+                <div className="ps-pagination">
+                  <button
+                    className="ps-page-btn"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safeCurrentPage === 1}
+                  >
+                    Prev
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      className={`ps-page-btn ${page === safeCurrentPage ? 'ps-page-btn--active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    className="ps-page-btn"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="ps-pagination-meta">
+                  Page {safeCurrentPage} of {totalPages}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Modal */}
