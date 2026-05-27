@@ -111,32 +111,51 @@ const Providers = () => {
         setProvidersLoading(true);
         setProvidersError(null);
         console.log('🔍 Fetching providers from API...');
-        const response = await api.get('/providers');
+        const response = await api.get('/providers/with-services');
         
         console.log('✅ Received providers:', response.data.count);
         
         if (response.data.success) {
-          // Transform backend data to match frontend structure
-          const transformedProviders = response.data.data.map(provider => {
-            console.log('📦 Transforming provider:', provider.businessName);
-            console.log('🖼️ Provider images array:', provider.images);
+          const transformedProviders = (response.data.data || []).map((provider) => {
+            const services = Array.isArray(provider.services) ? provider.services : [];
+
+            const serviceNames = services
+              .map((s) => s?.serviceName)
+              .filter(Boolean);
+
+            const prices = services
+              .map((s) => Number(s?.price))
+              .filter((p) => Number.isFinite(p));
+
+            const minPrice = prices.length ? Math.min(...prices) : null;
+            const maxPrice = prices.length ? Math.max(...prices) : null;
+            const priceRange = (minPrice === null || maxPrice === null)
+              ? '0-0'
+              : `${Math.round(minPrice)}-${Math.round(maxPrice)}`;
+
+            const specialties = Array.from(
+              new Set(
+                services
+                  .map((s) => s?.category)
+                  .filter(Boolean)
+              )
+            );
+
             return {
-              id: provider._id,
+              id: provider.providerId,
               name: provider.businessName,
-              image: provider.images && provider.images.length > 0 
-                ? provider.images[0] // Cloudinary returns full URL
-                : '/wash1.jpg',
-              rating: provider.rating?.average || 0,
-              address: `${provider.address?.street || ''}, ${provider.address?.city || ''}`,
-              phone: provider.phone,
-              email: provider.email,
-              distance: 2.5, // Default distance, can be calculated based on user location
-              services: [], // Will be populated if needed
-              priceRange: '15-45', // Default price range
+              image: '/wash1.jpg',
+              rating: Number(provider.rating ?? 0),
+              address: provider.businessAddress || '',
+              phone: '',
+              email: '',
+              distance: 2.5,
+              services: serviceNames,
+              priceRange,
               description: provider.description || 'No description available',
-              available: provider.isActive,
-              reviews: provider.rating?.count || 0,
-              specialties: []
+              available: true,
+              reviews: 0,
+              specialties
             };
           });
           

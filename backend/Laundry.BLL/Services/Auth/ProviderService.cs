@@ -11,4 +11,14 @@ public sealed class ProviderService(ProviderRepository repository)
     {
         return _repository.GetProviderProfile(providerId);
     }
+
+    public Task<List<ProviderWithServices>> GetProvidersWithServices()
+    {
+        return _repository.GetProvidersWithServices();
+    }
+
+    public Task<ProviderWithServices?> GetProviderWithServices(int providerId)
+    {
+        return _repository.GetProviderWithServices(providerId);
+    }
 }

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL without /api suffix - /api is added in the baseURL below
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5218';
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
@@ -134,21 +134,34 @@ export const getProviders = async (filters = {}) => {
 
 export const getProviderById = async (id) => {
   try {
-    const response = await api.get(`/providers/${id}`);
-    console.log('🔍 Raw provider response:', response.data);
-    const provider = response.data.data; // Backend returns { success: true, data: provider }
-    console.log('📦 Provider data:', provider);
-    console.log('🖼️ Provider images:', provider.images);
-    
-    // Transform images array to single image field (same as Providers.jsx)
+    const response = await api.get(`/providers/${id}/with-services`);
+    const provider = response.data?.data;
+
+    const services = Array.isArray(provider?.services) ? provider.services : [];
+
     return {
-      ...provider,
-      id: provider._id,
-      name: provider.businessName,
-      image: provider.images && provider.images.length > 0 
-        ? provider.images[0] // Cloudinary URL
-        : '/wash1.jpg', // Fallback
-      description: provider.description || 'No description available',
+      id: provider?.providerId,
+      name: provider?.businessName || 'Provider',
+      image: '/wash1.jpg',
+      rating: Number(provider?.rating ?? 0),
+      reviews: 0,
+      verified: Boolean(provider?.isVerified),
+      address: provider?.businessAddress || '',
+      phone: '',
+      email: '',
+      deliveryTime: '',
+      services: services.map((s) => ({
+        id: String(s.serviceId),
+        name: s.serviceName,
+        price: Number(s.price ?? 0),
+        unit: s.pricingType,
+        category: s.category,
+        minimumOrder: s.minimumOrder,
+        turnaroundTime: s.turnaroundTime,
+        description: s.description,
+      })),
+      promotions: [],
+      description: provider?.description || 'No description available',
     };
   } catch (error) {
     console.error('Error fetching provider:', error);

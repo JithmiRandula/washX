@@ -33,4 +33,32 @@ public class ProvidersController : ControllerBase
 
         return Ok(new { success = true, data = profile });
     }
+
+    // GET: /api/providers/with-services
+    [AllowAnonymous]
+    [HttpGet("with-services")]
+    public async Task<IActionResult> GetProvidersWithServices()
+    {
+        var providers = await _providerService.GetProvidersWithServices();
+        return Ok(new { success = true, count = providers.Count, data = providers });
+    }
+
+    // GET: /api/providers/{providerId}/with-services
+    [AllowAnonymous]
+    [HttpGet("{providerId:int}/with-services")]
+    public async Task<IActionResult> GetProviderWithServices([FromRoute] int providerId)
+    {
+        if (providerId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Invalid provider id" });
+        }
+
+        var provider = await _providerService.GetProviderWithServices(providerId);
+        if (provider is null)
+        {
+            return NotFound(new { success = false, message = "Provider not found" });
+        }
+
+        return Ok(new { success = true, data = provider });
+    }
 }
