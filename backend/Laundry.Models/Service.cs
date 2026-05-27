@@ -9,6 +9,10 @@ namespace Laundry.Models
     {
         public int ServiceId { get; set; }
 
+        public int ProviderId { get; set; }
+
+        public string? ProviderBusinessName { get; set; }
+
         public required string ServiceName { get; set; }
 
         public required string Category { get; set; }

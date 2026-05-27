@@ -161,7 +161,7 @@ export const serviceAPI = {
   // Get all services for logged-in provider
   getMyServices: async () => {
     try {
-      const response = await api.get('/services');
+      const response = await api.get('/services/mine');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

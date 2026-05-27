@@ -7,9 +7,14 @@ public sealed class LaundryService(ServiceRepository repository)
 {
     private readonly ServiceRepository _repository = repository;
 
-    public Task AddService(Service service)
+    public Task<int?> GetProviderIdForService(int serviceId)
     {
-        return _repository.AddService(service);
+        return _repository.GetProviderIdForService(serviceId);
+    }
+
+    public Task AddService(int providerId, Service service)
+    {
+        return _repository.AddService(providerId, service);
     }
 
     public Task<List<Service>> GetAllServices()
@@ -17,9 +22,14 @@ public sealed class LaundryService(ServiceRepository repository)
         return _repository.GetAllServices();
     }
 
-    public Task<int> UpdateService(int serviceId, Service service)
+    public Task<List<Service>> GetServicesByProviderId(int providerId)
     {
-        return _repository.UpdateService(serviceId, service);
+        return _repository.GetServicesByProviderId(providerId);
+    }
+
+    public Task<int> UpdateService(int serviceId, int providerId, Service service)
+    {
+        return _repository.UpdateService(serviceId, providerId, service);
     }
 
     public Task<int> DeleteService(int serviceId)

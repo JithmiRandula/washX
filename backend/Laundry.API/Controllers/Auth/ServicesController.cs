@@ -1,8 +1,10 @@
 using Laundry.API.Contracts.Services;
 using Laundry.BLL.Services.Auth;
+using Laundry.DAL.Repositories;
 using Laundry.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Laundry.API.Controllers.Auth
 {
@@ -11,16 +13,32 @@ namespace Laundry.API.Controllers.Auth
     public class ServicesController : ControllerBase
     {
         private readonly LaundryService _service;
+        private readonly UserRepository _userRepository;
 
-        public ServicesController(LaundryService service)
+        public ServicesController(LaundryService service, UserRepository userRepository)
         {
             _service = service;
+            _userRepository = userRepository;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var services = await _service.GetAllServices();
+            return Ok(services);
+        }
+
+        [Authorize(Roles = "provider")]
+        [HttpGet("mine")]
+        public async Task<IActionResult> GetMine()
+        {
+            var providerId = await ResolveProviderIdFromClaimsAsync();
+            if (providerId is null)
+            {
+                return BadRequest(new { message = "Provider account not found for this user" });
+            }
+
+            var services = await _service.GetServicesByProviderId(providerId.Value);
             return Ok(services);
         }
 
@@ -49,7 +67,13 @@ namespace Laundry.API.Controllers.Auth
                 SpecialInstructions = req.SpecialInstructions
             };
 
-            await _service.AddService(model);
+            var providerId = await ResolveProviderIdFromClaimsAsync();
+            if (providerId is null)
+            {
+                return BadRequest(new { message = "Provider account not found for this user" });
+            }
+
+            await _service.AddService(providerId.Value, model);
 
             return Ok(new
             {
@@ -87,7 +111,24 @@ namespace Laundry.API.Controllers.Auth
                 SpecialInstructions = req.SpecialInstructions
             };
 
-            var affected = await _service.UpdateService(id, model);
+            var providerId = await ResolveProviderIdFromClaimsAsync();
+            if (providerId is null)
+            {
+                return BadRequest(new { message = "Provider account not found for this user" });
+            }
+
+            var ownerProviderId = await _service.GetProviderIdForService(id);
+            if (!ownerProviderId.HasValue)
+            {
+                return NotFound(new { message = "Service not found" });
+            }
+
+            if (ownerProviderId.Value != providerId.Value)
+            {
+                return NotFound(new { message = "Service not found" });
+            }
+
+            var affected = await _service.UpdateService(id, providerId.Value, model);
             if (affected == 0)
             {
                 return NotFound(new { message = "Service not found" });
@@ -105,6 +146,23 @@ namespace Laundry.API.Controllers.Auth
                 return BadRequest("Invalid service id");
             }
 
+            var providerId = await ResolveProviderIdFromClaimsAsync();
+            if (providerId is null)
+            {
+                return BadRequest(new { message = "Provider account not found for this user" });
+            }
+
+            var ownerProviderId = await _service.GetProviderIdForService(id);
+            if (!ownerProviderId.HasValue)
+            {
+                return NotFound(new { message = "Service not found" });
+            }
+
+            if (ownerProviderId.Value != providerId.Value)
+            {
+                return NotFound(new { message = "Service not found" });
+            }
+
             var affected = await _service.DeleteService(id);
             if (affected == 0)
             {
@@ -112,6 +170,18 @@ namespace Laundry.API.Controllers.Auth
             }
 
             return Ok(new { message = "Service Deleted Successfully" });
+        }
+
+        private async Task<int?> ResolveProviderIdFromClaimsAsync()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return null;
+            }
+
+            var providerId = await _userRepository.GetProviderIdByUserId(userId);
+            return (providerId.HasValue && providerId.Value > 0) ? providerId.Value : null;
         }
     }
 }
