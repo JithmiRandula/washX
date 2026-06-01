@@ -45,6 +45,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
+import ItemBasedSelector from './ItemBasedSelector';
 import api from '../../utils/api';
 import './Providers.css';
 
@@ -62,6 +63,8 @@ const Providers = () => {
   const [showCardForm, setShowCardForm] = useState(false);
   const [showServiceTypeModal, setShowServiceTypeModal] = useState(false);
   const [showServiceList, setShowServiceList] = useState(false);
+  const [showItemSelector, setShowItemSelector] = useState(false);
+  const [selectedItemService, setSelectedItemService] = useState(null);
   const [serviceGroup, setServiceGroup] = useState(null); // 'item' | 'bulk'
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkService, setBulkService] = useState(null);
@@ -272,6 +275,35 @@ const Providers = () => {
     setShowCartModal(true);
   };
 
+  const openItemSelector = (service) => {
+    setSelectedItemService(service);
+    setShowServiceList(false);
+    setShowItemSelector(true);
+  };
+
+  const addItemSelectionsToCart = (selectedItems) => {
+    if (!selectedProvider || !selectedItemService || !Array.isArray(selectedItems) || selectedItems.length === 0) {
+      return;
+    }
+
+    const mappedItems = selectedItems.map((entry) => ({
+      id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
+      kind: 'item',
+      providerId: selectedProvider.id,
+      providerName: selectedProvider.name,
+      serviceId: selectedItemService.serviceId,
+      serviceName: selectedItemService.serviceName,
+      itemName: entry.itemName,
+      category: entry.category,
+      quantity: Number(entry.quantity || 0),
+      unitPrice: Number(entry.unitPrice || 0),
+      price: Number(entry.lineTotal || 0)
+    }));
+
+    setCartItems((prev) => [...prev, ...mappedItems]);
+    setShowCartModal(true);
+  };
+
   const removeCartItem = (id) => {
     setCartItems((prev) => prev.filter((x) => x.id !== id));
   };
@@ -325,11 +357,15 @@ const Providers = () => {
     setShowBulkModal(false);
     setBulkService(null);
     setSelectedBulkPackage(null);
+    setShowItemSelector(false);
+    setSelectedItemService(null);
     resetCardDetails();
   };
 
   const goToServiceList = (group) => {
     setServiceGroup(group);
+    setShowItemSelector(false);
+    setSelectedItemService(null);
     setShowServiceTypeModal(false);
     setShowServiceList(true);
   };
@@ -901,15 +937,19 @@ const Providers = () => {
               <div className="no-bookings" style={{ padding: '2rem 1rem', minHeight: '200px' }}>
                 <Package size={48} />
                 <h3>Your cart is empty</h3>
-                <p>Add a bulk package to see it here.</p>
+                <p>Add item-based or bulk services to see them here.</p>
               </div>
             ) : (
               <div className="cart-list cart-list-scroll">
                 {cartItems.map((it) => (
                   <div key={it.id} className="cart-row">
                     <div className="cart-row-main">
-                      <div className="cart-row-title">{it.serviceName}</div>
-                      <div className="cart-row-sub">{it.providerName} • {it.bags} bag • up to {it.maxKg}kg</div>
+                      <div className="cart-row-title">{it.kind === 'item' ? it.itemName : it.serviceName}</div>
+                      <div className="cart-row-sub">
+                        {it.kind === 'item'
+                          ? `${it.providerName} • ${it.serviceName} • Qty ${it.quantity}`
+                          : `${it.providerName} • ${it.bags} bag • up to ${it.maxKg}kg`}
+                      </div>
                     </div>
                     <div className="cart-row-right">
                       <div className="cart-row-price">Rs {Number(it.price).toFixed(2)}</div>
@@ -1039,7 +1079,7 @@ const Providers = () => {
                       key={`${s.serviceId}-${s.serviceName}`}
                       type="button"
                       className="service-select-card"
-                      onClick={() => (serviceGroup === 'bulk' ? openBulkPackageModal(s) : startBookingForService(s))}
+                      onClick={() => (serviceGroup === 'bulk' ? openBulkPackageModal(s) : openItemSelector(s))}
                     >
                       <div className="service-select-top">
                         <div>
@@ -1060,6 +1100,30 @@ const Providers = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+        <CartButton />
+      </>
+    );
+  }
+
+  // Item-based selector page
+  if (showItemSelector && selectedProvider && selectedItemService) {
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="bookings-page">
+          <div className="bookings-main">
+            <ItemBasedSelector
+              provider={selectedProvider}
+              service={selectedItemService}
+              onBack={() => {
+                setShowItemSelector(false);
+                setSelectedItemService(null);
+                setShowServiceList(true);
+              }}
+              onAddToCart={addItemSelectionsToCart}
+            />
           </div>
         </div>
         <CartButton />
