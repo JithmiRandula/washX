@@ -42,7 +42,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import api from '../../utils/api';
@@ -53,12 +53,21 @@ const Providers = () => {
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
+  const [showProviderDetail, setShowProviderDetail] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [useTransportService, setUseTransportService] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [showCardForm, setShowCardForm] = useState(false);
+  const [showServiceTypeModal, setShowServiceTypeModal] = useState(false);
+  const [showServiceList, setShowServiceList] = useState(false);
+  const [serviceGroup, setServiceGroup] = useState(null); // 'item' | 'bulk'
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkService, setBulkService] = useState(null);
+  const [selectedBulkPackage, setSelectedBulkPackage] = useState(null);
+  const [cartItems, setCartItems] = useState([]);
+  const [showCartModal, setShowCartModal] = useState(false);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     expiryDate: '',
@@ -74,7 +83,10 @@ const Providers = () => {
     },
     pickupDate: '',
     pickupSlot: '', // Morning / Afternoon / Evening
-    serviceType: 'Wash & Fold',
+    serviceType: '',
+    serviceId: null,
+    pricingType: '',
+    unitPrice: 0,
     items: [
       {
         category: 'Clothes',
@@ -123,6 +135,19 @@ const Providers = () => {
               .map((s) => s?.serviceName)
               .filter(Boolean);
 
+            const servicesDetailed = services
+              .map((s) => ({
+                serviceId: Number(s?.serviceId ?? 0),
+                serviceName: String(s?.serviceName ?? ''),
+                category: String(s?.category ?? ''),
+                pricingType: String(s?.pricingType ?? ''),
+                price: Number(s?.price ?? 0),
+                minimumOrder: Number(s?.minimumOrder ?? 0),
+                turnaroundTime: s?.turnaroundTime ?? '',
+                description: s?.description ?? ''
+              }))
+              .filter((s) => s.serviceName);
+
             const prices = services
               .map((s) => Number(s?.price))
               .filter((p) => Number.isFinite(p));
@@ -151,6 +176,7 @@ const Providers = () => {
               email: '',
               distance: 2.5,
               services: serviceNames,
+              servicesDetailed,
               priceRange,
               description: provider.description || 'No description available',
               available: true,
@@ -172,6 +198,169 @@ const Providers = () => {
 
     fetchProviders();
   }, []);
+
+  const getServiceGroup = (pricingType) => {
+    const t = String(pricingType || '').toLowerCase();
+    if (t.includes('kg') || t.includes('bulk') || t.includes('per_kg') || t.includes('perkg')) return 'bulk';
+    if (t.includes('item') || t.includes('piece') || t.includes('unit') || t.includes('per_item') || t.includes('peritem')) return 'item';
+    return 'item';
+  };
+
+  const getServicesForGroup = (provider, group) => {
+    const all = provider?.servicesDetailed || [];
+    if (!group) return all;
+    return all.filter((s) => getServiceGroup(s.pricingType) === group);
+  };
+
+  const formatServicePrice = (service) => {
+    const group = getServiceGroup(service?.pricingType);
+    const unit = group === 'bulk' ? '/ kg' : '/ item';
+    return `Rs ${Number(service?.price ?? 0).toFixed(2)} ${unit}`;
+  };
+
+  const getBulkPackages = (service) => {
+    const unitPrice = Number(service?.price ?? 0);
+    const base = [
+      { bags: 1, maxKg: 5, discount: 1 },
+      { bags: 2, maxKg: 10, discount: 0.97 },
+      { bags: 3, maxKg: 15, discount: 0.95 },
+      { bags: 4, maxKg: 20, discount: 0.93 }
+    ];
+
+    return base.map((p) => {
+      const raw = unitPrice * p.maxKg;
+      const price = Math.round(raw * p.discount * 100) / 100;
+      return {
+        id: `${service?.serviceId || 'svc'}-${p.bags}`,
+        ...p,
+        price
+      };
+    });
+  };
+
+  const openBulkPackageModal = (service) => {
+    setBulkService(service);
+    setSelectedBulkPackage(null);
+    setShowBulkModal(true);
+  };
+
+  const closeBulkPackageModal = () => {
+    setShowBulkModal(false);
+    setBulkService(null);
+    setSelectedBulkPackage(null);
+  };
+
+  const addBulkToCart = () => {
+    if (!selectedProvider || !bulkService || !selectedBulkPackage) return;
+
+    const id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
+    const item = {
+      id,
+      providerId: selectedProvider.id,
+      providerName: selectedProvider.name,
+      serviceId: bulkService.serviceId,
+      serviceName: bulkService.serviceName,
+      pricingType: bulkService.pricingType,
+      unitPrice: Number(bulkService.price ?? 0),
+      bags: selectedBulkPackage.bags,
+      maxKg: selectedBulkPackage.maxKg,
+      price: selectedBulkPackage.price
+    };
+
+    setCartItems((prev) => [...prev, item]);
+    closeBulkPackageModal();
+    setShowCartModal(true);
+  };
+
+  const removeCartItem = (id) => {
+    setCartItems((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  const goToCheckout = () => {
+    const match = window.location.pathname.match(/\/customer\/([^/]+)/);
+    const customerId = match?.[1];
+
+    if (!customerId) {
+      alert('Customer route not found for checkout');
+      return;
+    }
+
+    setShowCartModal(false);
+    navigate(`/customer/${customerId}/mybooking`, {
+      state: {
+        fromCart: true,
+        cartItems
+      }
+    });
+  };
+
+  const CartButton = () => (
+    <button
+      type="button"
+      className="cart-fab"
+      onClick={() => setShowCartModal(true)}
+      aria-label="Open cart"
+    >
+      <ShoppingBasket size={22} />
+      {cartItems.length > 0 && (
+        <span className="cart-badge">{cartItems.length}</span>
+      )}
+    </button>
+  );
+
+  const openServiceTypePicker = (provider) => {
+    setSelectedProvider(provider);
+    setShowProviderDetail(false);
+    setShowBookingForm(false);
+    setShowServiceList(false);
+    setServiceGroup(null);
+    setShowServiceTypeModal(true);
+    setShowPaymentModal(false);
+    setPaymentProcessing(false);
+    setPaymentSuccess(false);
+    setShowBulkModal(false);
+    setBulkService(null);
+    setSelectedBulkPackage(null);
+    resetCardDetails();
+  };
+
+  const goToServiceList = (group) => {
+    setServiceGroup(group);
+    setShowServiceTypeModal(false);
+    setShowServiceList(true);
+  };
+
+  const startBookingForService = (service) => {
+    const initialItems = getServiceGroup(service?.pricingType) === 'bulk'
+      ? [{ category: 'Clothes', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' }]
+      : [{ category: 'Shirt', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' }];
+
+    const nextBooking = {
+      customerInfo: { name: '', phone: '', email: '', address: '' },
+      pickupDate: '',
+      pickupSlot: '',
+      serviceType: service?.serviceName || '',
+      serviceId: service?.serviceId || null,
+      pricingType: service?.pricingType || '',
+      unitPrice: Number(service?.price ?? 0),
+      items: initialItems,
+      notes: '',
+      promoCode: '',
+      paymentMethod: 'Cash on Delivery',
+      invoiceRequired: false,
+      estimate: { subtotal: 0, discount: 0, total: 0 },
+      transportCost: 0
+    };
+    nextBooking.estimate = calcEstimate(nextBooking);
+
+    setShowServiceList(false);
+    setShowBookingForm(true);
+    setBookingData(nextBooking);
+  };
 
   const filteredProviders = providers.filter(provider => {
     if (filters.search && !provider.name.toLowerCase().includes(filters.search.toLowerCase())) {
@@ -212,13 +401,17 @@ const Providers = () => {
 
   const calcEstimate = (data) => {
     const d = data || bookingData;
-    const rate = baseRates[d.serviceType] || 0;
+    const resolvedUnitPrice = Number(d.unitPrice) || baseRates[d.serviceType] || 0;
+    const group = getServiceGroup(d.pricingType);
     let subtotal = 0;
     d.items.forEach((it) => {
       const qty = Number(it.quantity) || 0;
       const weight = Number(it.weight) || 0;
-      const weightCost = (d.serviceType === 'Wash & Fold' || d.serviceType === 'Wash & Iron') ? weight * 2 : 0;
-      subtotal += qty * rate + weightCost;
+      if (group === 'bulk') {
+        subtotal += weight * resolvedUnitPrice;
+      } else {
+        subtotal += qty * resolvedUnitPrice;
+      }
     });
     let discount = 0;
     const code = (d.promoCode || '').trim().toUpperCase();
@@ -236,11 +429,15 @@ const Providers = () => {
   };
 
   const addItem = () => {
+    const group = getServiceGroup(bookingData.pricingType);
+    const newItem = group === 'bulk'
+      ? { category: 'Clothes', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' }
+      : { category: 'Shirt', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' };
     setAndRecalc(prev => ({
       ...prev,
       items: [
         ...prev.items,
-        { category: 'Clothes', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' }
+        newItem
       ]
     }));
   };
@@ -274,20 +471,8 @@ const Providers = () => {
   };
 
   const handleBookService = (provider) => {
-    setSelectedProvider(provider);
-    setShowBookingForm(true);
-    setBookingData({
-      customerInfo: { name: '', phone: '', email: '', address: '' },
-      pickupDate: '',
-      pickupSlot: '',
-      serviceType: 'Wash & Fold',
-      items: [{ category: 'Clothes', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' }],
-      notes: '',
-      promoCode: '',
-      paymentMethod: 'Cash on Delivery',
-      invoiceRequired: false,
-      estimate: { subtotal: 0, discount: 0, total: 0 }
-    });
+    // Backward-compatible entry point: open the service type picker
+    openServiceTypePicker(provider);
   };
 
   const submitBooking = () => {
@@ -330,6 +515,10 @@ const Providers = () => {
     // Here you would typically send the booking to your backend
     alert(`Booking confirmed! Payment Method: ${bookingData.paymentMethod}`);
     setShowBookingForm(false);
+    setShowServiceList(false);
+    setShowServiceTypeModal(false);
+    setServiceGroup(null);
+    setShowProviderDetail(false);
     setSelectedProvider(null);
     resetCardDetails();
   };
@@ -432,171 +621,7 @@ const Providers = () => {
     }));
   };
 
-  // Provider Detail View (similar to booking detail)
-  if (selectedProvider && !showBookingForm) {
-    return (
-      <>
-        <CustomerNavbar />
-        <div className="bookings-page">
-          <div className="bookings-main">
-            <div className="bookings-header">
-              <button 
-                className="back-button"
-                onClick={() => setSelectedProvider(null)}
-              >
-                <ArrowLeft size={20} />
-                Back to Providers
-              </button>
-              <h1>{selectedProvider.name}</h1>
-              <p>{selectedProvider.description}</p>
-            </div>
-
-            <div className="detail-container">
-              <div className="detail-content">
-                <div className="detail-main">
-                  <div className="detail-provider-section">
-                    {/* Provider Image with overlay */}
-                    <div className="detail-inner-image-section">
-                      <img 
-                        src={selectedProvider.image} 
-                        alt={selectedProvider.name}
-                        className="detail-inner-laundry-image"
-                      />
-                      <div className="detail-image-overlay">
-                        <div className="detail-overlay-settings">
-                          <Settings size={32} className="detail-settings-icon" />
-                        </div>
-                        <div className="detail-overlay-content">
-                          <h2 className="detail-overlay-title">{selectedProvider.name}</h2>
-                          <div className="detail-overlay-services">
-                            {selectedProvider.services.map((service, index) => (
-                              <span key={index} className="detail-overlay-service-tag">{service}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <button 
-                          className="detail-order-button"
-                          onClick={() => handleBookService(selectedProvider)}
-                        >
-                          Book Service
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <p className="detail-description">{selectedProvider.description}</p>
-
-                    {/* Rating and reviews */}
-                    <div className="detail-rating">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          size={18} 
-                          fill={star <= Math.floor(selectedProvider.rating) ? "#fbbf24" : "none"}
-                          color="#fbbf24"
-                        />
-                      ))}
-                      <span>{selectedProvider.rating} ({selectedProvider.reviews} reviews)</span>
-                    </div>
-
-                    {/* Specialties */}
-                    <div className="specialties-section">
-                      <h4>Specialties</h4>
-                      <div className="specialties-tags">
-                        {selectedProvider.specialties.map((specialty, index) => (
-                          <span key={index} className="specialty-tag">{specialty}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="detail-info-grid">
-                    <div className="detail-info-card">
-                      <h3>Service Information</h3>
-                      <div className="detail-info-item">
-                        <Package size={18} />
-                        <span>Price Range: Rs {selectedProvider.priceRange}</span>
-                      </div>
-                      <div className="detail-info-item">
-                        <MapPin size={18} />
-                        <span>Distance: {selectedProvider.distance} km</span>
-                      </div>
-                      <div className="detail-info-item">
-                        <Star size={18} />
-                        <span>{selectedProvider.reviews} Reviews</span>
-                      </div>
-                    </div>
-
-                    <div className="detail-info-card">
-                      <h3>Contact & Location</h3>
-                      <div className="detail-info-item">
-                        <MapPin size={18} />
-                        <span>{selectedProvider.address}</span>
-                      </div>
-                      <div className="detail-info-item">
-                        <Phone size={18} />
-                        <span>{selectedProvider.phone}</span>
-                      </div>
-                      <div className="detail-info-item">
-                        <Mail size={18} />
-                        <span>{selectedProvider.email}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="detail-image-section">
-                  <div className="detail-image-container">
-                    <img 
-                      src="/map1.png" 
-                      alt="Location Map"
-                      className="detail-provider-image"
-                    />
-                  </div>
-                  
-                  <div className="detail-image-container">
-                    <div className="detail-calendar">
-                      <div className="detail-calendar-header">
-                        <button className="detail-calendar-nav">&lt;</button>
-                        <span className="detail-calendar-month">December 2025</span>
-                        <button className="detail-calendar-nav">&gt;</button>
-                      </div>
-                      <div className="detail-calendar-grid">
-                        <div className="detail-calendar-day-header">Sun</div>
-                        <div className="detail-calendar-day-header">Mon</div>
-                        <div className="detail-calendar-day-header">Tue</div>
-                        <div className="detail-calendar-day-header">Wed</div>
-                        <div className="detail-calendar-day-header">Thu</div>
-                        <div className="detail-calendar-day-header">Fri</div>
-                        <div className="detail-calendar-day-header">Sat</div>
-                        
-                        {/* Calendar Days */}
-                        {[...Array(31)].map((_, i) => {
-                          const day = i + 1;
-                          const isToday = day === new Date().getDate();
-                          
-                          return (
-                            <div 
-                              key={i} 
-                              className={`detail-calendar-day ${day < new Date().getDate() ? 'disabled' : ''} ${isToday ? 'today' : ''}`}
-                            >
-                              {day}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Stripe Payment Modal — must be checked BEFORE showBookingForm
+  // Stripe Payment Modal — must be checked BEFORE any other early return
   if (showPaymentModal) {
     return (
       <>
@@ -790,12 +815,260 @@ const Providers = () => {
             )}
           </div>
         </div>
+        <CartButton />
       </>
     );
   }
 
-  // Booking Form Modal
-  if (showBookingForm) {
+  // Bulk Package Modal (Bag-based picker)
+  if (showBulkModal && bulkService) {
+    const pkgs = getBulkPackages(bulkService);
+
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="sp-overlay">
+          <div className="bulk-modal">
+            <div className="bulk-modal-header">
+              <h2 className="bulk-modal-title">{bulkService.serviceName}</h2>
+              <button className="bulk-close-btn" onClick={closeBulkPackageModal}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="bulk-cards-row">
+              {pkgs.map((p) => {
+                const selected = selectedBulkPackage?.id === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`bulk-card ${selected ? 'selected' : ''}`}
+                    onClick={() => setSelectedBulkPackage(p)}
+                  >
+                    <div className="bulk-card-top">
+                      <div className="bulk-bag-label">{p.bags} BAG</div>
+                      <div className="bulk-bag-icons">
+                        {Array.from({ length: p.bags }).map((_, i) => (
+                          <ShoppingBag key={i} size={20} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bulk-price">Rs.{Number(p.price).toFixed(2)}</div>
+                    <div className="bulk-sub">{p.bags} bag{p.bags > 1 ? 's' : ''} included</div>
+                    <div className="bulk-sub">Up to {p.maxKg}Kg</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="bulk-actions">
+              <button
+                type="button"
+                className="bulk-add-btn"
+                onClick={addBulkToCart}
+                disabled={!selectedBulkPackage}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+        <CartButton />
+      </>
+    );
+  }
+
+  // Cart Sidebar
+  if (showCartModal) {
+    const total = cartItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="cart-sidebar-overlay" onClick={() => setShowCartModal(false)}>
+          <aside className="cart-sidebar" onClick={(e) => e.stopPropagation()}>
+            <div className="cart-sidebar-header">
+              <h2 className="service-mode-title">Cart</h2>
+              <button className="sp-close-btn" onClick={() => setShowCartModal(false)} aria-label="Close cart">
+                <X size={22} />
+              </button>
+            </div>
+            <p className="service-mode-subtitle">{cartItems.length} item(s)</p>
+
+            {cartItems.length === 0 ? (
+              <div className="no-bookings" style={{ padding: '2rem 1rem', minHeight: '200px' }}>
+                <Package size={48} />
+                <h3>Your cart is empty</h3>
+                <p>Add a bulk package to see it here.</p>
+              </div>
+            ) : (
+              <div className="cart-list cart-list-scroll">
+                {cartItems.map((it) => (
+                  <div key={it.id} className="cart-row">
+                    <div className="cart-row-main">
+                      <div className="cart-row-title">{it.serviceName}</div>
+                      <div className="cart-row-sub">{it.providerName} • {it.bags} bag • up to {it.maxKg}kg</div>
+                    </div>
+                    <div className="cart-row-right">
+                      <div className="cart-row-price">Rs {Number(it.price).toFixed(2)}</div>
+                      <button type="button" className="cart-remove" onClick={() => removeCartItem(it.id)}>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="cart-total">
+                  <span>Total</span>
+                  <strong>Rs {total.toFixed(2)}</strong>
+                </div>
+              </div>
+            )}
+
+            <div className="cart-sidebar-actions">
+              <button className="cancel-btn" onClick={clearCart}>
+                Clear Cart
+              </button>
+              <button className="submit-btn" onClick={goToCheckout} disabled={cartItems.length === 0}>
+                Go to Checkout
+              </button>
+            </div>
+          </aside>
+        </div>
+        <CartButton />
+      </>
+    );
+  }
+
+  // Service Type Picker Modal
+  if (showServiceTypeModal && selectedProvider) {
+    const itemCount = getServicesForGroup(selectedProvider, 'item').length;
+    const bulkCount = getServicesForGroup(selectedProvider, 'bulk').length;
+
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="sp-overlay">
+          <div className="sp-modal">
+            <div className="sp-header">
+              <button
+                className="sp-close-btn"
+                onClick={() => {
+                  setShowServiceTypeModal(false);
+                  setSelectedProvider(null);
+                  setServiceGroup(null);
+                }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <h2 className="service-mode-title">Choose Service Type</h2>
+            <p className="service-mode-subtitle">{selectedProvider.name}</p>
+
+            <div className="payment-method-options">
+              <div
+                className={`payment-method-card ${itemCount === 0 ? 'disabled' : ''}`}
+                onClick={() => itemCount > 0 && goToServiceList('item')}
+              >
+                <div className="payment-method-content">
+                  <Package size={24} />
+                  <span>Item-based services</span>
+                  <small>{itemCount} available</small>
+                  <p className="payment-method-description">Priced per item/piece</p>
+                </div>
+              </div>
+
+              <div
+                className={`payment-method-card ${bulkCount === 0 ? 'disabled' : ''}`}
+                onClick={() => bulkCount > 0 && goToServiceList('bulk')}
+              >
+                <div className="payment-method-content">
+                  <Settings size={24} />
+                  <span>Bulk (per kg) services</span>
+                  <small>{bulkCount} available</small>
+                  <p className="payment-method-description">Priced per kilogram</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <CartButton />
+      </>
+    );
+  }
+
+  // Services List View (Item-based / Bulk)
+  if (showServiceList && selectedProvider) {
+    const services = getServicesForGroup(selectedProvider, serviceGroup);
+    const title = serviceGroup === 'bulk' ? 'Bulk (per kg) services' : 'Item-based services';
+
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="bookings-page">
+          <div className="bookings-main">
+            <div className="bookings-header">
+              <button
+                className="back-button"
+                onClick={() => {
+                  setShowServiceList(false);
+                  setShowServiceTypeModal(true);
+                }}
+              >
+                <ArrowLeft size={20} />
+                Back
+              </button>
+              <h1>{selectedProvider.name}</h1>
+              <p>Select one of the {title} below</p>
+            </div>
+
+            <div className="service-list-container">
+              {services.length === 0 ? (
+                <div className="no-bookings">
+                  <Package size={48} />
+                  <h3>No services found</h3>
+                  <p>This provider has no services in this category.</p>
+                </div>
+              ) : (
+                <div className="service-list-grid">
+                  {services.map((s) => (
+                    <button
+                      key={`${s.serviceId}-${s.serviceName}`}
+                      type="button"
+                      className="service-select-card"
+                      onClick={() => (serviceGroup === 'bulk' ? openBulkPackageModal(s) : startBookingForService(s))}
+                    >
+                      <div className="service-select-top">
+                        <div>
+                          <div className="service-select-name">{s.serviceName}</div>
+                          {s.category && <div className="service-select-meta">{s.category}</div>}
+                        </div>
+                        <div className="service-select-price">{formatServicePrice(s)}</div>
+                      </div>
+
+                      <div className="service-select-bottom">
+                        {Number.isFinite(s.minimumOrder) && s.minimumOrder > 0 && (
+                          <span className="service-pill">Min order: {s.minimumOrder}</span>
+                        )}
+                        {s.turnaroundTime && <span className="service-pill">{s.turnaroundTime}</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <CartButton />
+      </>
+    );
+  }
+
+  // Provider Detail View (legacy)
+  if (selectedProvider && showProviderDetail && !showBookingForm) {
     return (
       <>
         <CustomerNavbar />
@@ -804,10 +1077,185 @@ const Providers = () => {
             <div className="bookings-header">
               <button 
                 className="back-button"
-                onClick={() => setShowBookingForm(false)}
+                onClick={() => setSelectedProvider(null)}
               >
                 <ArrowLeft size={20} />
-                Back to Provider
+                Back to Providers
+              </button>
+              <h1>{selectedProvider.name}</h1>
+              <p>{selectedProvider.description}</p>
+            </div>
+
+            <div className="detail-container">
+              <div className="detail-content">
+                <div className="detail-main">
+                  <div className="detail-provider-section">
+                    {/* Provider Image with overlay */}
+                    <div className="detail-inner-image-section">
+                      <img 
+                        src={selectedProvider.image} 
+                        alt={selectedProvider.name}
+                        className="detail-inner-laundry-image"
+                      />
+                      <div className="detail-image-overlay">
+                        <div className="detail-overlay-settings">
+                          <Settings size={32} className="detail-settings-icon" />
+                        </div>
+                        <div className="detail-overlay-content">
+                          <h2 className="detail-overlay-title">{selectedProvider.name}</h2>
+                          <div className="detail-overlay-services">
+                            {selectedProvider.services.map((service, index) => (
+                              <span key={index} className="detail-overlay-service-tag">{service}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <button 
+                          className="detail-order-button"
+                          onClick={() => handleBookService(selectedProvider)}
+                        >
+                          Book Service
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <p className="detail-description">{selectedProvider.description}</p>
+
+                    {/* Rating and reviews */}
+                    <div className="detail-rating">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          size={18} 
+                          fill={star <= Math.floor(selectedProvider.rating) ? "#fbbf24" : "none"}
+                          color="#fbbf24"
+                        />
+                      ))}
+                      <span>{selectedProvider.rating} ({selectedProvider.reviews} reviews)</span>
+                    </div>
+
+                    {/* Specialties */}
+                    <div className="specialties-section">
+                      <h4>Specialties</h4>
+                      <div className="specialties-tags">
+                        {selectedProvider.specialties.map((specialty, index) => (
+                          <span key={index} className="specialty-tag">{specialty}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="detail-info-grid">
+                    <div className="detail-info-card">
+                      <h3>Service Information</h3>
+                      <div className="detail-info-item">
+                        <Package size={18} />
+                        <span>Price Range: Rs {selectedProvider.priceRange}</span>
+                      </div>
+                      <div className="detail-info-item">
+                        <MapPin size={18} />
+                        <span>Distance: {selectedProvider.distance} km</span>
+                      </div>
+                      <div className="detail-info-item">
+                        <Star size={18} />
+                        <span>{selectedProvider.reviews} Reviews</span>
+                      </div>
+                    </div>
+
+                    <div className="detail-info-card">
+                      <h3>Contact & Location</h3>
+                      <div className="detail-info-item">
+                        <MapPin size={18} />
+                        <span>{selectedProvider.address}</span>
+                      </div>
+                      <div className="detail-info-item">
+                        <Phone size={18} />
+                        <span>{selectedProvider.phone}</span>
+                      </div>
+                      <div className="detail-info-item">
+                        <Mail size={18} />
+                        <span>{selectedProvider.email}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-image-section">
+                  <div className="detail-image-container">
+                    <img 
+                      src="/map1.png" 
+                      alt="Location Map"
+                      className="detail-provider-image"
+                    />
+                  </div>
+                  
+                  <div className="detail-image-container">
+                    <div className="detail-calendar">
+                      <div className="detail-calendar-header">
+                        <button className="detail-calendar-nav">&lt;</button>
+                        <span className="detail-calendar-month">December 2025</span>
+                        <button className="detail-calendar-nav">&gt;</button>
+                      </div>
+                      <div className="detail-calendar-grid">
+                        <div className="detail-calendar-day-header">Sun</div>
+                        <div className="detail-calendar-day-header">Mon</div>
+                        <div className="detail-calendar-day-header">Tue</div>
+                        <div className="detail-calendar-day-header">Wed</div>
+                        <div className="detail-calendar-day-header">Thu</div>
+                        <div className="detail-calendar-day-header">Fri</div>
+                        <div className="detail-calendar-day-header">Sat</div>
+                        
+                        {/* Calendar Days */}
+                        {[...Array(31)].map((_, i) => {
+                          const day = i + 1;
+                          const isToday = day === new Date().getDate();
+                          
+                          return (
+                            <div 
+                              key={i} 
+                              className={`detail-calendar-day ${day < new Date().getDate() ? 'disabled' : ''} ${isToday ? 'today' : ''}`}
+                            >
+                              {day}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <CartButton />
+      </>
+    );
+  }
+
+  // Booking Form Modal
+  if (showBookingForm) {
+    const group = getServiceGroup(bookingData.pricingType);
+    const availableServices = getServicesForGroup(selectedProvider, group);
+    const isBulk = group === 'bulk';
+    const itemsValid = isBulk
+      ? bookingData.items.every((it) => Number(it.weight) > 0)
+      : bookingData.items.every((it) => Number(it.quantity) > 0);
+
+    return (
+      <>
+        <CustomerNavbar />
+        <div className="bookings-page">
+          <div className="bookings-main">
+            <div className="bookings-header">
+              <button 
+                className="back-button"
+                onClick={() => {
+                  setShowBookingForm(false);
+                  setShowServiceList(true);
+                }}
+              >
+                <ArrowLeft size={20} />
+                Back to Services
               </button>
               <h1>Book Service with {selectedProvider.name}</h1>
               <p>Fill in the details for your laundry service</p>
@@ -819,20 +1267,6 @@ const Providers = () => {
                   <h2>Book Laundry Service</h2>
                 </div>
 
-                <div className="transport-option">
-                  <label className="transport-toggle-label">
-                    <input
-                      type="checkbox"
-                      checked={useTransportService}
-                      onChange={handleTransportToggle}
-                    />
-                    Use our transport service (+Rs {selectedProvider.transportCost || 0})
-                  </label>
-                </div>
-
-                <div className="total-amount">
-                  <strong>Total Amount: </strong>Rs {bookingData.estimate.total}
-                </div>
 
                 {/* Customer Details */}
                 <div className="form-group">
@@ -911,68 +1345,112 @@ const Providers = () => {
                 <div className="form-group">
                   <label>Service Type</label>
                   <select
-                    value={bookingData.serviceType}
-                    onChange={(e) => setAndRecalc({ ...bookingData, serviceType: e.target.value })}
+                    value={bookingData.serviceId || ''}
+                    onChange={(e) => {
+                      const id = Number(e.target.value);
+                      const svc = availableServices.find((s) => Number(s.serviceId) === id);
+                      setAndRecalc({
+                        ...bookingData,
+                        serviceId: id,
+                        serviceType: svc?.serviceName || '',
+                        pricingType: svc?.pricingType || bookingData.pricingType,
+                        unitPrice: Number(svc?.price ?? bookingData.unitPrice)
+                      });
+                    }}
                   >
-                    <option value="Wash & Fold">Wash & Fold</option>
-                    <option value="Wash & Iron">Wash & Iron</option>
-                    <option value="Dry Clean">Dry Clean</option>
-                    <option value="Iron Only">Iron Only</option>
-                    <option value="Express Service">Express Service</option>
+                    {availableServices.length === 0 ? (
+                      <option value="">No services available</option>
+                    ) : (
+                      availableServices.map((s) => (
+                        <option key={`${s.serviceId}-${s.serviceName}`} value={s.serviceId}>
+                          {s.serviceName} — {formatServicePrice(s)}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
                 {/* Items */}
-                <h3 style={{marginTop: '1rem', marginBottom: '0.5rem', color: '#374151'}}>Items</h3>
-                {bookingData.items.map((item, index) => (
-                  <div key={index} className="item-grid-row">
-                    <select
-                      value={item.category}
-                      onChange={(e) => updateItem(index, 'category', e.target.value)}
-                    >
-                      <option value="Clothes">Clothes</option>
-                      <option value="Bedding">Bedding</option>
-                      <option value="Curtains">Curtains</option>
-                      <option value="Towels">Towels</option>
-                    </select>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                      placeholder="Qty"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={item.weight}
-                      onChange={(e) => updateItem(index, 'weight', e.target.value)}
-                      placeholder="Weight (kg)"
-                    />
-                    <select
-                      value={item.fabric}
-                      onChange={(e) => updateItem(index, 'fabric', e.target.value)}
-                    >
-                      <option value="Cotton">Cotton</option>
-                      <option value="Wool">Wool</option>
-                      <option value="Silk">Silk</option>
-                      <option value="Denim">Denim</option>
-                    </select>
-                    <select
-                      value={item.color}
-                      onChange={(e) => updateItem(index, 'color', e.target.value)}
-                    >
-                      <option value="Whites">Whites</option>
-                      <option value="Colors">Colors</option>
-                      <option value="Mixed">Mixed</option>
-                    </select>
-                    {bookingData.items.length > 1 && (
-                      <button type="button" className="remove-item-btn" onClick={() => removeItemRow(index)}>×</button>
-                    )}
-                  </div>
-                ))}
-                <button type="button" className="add-item-btn" onClick={addItem}>Add Item</button>
+                <h3 style={{marginTop: '1rem', marginBottom: '0.5rem', color: '#374151'}}>
+                  {isBulk ? 'Bulk Items (per kg)' : 'Items (per piece)'}
+                </h3>
+
+                {isBulk ? (
+                  <>
+                    {bookingData.items.map((item, index) => (
+                      <div key={index} className="bulk-item-grid-row">
+                        <select
+                          value={item.category}
+                          onChange={(e) => updateItem(index, 'category', e.target.value)}
+                        >
+                          <option value="Clothes">Clothes</option>
+                          <option value="Bedding">Bedding</option>
+                          <option value="Curtains">Curtains</option>
+                          <option value="Towels">Towels</option>
+                        </select>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={item.weight}
+                          onChange={(e) => updateItem(index, 'weight', e.target.value)}
+                          placeholder="Weight (kg)"
+                        />
+                        {bookingData.items.length > 1 && (
+                          <button type="button" className="remove-item-btn" onClick={() => removeItemRow(index)}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="add-item-btn" onClick={addItem}>Add Item</button>
+                  </>
+                ) : (
+                  <>
+                    {bookingData.items.map((item, index) => (
+                      <div key={index} className="item-grid-row">
+                        <select
+                          value={item.category}
+                          onChange={(e) => updateItem(index, 'category', e.target.value)}
+                        >
+                          <option value="Shirt">Shirt</option>
+                          <option value="Pants">Pants</option>
+                          <option value="Dress">Dress</option>
+                          <option value="Saree">Saree</option>
+                          <option value="Bedsheet">Bedsheet</option>
+                          <option value="Curtains">Curtains</option>
+                          <option value="Towel">Towel</option>
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                          placeholder="Qty"
+                        />
+                        <select
+                          value={item.fabric}
+                          onChange={(e) => updateItem(index, 'fabric', e.target.value)}
+                        >
+                          <option value="Cotton">Cotton</option>
+                          <option value="Wool">Wool</option>
+                          <option value="Silk">Silk</option>
+                          <option value="Denim">Denim</option>
+                        </select>
+                        <select
+                          value={item.color}
+                          onChange={(e) => updateItem(index, 'color', e.target.value)}
+                        >
+                          <option value="Whites">Whites</option>
+                          <option value="Colors">Colors</option>
+                          <option value="Mixed">Mixed</option>
+                        </select>
+                        {bookingData.items.length > 1 && (
+                          <button type="button" className="remove-item-btn" onClick={() => removeItemRow(index)}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="add-item-btn" onClick={addItem}>Add Item</button>
+                  </>
+                )}
 
                 {/* Payment & Notes */}
                 <div className="form-group">
@@ -1068,7 +1546,7 @@ const Providers = () => {
                   <button 
                     onClick={submitBooking}
                     className="submit-btn"
-                    disabled={!bookingData.customerInfo.name || !bookingData.customerInfo.phone || !bookingData.customerInfo.email || !bookingData.customerInfo.address || !bookingData.pickupDate || !bookingData.pickupSlot || bookingData.items.length === 0}
+                    disabled={!bookingData.customerInfo.name || !bookingData.customerInfo.phone || !bookingData.customerInfo.email || !bookingData.customerInfo.address || !bookingData.pickupDate || !bookingData.pickupSlot || bookingData.items.length === 0 || !itemsValid || !bookingData.serviceId}
                   >
                     {bookingData.paymentMethod === 'Online Payment' ? (
                       <>
@@ -1102,6 +1580,7 @@ const Providers = () => {
             </div>
           </div>
         </div>
+        <CartButton />
       </>
     );
   }
@@ -1228,6 +1707,7 @@ const Providers = () => {
                   <div 
                     key={provider.id} 
                     className="provider-card"
+                    onClick={() => openServiceTypePicker(provider)}
                   >
                     <div className="provider-image-container">
                       <img 
@@ -1277,21 +1757,6 @@ const Providers = () => {
                           <span>Rs {provider.priceRange}</span>
                         </div>
                       </div>
-                      
-                      <div className="provider-actions">
-                        <button 
-                          className="view-details-btn"
-                          onClick={() => setSelectedProvider(provider)}
-                        >
-                          View Details
-                        </button>
-                        <button 
-                          className="book-now-btn"
-                          onClick={() => handleBookService(provider)}
-                        >
-                          Book Now
-                        </button>
-                      </div>
                     </div>
                   </div>
                 ))
@@ -1300,6 +1765,7 @@ const Providers = () => {
           </div>
         </div>
       </div>
+      <CartButton />
     </>
   );
 };
