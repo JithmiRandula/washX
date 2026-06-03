@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Minus, ShoppingCart } from 'lucide-react';
 import './ItemBasedSelector.css';
 
 const CATEGORY_CONFIG = [
@@ -91,6 +90,8 @@ const toMoney = (value) => {
   return `Rs.${n.toFixed(2)}`;
 };
 
+const VISIBLE_CATEGORY_COUNT = 8;
+
 const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
   const [activeCategory, setActiveCategory] = useState(CATEGORY_CONFIG[0].key);
   const [categoryStartIndex, setCategoryStartIndex] = useState(0);
@@ -125,8 +126,10 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
     return sum + qty * Number(item.price || 0);
   }, 0);
 
-  const visibleCategoryCount = 8;
-  const visibleCategories = CATEGORY_CONFIG.slice(categoryStartIndex, categoryStartIndex + visibleCategoryCount);
+  const visibleCategories = CATEGORY_CONFIG.slice(
+    categoryStartIndex,
+    categoryStartIndex + VISIBLE_CATEGORY_COUNT
+  );
 
   const increaseQty = (id) => {
     setQuantities((prev) => ({ ...prev, [id]: Number(prev[id] || 0) + 1 }));
@@ -164,90 +167,113 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
 
   return (
     <div className="ibs-page">
-      <div className="ibs-header-row">
+      <header className="ibs-header">
         <button type="button" className="ibs-back-btn" onClick={onBack}>
-          <ArrowLeft size={18} />
           Back
         </button>
-        <div className="ibs-provider-meta">
-          <h2>Select Your Items</h2>
-          <p>{provider?.name} • {service?.serviceName}</p>
+
+        <div className="ibs-header-content">
+          <div className="ibs-header-text">
+            <span className="ibs-eyebrow">Item-based booking</span>
+            <h2>Select Your Items</h2>
+            <p>
+              <strong>{provider?.name}</strong>
+              <span className="ibs-dot">•</span>
+              {service?.serviceName}
+            </p>
+          </div>
+          <div className="ibs-header-badge">
+            From {toMoney(basePrice)}/item
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="ibs-categories-wrap">
-        <button
-          type="button"
-          className="ibs-cat-nav"
-          onClick={() => setCategoryStartIndex((prev) => Math.max(0, prev - 1))}
-          disabled={categoryStartIndex === 0}
-        >
-          <ChevronLeft size={22} />
-        </button>
+      <section className="ibs-categories-section">
+        <div className="ibs-categories-label">Browse by category</div>
 
-        <div className="ibs-categories">
-          {visibleCategories.map((category) => (
-            <button
-              key={category.key}
-              type="button"
-              className={`ibs-category-chip ${activeCategory === category.key ? 'active' : ''}`}
-              onClick={() => setActiveCategory(category.key)}
-            >
-              {category.label}
-            </button>
-          ))}
+        <div className="ibs-categories-wrap">
+          <button
+            type="button"
+            className="ibs-cat-nav"
+            onClick={() => setCategoryStartIndex((prev) => Math.max(0, prev - 1))}
+            disabled={categoryStartIndex === 0}
+            aria-label="Previous categories"
+          >
+            Prev
+          </button>
+
+          <div className="ibs-categories">
+            {visibleCategories.map((category) => (
+              <button
+                key={category.key}
+                type="button"
+                className={`ibs-category-chip ${activeCategory === category.key ? 'active' : ''}`}
+                onClick={() => setActiveCategory(category.key)}
+              >
+                {category.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="ibs-cat-nav"
+            onClick={() =>
+              setCategoryStartIndex((prev) =>
+                Math.min(CATEGORY_CONFIG.length - VISIBLE_CATEGORY_COUNT, prev + 1)
+              )
+            }
+            disabled={categoryStartIndex >= CATEGORY_CONFIG.length - VISIBLE_CATEGORY_COUNT}
+            aria-label="Next categories"
+          >
+            Next
+          </button>
         </div>
-
-        <button
-          type="button"
-          className="ibs-cat-nav"
-          onClick={() => setCategoryStartIndex((prev) => Math.min(CATEGORY_CONFIG.length - visibleCategoryCount, prev + 1))}
-          disabled={categoryStartIndex >= CATEGORY_CONFIG.length - visibleCategoryCount}
-        >
-          <ChevronRight size={22} />
-        </button>
-      </div>
+      </section>
 
       <div className="ibs-grid">
         {visibleItems.map((item) => {
           const qty = Number(quantities[item.id] || 0);
+          const inCart = qty > 0;
 
           return (
-            <div className="ibs-card" key={item.id}>
+            <article className={`ibs-card ${inCart ? 'selected' : ''}`} key={item.id}>
               <div className="ibs-card-image-wrap">
-                <img src={item.image} alt={item.name} className="ibs-card-image" />
+                <img src={item.image} alt={item.name} className="ibs-card-image" loading="lazy" />
+                <div className="ibs-card-image-overlay" />
                 <span className="ibs-card-price">{toMoney(item.price)}</span>
               </div>
 
               <div className="ibs-card-body">
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
+                <div className="ibs-card-copy">
+                  <h3>{item.name}</h3>
+                  <p>{item.description}</p>
+                </div>
 
                 {qty === 0 ? (
                   <button type="button" className="ibs-add-btn" onClick={() => increaseQty(item.id)}>
-                    ADD
-                    <span className="ibs-add-plus"><Plus size={18} /></span>
+                    Add item
                   </button>
                 ) : (
                   <div className="ibs-qty-control">
-                    <button type="button" onClick={() => decreaseQty(item.id)}>
-                      <Minus size={16} />
+                    <button type="button" onClick={() => decreaseQty(item.id)} aria-label="Decrease quantity">
+                      −
                     </button>
                     <span>{qty}</span>
-                    <button type="button" onClick={() => increaseQty(item.id)}>
-                      <Plus size={16} />
+                    <button type="button" onClick={() => increaseQty(item.id)} aria-label="Increase quantity">
+                      +
                     </button>
                   </div>
                 )}
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
 
-      <div className="ibs-footer-bar">
+      <footer className="ibs-footer-bar">
         <div className="ibs-summary">
-          <span>{selectedCount} item(s) selected</span>
+          <span className="ibs-summary-count">{selectedCount} item(s) selected</span>
           <strong>{toMoney(selectedTotal)}</strong>
         </div>
         <button
@@ -256,10 +282,9 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
           disabled={selectedCount === 0}
           onClick={handleAddSelected}
         >
-          <ShoppingCart size={18} />
           Add Selected to Cart
         </button>
-      </div>
+      </footer>
     </div>
   );
 };
