@@ -1,7 +1,15 @@
-﻿using Laundry.DAL.Repositories;
+using Laundry.DAL.Repositories;
 using Laundry.Models;
 
 namespace Laundry.BLL.Services.Auth;
+
+public sealed class AddressParts
+{
+    public string? Street { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? ZipCode { get; set; }
+}
 
 public sealed class UserService(UserRepository repo, TokenService tokenService)
 {
@@ -111,5 +119,78 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
         return user;
     }
 
+    public async Task<object?> GetCustomerProfile(int userId)
+    {
+        var row = await _repo.GetCustomerProfileByUserId(userId);
+        if (row is null)
+            return null;
 
+        return MapProfileResponse(row);
+    }
+
+    public async Task<object?> UpdateCustomerProfile(int userId, string? name, string? phone, AddressParts? address)
+    {
+        var row = await _repo.GetCustomerProfileByUserId(userId);
+        if (row is null)
+            return null;
+
+        var updatedName = string.IsNullOrWhiteSpace(name) ? row.Name : name.Trim();
+        var updatedPhone = phone ?? row.Phone;
+
+        await _repo.UpdateUserProfile(userId, updatedName, updatedPhone);
+
+        if (address is not null)
+        {
+            var addressLine = FormatAddress(address);
+            await _repo.UpdateCustomerAddress(userId, addressLine);
+        }
+
+        var updated = await _repo.GetCustomerProfileByUserId(userId);
+        return updated is null ? null : MapProfileResponse(updated);
+    }
+
+    private static object MapProfileResponse(CustomerUserProfile row) => new
+    {
+        customerId = row.CustomerId,
+        name = row.Name,
+        email = row.Email,
+        phone = row.Phone,
+        dateOfBirth = (string?)null,
+        gender = (string?)null,
+        address = ParseAddress(row.Address),
+        avatar = (string?)null,
+        preferences = new
+        {
+            notifications = true,
+            emailUpdates = true,
+            smsAlerts = false,
+            promotionalEmails = false
+        },
+        googleId = row.HasPassword ? (string?)null : "google",
+        paymentMethods = Array.Empty<object>()
+    };
+
+    private static object ParseAddress(string? address)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return new { street = "", city = "", state = "", zipCode = "" };
+        }
+
+        return new { street = address, city = "", state = "", zipCode = "" };
+    }
+
+    private static string? FormatAddress(AddressParts address)
+    {
+        var parts = new[]
+        {
+            address.Street?.Trim(),
+            address.City?.Trim(),
+            address.State?.Trim(),
+            address.ZipCode?.Trim()
+        }.Where(p => !string.IsNullOrWhiteSpace(p));
+
+        var line = string.Join(", ", parts);
+        return string.IsNullOrWhiteSpace(line) ? null : line;
+    }
 }
