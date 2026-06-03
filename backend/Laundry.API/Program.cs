@@ -1,6 +1,7 @@
 using Laundry.DAL.DbHelper;
 using Laundry.DAL.Repositories;
 using Laundry.BLL.Services.Auth;
+using Laundry.BLL.Services.Payments;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,6 +28,7 @@ builder.Services.AddScoped<ServiceRepository>();
 builder.Services.AddScoped<LaundryService>();
 builder.Services.AddScoped<ProviderRepository>();
 builder.Services.AddScoped<ProviderService>();
+builder.Services.AddSingleton<PayHereService>();
 
 builder.Services.AddHttpLogging(_ => { });
 

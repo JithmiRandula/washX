@@ -19,6 +19,7 @@ import ProviderDetails from './pages/Customer/ProviderDetails';
 import CustomerDashboard from './pages/Customer/CustomerDashboard';
 import Bookings from './pages/Customer/Bookings';
 import CustomerProfile from './pages/Customer/CustomerProfile';
+import PaymentResult from './pages/Customer/PaymentResult';
 import ProviderDashboard from './pages/Provider/ProviderDashboard';
 import ProviderServices from './pages/Provider/ProviderServices';
 import ProviderOrders from './pages/Provider/ProviderOrders';
@@ -34,7 +35,7 @@ import './App.css';
 
 function AppContent() {
   const location = useLocation();
-  const isCustomerRoute = location.pathname.startsWith('/customer');
+  const isCustomerRoute = location.pathname.startsWith('/customer') || location.pathname.startsWith('/payment');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isAuthRoute = ['/login', '/register', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/reset-password') || location.pathname.startsWith('/auth/set-password');
 
@@ -54,6 +55,22 @@ function AppContent() {
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/providers" element={<HomeProviders />} />
           <Route path="/provider/:id" element={<ProviderDetails />} />
+          <Route
+            path="/payment/success"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <PaymentResult status="success" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment/cancel"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <PaymentResult status="cancel" />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Customer Routes - Dynamic with customerId */}
           <Route 

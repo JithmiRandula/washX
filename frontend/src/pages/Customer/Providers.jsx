@@ -42,15 +42,18 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import ItemBasedSelector from './ItemBasedSelector';
 import api from '../../utils/api';
+import { redirectToPayHereCheckout } from '../../utils/payhere';
 import './Providers.css';
 
 const Providers = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -71,6 +74,7 @@ const Providers = () => {
   const [selectedBulkPackage, setSelectedBulkPackage] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     expiryDate: '',
@@ -259,6 +263,7 @@ const Providers = () => {
     const id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     const item = {
       id,
+      kind: 'bulk',
       providerId: selectedProvider.id,
       providerName: selectedProvider.name,
       serviceId: bulkService.serviceId,
@@ -312,7 +317,20 @@ const Providers = () => {
     setCartItems([]);
   };
 
-  const goToCheckout = () => {
+  const buildCartItemsDescription = () => {
+    return cartItems
+      .map((it) => {
+        if (it.kind === 'item') {
+          return `${it.itemName} x${it.quantity}`;
+        }
+        return `${it.serviceName} (${it.bags} bag)`;
+      })
+      .join(', ');
+  };
+
+  const goToCheckout = async () => {
+    if (cartItems.length === 0) return;
+
     const match = window.location.pathname.match(/\/customer\/([^/]+)/);
     const customerId = match?.[1];
 
@@ -321,13 +339,47 @@ const Providers = () => {
       return;
     }
 
-    setShowCartModal(false);
-    navigate(`/customer/${customerId}/mybooking`, {
-      state: {
-        fromCart: true,
-        cartItems
+    const total = cartItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    if (total <= 0) {
+      alert('Cart total must be greater than zero');
+      return;
+    }
+
+    const nameParts = String(user?.name || user?.Name || 'Customer').trim().split(/\s+/);
+    const firstName = nameParts[0] || 'Customer';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'WashX';
+
+    setCheckoutLoading(true);
+
+    try {
+      const response = await api.post('/payments/payhere/checkout', {
+        amount: total,
+        items: buildCartItemsDescription(),
+        firstName,
+        lastName,
+        email: user?.email || user?.Email || '',
+        phone: user?.phone || user?.Phone || '',
+        address: user?.address || 'Colombo',
+        city: 'Colombo'
+      });
+
+      if (!response.data?.success || !response.data?.data) {
+        throw new Error(response.data?.message || 'Failed to prepare PayHere checkout');
       }
-    });
+
+      const payment = response.data.data;
+
+      sessionStorage.setItem('washx_payhere_order', payment.order_id);
+      sessionStorage.setItem('washx_checkout_cart', JSON.stringify(cartItems));
+
+      setShowCartModal(false);
+      redirectToPayHereCheckout(payment);
+      // Page navigates to PayHere — no further UI updates needed
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert(error.response?.data?.message || error.message || 'Failed to start PayHere payment');
+      setCheckoutLoading(false);
+    }
   };
 
   const CartButton = () => (
@@ -983,8 +1035,12 @@ const Providers = () => {
               <button className="cancel-btn" onClick={clearCart}>
                 Clear Cart
               </button>
-              <button className="submit-btn" onClick={goToCheckout} disabled={cartItems.length === 0}>
-                Go to Checkout
+              <button
+                className="submit-btn"
+                onClick={goToCheckout}
+                disabled={cartItems.length === 0 || checkoutLoading}
+              >
+                {checkoutLoading ? 'Opening PayHere...' : 'Go to Checkout'}
               </button>
             </div>
           </aside>
