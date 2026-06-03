@@ -167,7 +167,7 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
       <div className="ibs-header-row">
         <button type="button" className="ibs-back-btn" onClick={onBack}>
           <ArrowLeft size={18} />
-          Back to Services
+          Back
         </button>
         <div className="ibs-provider-meta">
           <h2>Select Your Items</h2>

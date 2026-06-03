@@ -370,6 +370,18 @@ const Providers = () => {
     setShowServiceList(true);
   };
 
+  const goToItemBasedSelector = () => {
+    if (!selectedProvider) return;
+    const itemServices = getServicesForGroup(selectedProvider, 'item');
+    if (itemServices.length === 0) return;
+
+    setServiceGroup('item');
+    setShowServiceTypeModal(false);
+    setShowServiceList(false);
+    setSelectedItemService(itemServices[0]);
+    setShowItemSelector(true);
+  };
+
   const startBookingForService = (service) => {
     const initialItems = getServiceGroup(service?.pricingType) === 'bulk'
       ? [{ category: 'Clothes', quantity: 1, weight: '', fabric: 'Cotton', color: 'Mixed' }]
@@ -1011,7 +1023,7 @@ const Providers = () => {
             <div className="payment-method-options">
               <div
                 className={`payment-method-card ${itemCount === 0 ? 'disabled' : ''}`}
-                onClick={() => itemCount > 0 && goToServiceList('item')}
+                onClick={() => itemCount > 0 && goToItemBasedSelector()}
               >
                 <div className="payment-method-content">
                   <Package size={24} />
@@ -1120,7 +1132,7 @@ const Providers = () => {
               onBack={() => {
                 setShowItemSelector(false);
                 setSelectedItemService(null);
-                setShowServiceList(true);
+                setShowServiceTypeModal(true);
               }}
               onAddToCart={addItemSelectionsToCart}
             />
