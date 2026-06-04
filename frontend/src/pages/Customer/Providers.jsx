@@ -298,8 +298,8 @@ const Providers = () => {
       providerName: selectedProvider.name,
       serviceId: selectedItemService.serviceId,
       serviceName: selectedItemService.serviceName,
+      itemId: Number(entry.itemId || 0),
       itemName: entry.itemName,
-      category: entry.category,
       quantity: Number(entry.quantity || 0),
       unitPrice: Number(entry.unitPrice || 0),
       price: Number(entry.lineTotal || 0)
@@ -429,9 +429,16 @@ const Providers = () => {
 
     setServiceGroup('item');
     setShowServiceTypeModal(false);
-    setShowServiceList(false);
-    setSelectedItemService(itemServices[0]);
-    setShowItemSelector(true);
+    setShowItemSelector(false);
+    setSelectedItemService(null);
+
+    if (itemServices.length === 1) {
+      setSelectedItemService(itemServices[0]);
+      setShowItemSelector(true);
+      return;
+    }
+
+    setShowServiceList(true);
   };
 
   const startBookingForService = (service) => {
@@ -1188,7 +1195,13 @@ const Providers = () => {
               onBack={() => {
                 setShowItemSelector(false);
                 setSelectedItemService(null);
-                setShowServiceTypeModal(true);
+                const itemServices = getServicesForGroup(selectedProvider, 'item');
+                if (itemServices.length > 1) {
+                  setServiceGroup('item');
+                  setShowServiceList(true);
+                } else {
+                  setShowServiceTypeModal(true);
+                }
               }}
               onAddToCart={addItemSelectionsToCart}
             />

@@ -25,6 +25,8 @@ import ProviderServices from './pages/Provider/ProviderServices';
 import ProviderOrders from './pages/Provider/ProviderOrders';
 import ProviderAnalytics from './pages/Provider/ProviderAnalytics';
 import ProviderProfile from './pages/Provider/ProviderProfile';
+import ProviderItems from './pages/Provider/ProviderItems';
+import ProviderLayout from './layouts/ProviderLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminProviders from './pages/Admin/AdminProviders';
@@ -36,13 +38,15 @@ import './App.css';
 function AppContent() {
   const location = useLocation();
   const isCustomerRoute = location.pathname.startsWith('/customer') || location.pathname.startsWith('/payment');
+  const isProviderRoute = location.pathname.startsWith('/provider');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isAuthRoute = ['/login', '/register', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/reset-password') || location.pathname.startsWith('/auth/set-password');
+  const hidePublicChrome = isCustomerRoute || isProviderRoute || isAdminRoute;
 
   return (
     <div className="app">
-      {!isCustomerRoute && !isAdminRoute && <Navbar />}
-      <main className={`main-content ${isCustomerRoute || isAdminRoute ? 'no-navbar' : ''}`}>
+      {!hidePublicChrome && <Navbar />}
+      <main className={`main-content ${hidePublicChrome ? 'no-navbar' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -106,47 +110,22 @@ function AppContent() {
             } 
           />
           
-          {/* Provider Routes - Dynamic with providerId */}
-          <Route 
-            path="/provider/:providerId/dashboard" 
+          {/* Provider Routes — single ProviderNavbar via layout */}
+          <Route
+            path="/provider/:providerId"
             element={
               <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderDashboard />
+                <ProviderLayout />
               </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/provider/:providerId/services" 
-            element={
-              <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderServices />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/provider/:providerId/orders" 
-            element={
-              <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderOrders />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/provider/:providerId/analytics" 
-            element={
-              <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderAnalytics />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/provider/:providerId/profile" 
-            element={
-              <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderProfile />
-              </ProtectedRoute>
-            } 
-          />
+            }
+          >
+            <Route path="dashboard" element={<ProviderDashboard />} />
+            <Route path="services" element={<ProviderServices />} />
+            <Route path="items/:serviceTypeId" element={<ProviderItems />} />
+            <Route path="orders" element={<ProviderOrders />} />
+            <Route path="analytics" element={<ProviderAnalytics />} />
+            <Route path="profile" element={<ProviderProfile />} />
+          </Route>
           
           {/* Admin Routes */}
           <Route 
@@ -201,7 +180,7 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {!isCustomerRoute && !isAdminRoute && !isAuthRoute && <Footer />}
+      {!hidePublicChrome && !isAuthRoute && <Footer />}
     </div>
   );
 }

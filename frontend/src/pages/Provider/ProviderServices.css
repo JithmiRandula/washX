@@ -498,6 +498,27 @@
 .ps-info-block--instructions .ps-info-text { color: #92400e; }
 
 /* Toggle Button */
+.ps-manage-items-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border: 1px solid #bfdbfe;
+}
+
+.ps-manage-items-link:hover {
+  background: #dbeafe;
+}
+
 .ps-toggle-btn {
   align-self: flex-start;
   margin-top: auto;

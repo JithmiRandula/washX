@@ -99,6 +99,27 @@
 }
 
 /* ── Categories ── */
+.ibs-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--ibs-muted);
+  background: var(--ibs-card-bg);
+  border: 1px dashed var(--ibs-border);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.ibs-state h3 {
+  margin: 0 0 0.5rem;
+  color: var(--ibs-text);
+}
+
+.ibs-state-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .ibs-categories-section {
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
   border: 1px solid var(--ibs-border);

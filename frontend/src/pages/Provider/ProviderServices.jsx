@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Package, Clock, Tag, AlertCircle, Star, ChevronDown } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { Plus, Edit, Trash2, Package, Clock, Tag, AlertCircle, Star, ChevronDown, List } from 'lucide-react';
 import { serviceAPI } from '../../utils/api';
 import './ProviderServices.css';
 
 const ProviderServices = () => {
+  const { providerId } = useParams();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -308,6 +310,17 @@ const ProviderServices = () => {
                       </div>
                       <p className="ps-info-text">{service.specialInstructions}</p>
                     </div>
+                  )}
+
+                  {['per item', 'per piece', 'per unit'].includes(
+                    String(service.prices?.[0]?.unit || '').toLowerCase()
+                  ) && (
+                    <Link
+                      to={`/provider/${providerId}/items/${service._id}`}
+                      className="ps-manage-items-link"
+                    >
+                      <List size={14} /> Manage Items
+                    </Link>
                   )}
 
                   {/* Toggle */}
