@@ -1,8 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Plus, Edit, Trash2, Package, Clock, Tag, AlertCircle, Star, ChevronDown, List } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Clock, Tag, AlertCircle, Star, ChevronDown, List, Settings } from 'lucide-react';
 import { serviceAPI } from '../../utils/api';
 import './ProviderServices.css';
+
+const ITEM_PRICING_UNITS = ['per item', 'per piece', 'per bundle', 'per set'];
+const BULK_PRICING_UNIT = 'per kg';
+
+const ITEM_CATEGORIES = [
+  'Washing (per item)',
+  'Dry Cleaning (per item)',
+  'Ironing',
+  'Premium Express',
+  'Fabric Care',
+  'Shoe Cleaning',
+  'Stain Removal'
+];
+
+const BULK_CATEGORIES = [
+  'General Laundry (kg-based)',
+  'Household Linen Bundle',
+  'Commercial Laundry',
+  'Subscription Laundry Plans',
+  'Bulk Premium Wash'
+];
+
+const getServiceMode = (pricingType) => {
+  const t = String(pricingType || '').toLowerCase();
+  if (t.includes('kg') || t.includes('bulk') || t.includes('per_kg') || t.includes('perkg')) {
+    return 'bulk';
+  }
+  return 'item';
+};
 
 const ProviderServices = () => {
   const { providerId } = useParams();
@@ -17,8 +46,9 @@ const ProviderServices = () => {
   const [editingService, setEditingService] = useState(null);
   const [newService, setNewService] = useState({
     name: '',
-    category: 'Washing',
-    prices: [{ unit: 'per kg', price: '' }],
+    category: ITEM_CATEGORIES[0],
+    serviceMode: 'item',
+    prices: [{ unit: 'per item', price: '' }],
     duration: '',
     description: '',
     minOrder: '',
@@ -27,14 +57,31 @@ const ProviderServices = () => {
     active: true
   });
 
-  const categories = ['Washing', 'Dry Clean', 'Ironing', 'Premium'];
-  const unitTypes = ['per kg', 'per piece', 'per item', 'per bundle', 'per set'];
-
   const categoryColors = {
-    'Washing': { bg: '#e0f2fe', text: '#0369a1', dot: '#0ea5e9' },
+    'Washing (per item)': { bg: '#e0f2fe', text: '#0369a1', dot: '#0ea5e9' },
+    'Dry Cleaning (per item)': { bg: '#f3e8ff', text: '#7e22ce', dot: '#a855f7' },
+    Ironing: { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
+    'Premium Express': { bg: '#fce7f3', text: '#9d174d', dot: '#ec4899' },
+    'Fabric Care': { bg: '#ecfdf5', text: '#047857', dot: '#10b981' },
+    'Shoe Cleaning': { bg: '#fff7ed', text: '#c2410c', dot: '#f97316' },
+    'Stain Removal': { bg: '#fef2f2', text: '#b91c1c', dot: '#ef4444' },
+    'General Laundry (kg-based)': { bg: '#f0fdf4', text: '#15803d', dot: '#22c55e' },
+    'Household Linen Bundle': { bg: '#ecfccb', text: '#3f6212', dot: '#84cc16' },
+    'Commercial Laundry': { bg: '#e0e7ff', text: '#3730a3', dot: '#6366f1' },
+    'Subscription Laundry Plans': { bg: '#fae8ff', text: '#86198f', dot: '#d946ef' },
+    'Bulk Premium Wash': { bg: '#cffafe', text: '#0e7490', dot: '#06b6d4' },
+    Washing: { bg: '#e0f2fe', text: '#0369a1', dot: '#0ea5e9' },
     'Dry Clean': { bg: '#f3e8ff', text: '#7e22ce', dot: '#a855f7' },
-    'Ironing': { bg: '#fef9c3', text: '#854d0e', dot: '#eab308' },
-    'Premium': { bg: '#fce7f3', text: '#9d174d', dot: '#ec4899' },
+    Premium: { bg: '#fce7f3', text: '#9d174d', dot: '#ec4899' },
+    _default: { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' }
+  };
+
+  const getCategoriesForMode = (mode) => (mode === 'bulk' ? BULK_CATEGORIES : ITEM_CATEGORIES);
+
+  const resolveCategoryForMode = (mode, currentCategory) => {
+    const list = getCategoriesForMode(mode);
+    if (list.includes(currentCategory)) return currentCategory;
+    return list[0];
   };
 
   useEffect(() => {
@@ -54,18 +101,23 @@ const ProviderServices = () => {
         ? result.data
         : [];
 
-      const mapped = rows.map((s) => ({
-        _id: String(s.serviceId),
-        name: s.serviceName,
-        category: s.category,
-        prices: [{ unit: s.pricingType, price: s.price }],
-        duration: s.turnaroundTime || '',
-        description: s.description || '',
-        minOrder: s.minimumOrder,
-        features: s.keyFeatures || '',
-        specialInstructions: s.specialInstructions || '',
-        active: true
-      }));
+      const mapped = rows.map((s) => {
+        const pricingType = String(s.pricingType ?? '');
+        const serviceMode = getServiceMode(pricingType);
+        return {
+          _id: String(s.serviceId),
+          name: s.serviceName,
+          category: s.category,
+          serviceMode,
+          prices: [{ unit: pricingType, price: s.price ?? s.basePrice }],
+          duration: s.turnaroundTime || '',
+          description: s.description || '',
+          minOrder: s.minimumOrder,
+          features: s.keyFeatures || '',
+          specialInstructions: s.specialInstructions || '',
+          active: true
+        };
+      });
       setServices(mapped);
       setCurrentPage(1);
     } catch (err) {
@@ -90,11 +142,26 @@ const ProviderServices = () => {
     setNewService({ ...newService, prices: updatedPrices });
   };
 
+  const setServiceMode = (mode) => {
+    setNewService((prev) => ({
+      ...prev,
+      serviceMode: mode,
+      category: resolveCategoryForMode(mode, prev.category),
+      prices: [
+        {
+          unit: mode === 'bulk' ? BULK_PRICING_UNIT : (ITEM_PRICING_UNITS.includes(prev.prices[0]?.unit) ? prev.prices[0].unit : 'per item'),
+          price: prev.prices[0]?.price ?? ''
+        }
+      ]
+    }));
+  };
+
   const resetForm = () => {
     setNewService({
       name: '',
-      category: 'Washing',
-      prices: [{ unit: 'per kg', price: '' }],
+      category: ITEM_CATEGORIES[0],
+      serviceMode: 'item',
+      prices: [{ unit: 'per item', price: '' }],
       duration: '',
       description: '',
       minOrder: '',
@@ -106,13 +173,18 @@ const ProviderServices = () => {
     setIsAddModalOpen(false);
   };
 
+  const resolvePricingType = () => {
+    if (newService.serviceMode === 'bulk') return BULK_PRICING_UNIT;
+    return newService.prices?.[0]?.unit || 'per item';
+  };
+
   const handleAddService = async () => {
     try {
       const primaryPrice = newService.prices?.[0];
       await serviceAPI.createService({
         serviceName: newService.name,
         category: newService.category,
-        pricingType: primaryPrice?.unit ?? '',
+        pricingType: resolvePricingType(),
         price: Number(primaryPrice?.price ?? 0),
         minimumOrder: Number(newService.minOrder ?? 0),
         turnaroundTime: newService.duration,
@@ -128,12 +200,21 @@ const ProviderServices = () => {
   };
 
   const handleEditService = (service) => {
+    const serviceMode = service.serviceMode || getServiceMode(service.prices?.[0]?.unit);
     setEditingService(service);
     setNewService({
       ...service,
+      serviceMode,
+      category: resolveCategoryForMode(serviceMode, service.category),
       minOrder: service.minOrder || '',
       features: service.features || '',
-      specialInstructions: service.specialInstructions || ''
+      specialInstructions: service.specialInstructions || '',
+      prices: [
+        {
+          unit: serviceMode === 'bulk' ? BULK_PRICING_UNIT : (service.prices?.[0]?.unit || 'per item'),
+          price: service.prices?.[0]?.price ?? ''
+        }
+      ]
     });
     setIsAddModalOpen(true);
   };
@@ -144,7 +225,7 @@ const ProviderServices = () => {
       await serviceAPI.updateService(editingService._id, {
         serviceName: newService.name,
         category: newService.category,
-        pricingType: primaryPrice?.unit ?? '',
+        pricingType: resolvePricingType(),
         price: Number(primaryPrice?.price ?? 0),
         minimumOrder: Number(newService.minOrder ?? 0),
         turnaroundTime: newService.duration,
@@ -228,7 +309,7 @@ const ProviderServices = () => {
           <>
             <div className="ps-grid">
               {pagedServices.map((service) => {
-              const cat = categoryColors[service.category] || categoryColors['Washing'];
+              const cat = categoryColors[service.category] || categoryColors._default;
               return (
                 <div key={service._id} className={`ps-card ${service.active ? '' : 'ps-card--inactive'}`}>
 
@@ -251,10 +332,17 @@ const ProviderServices = () => {
                     </div>
                   </div>
 
-                  {/* Category Chip */}
-                  <div className="ps-category-chip" style={{ background: cat.bg, color: cat.text }}>
-                    <span className="ps-category-dot" style={{ background: cat.dot }}></span>
-                    {service.category}
+                  {/* Category + service type */}
+                  <div className="ps-card-badges">
+                    <div className="ps-category-chip" style={{ background: cat.bg, color: cat.text }}>
+                      <span className="ps-category-dot" style={{ background: cat.dot }}></span>
+                      {service.category}
+                    </div>
+                    <span className={`ps-type-badge ps-type-badge--${service.serviceMode || getServiceMode(service.prices?.[0]?.unit)}`}>
+                      {service.serviceMode === 'bulk' || getServiceMode(service.prices?.[0]?.unit) === 'bulk'
+                        ? 'Bulk (per kg)'
+                        : 'Item-based'}
+                    </span>
                   </div>
 
                   {/* Pricing */}
@@ -312,9 +400,7 @@ const ProviderServices = () => {
                     </div>
                   )}
 
-                  {['per item', 'per piece', 'per unit'].includes(
-                    String(service.prices?.[0]?.unit || '').toLowerCase()
-                  ) && (
+                  {(service.serviceMode === 'item' || getServiceMode(service.prices?.[0]?.unit) === 'item') && (
                     <Link
                       to={`/provider/${providerId}/items/${service._id}`}
                       className="ps-manage-items-link"
@@ -398,14 +484,60 @@ const ProviderServices = () => {
                       placeholder="e.g., Premium Wash, Express Iron"
                     />
                   </div>
+                </div>
+
+                {/* Section: Service type */}
+                <div className="ps-form-section">
+                  <h4 className="ps-section-heading">Service Type</h4>
+                  <p className="ps-section-hint">Choose how customers will book this service.</p>
+                  <div className="ps-service-type-options">
+                    <button
+                      type="button"
+                      className={`ps-service-type-card ${newService.serviceMode === 'item' ? 'active' : ''}`}
+                      onClick={() => setServiceMode('item')}
+                    >
+                      <Package size={22} />
+                      <span className="ps-service-type-title">Item-based services</span>
+                      <small>Priced per item, piece, bundle, or set</small>
+                    </button>
+                    <button
+                      type="button"
+                      className={`ps-service-type-card ${newService.serviceMode === 'bulk' ? 'active' : ''}`}
+                      onClick={() => setServiceMode('bulk')}
+                    >
+                      <Settings size={22} />
+                      <span className="ps-service-type-title">Bulk (per kg) services</span>
+                      <small>Priced per kilogram</small>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section: Category (depends on service type) */}
+                <div className="ps-form-section">
+                  <h4 className="ps-section-heading">Category</h4>
+                  <p className="ps-section-hint">
+                    {newService.serviceMode === 'bulk'
+                      ? 'Bulk-based categories (priced per kg)'
+                      : 'Item-based categories (priced per item/piece)'}
+                  </p>
                   <div className="ps-field">
-                    <label>Category</label>
+                    <label>
+                      {newService.serviceMode === 'bulk' ? 'Bulk-Based Category' : 'Item-Based Category'}
+                    </label>
                     <div className="ps-select-wrap">
                       <select
                         value={newService.category}
                         onChange={(e) => setNewService({ ...newService, category: e.target.value })}
                       >
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                        <optgroup
+                          label={newService.serviceMode === 'bulk' ? 'Bulk-Based' : 'Item-Based'}
+                        >
+                          {getCategoriesForMode(newService.serviceMode).map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
                       <ChevronDown size={16} className="ps-select-arrow" />
                     </div>
@@ -416,18 +548,27 @@ const ProviderServices = () => {
                 <div className="ps-form-section">
                   <h4 className="ps-section-heading">Pricing</h4>
                   <div className="ps-form-row">
-                    <div className="ps-field">
-                      <label>Unit Type</label>
-                      <div className="ps-select-wrap">
-                        <select
-                          value={newService.prices[0].unit}
-                          onChange={(e) => handlePriceChange(0, 'unit', e.target.value)}
-                        >
-                          {unitTypes.map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                        <ChevronDown size={16} className="ps-select-arrow" />
+                    {newService.serviceMode === 'item' ? (
+                      <div className="ps-field">
+                        <label>Unit Type</label>
+                        <div className="ps-select-wrap">
+                          <select
+                            value={newService.prices[0].unit}
+                            onChange={(e) => handlePriceChange(0, 'unit', e.target.value)}
+                          >
+                            {ITEM_PRICING_UNITS.map((u) => (
+                              <option key={u} value={u}>{u}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={16} className="ps-select-arrow" />
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="ps-field">
+                        <label>Unit Type</label>
+                        <input type="text" value="per kg" readOnly className="ps-readonly-input" />
+                      </div>
+                    )}
                     <div className="ps-field">
                       <label>Price (Rs)</label>
                       <input

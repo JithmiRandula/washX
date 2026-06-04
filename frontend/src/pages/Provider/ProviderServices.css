@@ -497,6 +497,98 @@
 .ps-info-block--features .ps-info-text { color: #1e3a8a; }
 .ps-info-block--instructions .ps-info-text { color: #92400e; }
 
+/* Service type badges on cards */
+.ps-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ps-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ps-type-badge--item {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.ps-type-badge--bulk {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* Add/Edit modal — service type picker */
+.ps-section-hint {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.ps-service-type-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.ps-service-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  color: #334155;
+}
+
+.ps-service-type-card svg {
+  color: #1e3a8a;
+}
+
+.ps-service-type-card.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.ps-service-type-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.ps-service-type-card small {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.ps-readonly-input {
+  background: #f8fafc;
+  color: #475569;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .ps-service-type-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Toggle Button */
 .ps-manage-items-link {
   display: inline-flex;

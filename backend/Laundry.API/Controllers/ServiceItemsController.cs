@@ -17,7 +17,6 @@ public class ServiceItemsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Step 1 — Provider adds an item to a service type (uses SP_AddServiceItem).</summary>
     [Authorize(Roles = "provider")]
     [HttpPost]
     public async Task<IActionResult> Add([FromBody] AddServiceItemRequest request)
@@ -26,7 +25,7 @@ public class ServiceItemsController : ControllerBase
         {
             await _service.AddServiceItem(new ServiceItem
             {
-                ServiceTypeId = request.ServiceTypeId,
+                ServiceId = request.ServiceId,
                 ItemName = request.ItemName,
                 Description = request.Description,
                 Price = request.Price,
@@ -42,12 +41,12 @@ public class ServiceItemsController : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpGet("by-service-type/{serviceTypeId:int}")]
-    public async Task<IActionResult> GetByServiceType(int serviceTypeId)
+    [HttpGet("by-service/{serviceId:int}")]
+    public async Task<IActionResult> GetByService(int serviceId)
     {
         try
         {
-            var items = await _service.GetServiceItems(serviceTypeId);
+            var items = await _service.GetServiceItems(serviceId);
             return Ok(new { success = true, count = items.Count, data = items });
         }
         catch (ArgumentException ex)
@@ -55,6 +54,11 @@ public class ServiceItemsController : ControllerBase
             return BadRequest(new { success = false, message = ex.Message });
         }
     }
+
+    /// <summary>Legacy route alias — same as by-service/{id}.</summary>
+    [AllowAnonymous]
+    [HttpGet("by-service-type/{serviceId:int}")]
+    public Task<IActionResult> GetByServiceType(int serviceId) => GetByService(serviceId);
 
     [Authorize(Roles = "provider")]
     [HttpPut("{itemId:int}")]
@@ -64,7 +68,7 @@ public class ServiceItemsController : ControllerBase
         {
             await _service.UpdateServiceItem(itemId, new ServiceItem
             {
-                ServiceTypeId = request.ServiceTypeId,
+                ServiceId = request.ServiceId,
                 ItemName = request.ItemName,
                 Description = request.Description,
                 Price = request.Price,
@@ -81,11 +85,11 @@ public class ServiceItemsController : ControllerBase
 
     [Authorize(Roles = "provider")]
     [HttpDelete("{itemId:int}")]
-    public async Task<IActionResult> Delete(int itemId, [FromQuery] int serviceTypeId)
+    public async Task<IActionResult> Delete(int itemId, [FromQuery] int serviceId)
     {
         try
         {
-            await _service.DeleteServiceItem(itemId, serviceTypeId);
+            await _service.DeleteServiceItem(itemId, serviceId);
             return Ok(new { success = true, message = "Service item deleted successfully" });
         }
         catch (ArgumentException ex)

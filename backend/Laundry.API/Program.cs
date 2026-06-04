@@ -32,6 +32,8 @@ builder.Services.AddScoped<ProviderService>();
 builder.Services.AddSingleton<PayHereService>();
 builder.Services.AddScoped<ServiceItemRepository>();
 builder.Services.AddScoped<ServiceItemService>();
+builder.Services.AddScoped<CartRepository>();
+builder.Services.AddScoped<CartService>();
 
 builder.Services.AddHttpLogging(_ => { });
 

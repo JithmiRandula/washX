@@ -70,19 +70,36 @@ public sealed class UserRepository(SqlHelper sql)
         return _sql.ExecuteSingleAsync(
             "sp_GetUserByEmail",
             parameters,
-            reader => new User
-            {
-                UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
-                Name = reader.GetString(reader.GetOrdinal("Name")),
-                Email = reader.GetString(reader.GetOrdinal("Email")),
-                Phone = reader.GetString(reader.GetOrdinal("Phone")),
-                PasswordHash = reader.GetString(reader.GetOrdinal("PasswordHash")),
-                Role = reader.GetString(reader.GetOrdinal("Role")),
-                CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                UpdatedAt = reader.IsDBNull(reader.GetOrdinal("UpdatedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
-            },
+            MapUser,
             System.Data.CommandType.StoredProcedure);
     }
+
+    public Task<User?> GetUserById(int userId)
+    {
+        SqlParameter[] parameters = [new("@UserId", userId)];
+
+        return _sql.ExecuteSingleAsync(
+            """
+            SELECT UserId, Name, Email, Phone, PasswordHash, Role, CreatedAt, UpdatedAt
+            FROM Users
+            WHERE UserId = @UserId
+            """,
+            parameters,
+            MapUser,
+            System.Data.CommandType.Text);
+    }
+
+    private static User MapUser(Microsoft.Data.SqlClient.SqlDataReader reader) => new()
+    {
+        UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+        Name = reader.GetString(reader.GetOrdinal("Name")),
+        Email = reader.GetString(reader.GetOrdinal("Email")),
+        Phone = reader.GetString(reader.GetOrdinal("Phone")),
+        PasswordHash = reader.GetString(reader.GetOrdinal("PasswordHash")),
+        Role = reader.GetString(reader.GetOrdinal("Role")),
+        CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+        UpdatedAt = reader.IsDBNull(reader.GetOrdinal("UpdatedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("UpdatedAt"))
+    };
 
     public Task<int?> GetProviderIdByUserId(int userId)
     {

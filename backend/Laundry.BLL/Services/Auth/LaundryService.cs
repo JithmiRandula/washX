@@ -29,7 +29,8 @@ public sealed class LaundryService(ServiceRepository repository)
 
     public Task<int> UpdateService(int serviceId, int providerId, Service service)
     {
-        return _repository.UpdateService(serviceId, providerId, service);
+        _ = providerId;
+        return _repository.UpdateService(serviceId, service);
     }
 
     public Task<int> DeleteService(int serviceId)

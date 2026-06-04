@@ -92,6 +92,36 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
     }
 
 
+    public async Task<object?> GetCurrentUserAsync(int userId)
+    {
+        var user = await _repo.GetUserById(userId);
+        if (user is null)
+            return null;
+
+        int? providerId = null;
+        int? customerId = null;
+
+        if (user.Role.Equals("provider", StringComparison.OrdinalIgnoreCase))
+            providerId = await _repo.GetProviderIdByUserId(user.UserId);
+        else if (user.Role.Equals("customer", StringComparison.OrdinalIgnoreCase))
+            customerId = await _repo.GetCustomerIdByUserId(user.UserId);
+
+        return new
+        {
+            success = true,
+            user = new
+            {
+                id = user.UserId,
+                name = user.Name,
+                email = user.Email,
+                phone = user.Phone,
+                role = user.Role
+            },
+            providerId,
+            customerId
+        };
+    }
+
     public async Task<User> HandleGoogleLogin(string? name, string? email)
     {
         if (string.IsNullOrWhiteSpace(email))

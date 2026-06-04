@@ -121,7 +121,7 @@ function AppContent() {
           >
             <Route path="dashboard" element={<ProviderDashboard />} />
             <Route path="services" element={<ProviderServices />} />
-            <Route path="items/:serviceTypeId" element={<ProviderItems />} />
+            <Route path="items/:serviceId" element={<ProviderItems />} />
             <Route path="orders" element={<ProviderOrders />} />
             <Route path="analytics" element={<ProviderAnalytics />} />
             <Route path="profile" element={<ProviderProfile />} />

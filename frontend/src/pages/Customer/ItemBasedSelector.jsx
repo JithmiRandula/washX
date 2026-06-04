@@ -21,13 +21,13 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
   const [error, setError] = useState('');
   const [quantities, setQuantities] = useState({});
 
-  const serviceTypeId = Number(service?.serviceId ?? 0);
+  const serviceId = Number(service?.serviceId ?? 0);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadItems = async () => {
-      if (!serviceTypeId) {
+      if (!serviceId) {
         setItems([]);
         setLoading(false);
         setError('Service not selected');
@@ -37,7 +37,7 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
       try {
         setLoading(true);
         setError('');
-        const result = await serviceItemsAPI.getByServiceType(serviceTypeId);
+        const result = await serviceItemsAPI.getByService(serviceId);
         if (cancelled) return;
 
         const list = (result?.data || []).map(normalizeItem).filter((i) => i.itemId > 0);
@@ -56,7 +56,7 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
     return () => {
       cancelled = true;
     };
-  }, [serviceTypeId]);
+  }, [serviceId]);
 
   const priceFrom = useMemo(() => {
     if (items.length === 0) return Number(service?.price ?? 0);

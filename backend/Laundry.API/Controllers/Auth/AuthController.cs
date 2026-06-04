@@ -1,7 +1,8 @@
-﻿using Laundry.API.Contracts.Auth;
+using Laundry.API.Contracts.Auth;
 using Laundry.API.DTOs.Auth;
 using Laundry.BLL.Services.Auth;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -55,6 +56,24 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+
+    // =========================
+    // CURRENT USER (session verify)
+    // =========================
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> Me()
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(claim) || !int.TryParse(claim, out var userId))
+            return Unauthorized(new { success = false, message = "Invalid token" });
+
+        var result = await _service.GetCurrentUserAsync(userId);
+        if (result is null)
+            return NotFound(new { success = false, message = "User not found" });
+
+        return Ok(result);
+    }
 
     // =========================
     // GOOGLE LOGIN START

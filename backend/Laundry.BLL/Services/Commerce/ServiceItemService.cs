@@ -11,19 +11,19 @@ public sealed class ServiceItemService(ServiceItemRepository repository)
     {
         ValidateItem(item);
         return _repository.AddServiceItem(
-            item.ServiceTypeId,
+            item.ServiceId,
             item.ItemName.Trim(),
             item.Description,
             item.Price,
             item.ImageUrl);
     }
 
-    public Task<List<ServiceItem>> GetServiceItems(int serviceTypeId)
+    public Task<List<ServiceItem>> GetServiceItems(int serviceId)
     {
-        if (serviceTypeId <= 0)
-            throw new ArgumentException("Invalid service type id");
+        if (serviceId <= 0)
+            throw new ArgumentException("Invalid service id");
 
-        return _repository.GetServiceItems(serviceTypeId);
+        return _repository.GetServiceItems(serviceId);
     }
 
     public Task UpdateServiceItem(int itemId, ServiceItem item)
@@ -34,25 +34,25 @@ public sealed class ServiceItemService(ServiceItemRepository repository)
         ValidateItem(item);
         return _repository.UpdateServiceItem(
             itemId,
-            item.ServiceTypeId,
+            item.ServiceId,
             item.ItemName.Trim(),
             item.Description,
             item.Price,
             item.ImageUrl);
     }
 
-    public Task DeleteServiceItem(int itemId, int serviceTypeId)
+    public Task DeleteServiceItem(int itemId, int serviceId)
     {
-        if (itemId <= 0 || serviceTypeId <= 0)
-            throw new ArgumentException("Invalid item or service type id");
+        if (itemId <= 0 || serviceId <= 0)
+            throw new ArgumentException("Invalid item or service id");
 
-        return _repository.DeleteServiceItem(itemId, serviceTypeId);
+        return _repository.DeleteServiceItem(itemId, serviceId);
     }
 
     private static void ValidateItem(ServiceItem item)
     {
-        if (item.ServiceTypeId <= 0)
-            throw new ArgumentException("ServiceTypeId is required");
+        if (item.ServiceId <= 0)
+            throw new ArgumentException("ServiceId is required");
 
         if (string.IsNullOrWhiteSpace(item.ItemName))
             throw new ArgumentException("Item name is required");

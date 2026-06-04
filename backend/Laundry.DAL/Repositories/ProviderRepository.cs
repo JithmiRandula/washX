@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Laundry.DAL.DbHelper;
 using Laundry.Models;
 using Microsoft.Data.SqlClient;
@@ -72,10 +72,39 @@ public sealed class ProviderRepository(SqlHelper sql)
             commandType: CommandType.StoredProcedure);
     }
 
+    private const string ProvidersWithServicesSql = """
+        SELECT
+            p.ProviderId,
+            p.UserId,
+            p.BusinessName,
+            p.BusinessAddress,
+            p.Latitude,
+            p.Longitude,
+            p.Description AS ProviderDescription,
+            p.Rating,
+            p.IsVerified,
+            p.CreatedAt AS ProviderCreatedAt,
+            s.ServiceId,
+            s.ServiceName,
+            s.Category,
+            s.PricingType,
+            s.BasePrice AS Price,
+            s.MinimumOrder,
+            s.TurnaroundTime,
+            s.Description AS ServiceDescription,
+            s.KeyFeatures,
+            s.SpecialInstructions,
+            s.CreatedAt AS ServiceCreatedAt
+        FROM Providers p
+        LEFT JOIN Services s ON p.ProviderId = s.ProviderId
+            AND (s.IsActive = 1 OR s.IsActive IS NULL)
+        ORDER BY p.ProviderId, s.ServiceId DESC
+        """;
+
     public async Task<List<ProviderWithServices>> GetProvidersWithServices()
     {
         var rows = await _sql.ExecuteListAsync(
-            commandText: "sp_GetProvidersWithServices",
+            commandText: ProvidersWithServicesSql,
             parameters: null,
             map: reader => new ProviderServiceRow
             {
@@ -110,9 +139,7 @@ public sealed class ProviderRepository(SqlHelper sql)
                 PricingType = reader.IsDBNull(reader.GetOrdinal("PricingType"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("PricingType")),
-                Price = reader.IsDBNull(reader.GetOrdinal("Price"))
-                    ? null
-                    : reader.GetDecimal(reader.GetOrdinal("Price")),
+                Price = ReadProviderServicePrice(reader),
                 MinimumOrder = reader.IsDBNull(reader.GetOrdinal("MinimumOrder"))
                     ? null
                     : reader.GetInt32(reader.GetOrdinal("MinimumOrder")),
@@ -132,7 +159,7 @@ public sealed class ProviderRepository(SqlHelper sql)
                     ? null
                     : reader.GetDateTime(reader.GetOrdinal("ServiceCreatedAt"))
             },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.Text);
 
         var byProvider = new Dictionary<int, ProviderWithServices>();
 
@@ -181,6 +208,27 @@ public sealed class ProviderRepository(SqlHelper sql)
         return byProvider.Values.ToList();
     }
 
+    private static decimal? ReadProviderServicePrice(SqlDataReader reader)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal("Price");
+            return reader.IsDBNull(ordinal) ? null : reader.GetDecimal(ordinal);
+        }
+        catch (IndexOutOfRangeException)
+        {
+            try
+            {
+                var ordinal = reader.GetOrdinal("BasePrice");
+                return reader.IsDBNull(ordinal) ? null : reader.GetDecimal(ordinal);
+            }
+            catch (IndexOutOfRangeException)
+            {
+                return null;
+            }
+        }
+    }
+
     public async Task<ProviderWithServices?> GetProviderWithServices(int providerId)
     {
         SqlParameter[] parameters =
@@ -205,7 +253,7 @@ public sealed class ProviderRepository(SqlHelper sql)
     s.ServiceName,
     s.Category,
     s.PricingType,
-    s.Price,
+    s.BasePrice AS Price,
     s.MinimumOrder,
     s.TurnaroundTime,
     s.Description AS ServiceDescription,
@@ -213,7 +261,7 @@ public sealed class ProviderRepository(SqlHelper sql)
     s.SpecialInstructions,
     s.CreatedAt AS ServiceCreatedAt
 FROM Providers p
-INNER JOIN Services s ON p.ProviderId = s.ProviderId
+INNER JOIN Services s ON p.ProviderId = s.ProviderId AND s.IsActive = 1
 WHERE p.ProviderId = @ProviderId
 ORDER BY s.ServiceId DESC",
             parameters: parameters,
@@ -250,9 +298,7 @@ ORDER BY s.ServiceId DESC",
                 PricingType = reader.IsDBNull(reader.GetOrdinal("PricingType"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("PricingType")),
-                Price = reader.IsDBNull(reader.GetOrdinal("Price"))
-                    ? null
-                    : reader.GetDecimal(reader.GetOrdinal("Price")),
+                Price = ReadProviderServicePrice(reader),
                 MinimumOrder = reader.IsDBNull(reader.GetOrdinal("MinimumOrder"))
                     ? null
                     : reader.GetInt32(reader.GetOrdinal("MinimumOrder")),

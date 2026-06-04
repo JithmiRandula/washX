@@ -9,61 +9,61 @@ public sealed class ServiceItemRepository(SqlHelper sql)
 {
     private readonly SqlHelper _sql = sql;
 
-    public Task AddServiceItem(int serviceTypeId, string itemName, string? description, decimal price, string? imageUrl)
+    public Task AddServiceItem(int serviceId, string itemName, string? description, decimal price, string? imageUrl)
     {
         SqlParameter[] parameters =
         [
-            new("@ServiceTypeId", serviceTypeId),
+            new("@ServiceId", serviceId),
             new("@ItemName", itemName),
             new("@Description", (object?)description ?? DBNull.Value),
             new("@Price", price),
             new("@ImageUrl", (object?)imageUrl ?? DBNull.Value)
         ];
 
-        return _sql.ExecuteAsync("SP_AddServiceItem", parameters);
+        return _sql.ExecuteAsync("sp_AddServiceItem", parameters);
     }
 
-    public Task<List<ServiceItem>> GetServiceItems(int serviceTypeId)
+    public Task<List<ServiceItem>> GetServiceItems(int serviceId)
     {
-        SqlParameter[] parameters = [new("@ServiceTypeId", serviceTypeId)];
+        SqlParameter[] parameters = [new("@ServiceId", serviceId)];
 
         return _sql.ExecuteListAsync(
-            "SP_GetServiceItems",
+            "sp_GetServiceItems",
             parameters,
             MapServiceItem,
             CommandType.StoredProcedure);
     }
 
-    public Task UpdateServiceItem(int itemId, int serviceTypeId, string itemName, string? description, decimal price, string? imageUrl)
+    public Task UpdateServiceItem(int itemId, int serviceId, string itemName, string? description, decimal price, string? imageUrl)
     {
         SqlParameter[] parameters =
         [
             new("@ItemId", itemId),
-            new("@ServiceTypeId", serviceTypeId),
+            new("@ServiceId", serviceId),
             new("@ItemName", itemName),
             new("@Description", (object?)description ?? DBNull.Value),
             new("@Price", price),
             new("@ImageUrl", (object?)imageUrl ?? DBNull.Value)
         ];
 
-        return _sql.ExecuteAsync("SP_UpdateServiceItem", parameters);
+        return _sql.ExecuteAsync("sp_UpdateServiceItem", parameters);
     }
 
-    public Task DeleteServiceItem(int itemId, int serviceTypeId)
+    public Task DeleteServiceItem(int itemId, int serviceId)
     {
         SqlParameter[] parameters =
         [
             new("@ItemId", itemId),
-            new("@ServiceTypeId", serviceTypeId)
+            new("@ServiceId", serviceId)
         ];
 
-        return _sql.ExecuteAsync("SP_DeleteServiceItem", parameters);
+        return _sql.ExecuteAsync("sp_DeleteServiceItem", parameters);
     }
 
     private static ServiceItem MapServiceItem(SqlDataReader reader) => new()
     {
         ItemId = reader.GetInt32(reader.GetOrdinal("ItemId")),
-        ServiceTypeId = reader.GetInt32(reader.GetOrdinal("ServiceTypeId")),
+        ServiceId = SqlReaderExtensions.ReadIntColumn(reader, "ServiceId", "ServiceTypeId"),
         ItemName = reader.GetString(reader.GetOrdinal("ItemName")),
         Description = reader.IsDBNull(reader.GetOrdinal("Description"))
             ? null
@@ -72,8 +72,6 @@ public sealed class ServiceItemRepository(SqlHelper sql)
         ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl"))
             ? null
             : reader.GetString(reader.GetOrdinal("ImageUrl")),
-        CreatedAt = reader.IsDBNull(reader.GetOrdinal("CreatedAt"))
-            ? null
-            : reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+        IsAvailable = SqlReaderExtensions.ReadBoolColumn(reader, "IsAvailable") ?? true
     };
 }

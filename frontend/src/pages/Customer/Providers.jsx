@@ -48,6 +48,7 @@ import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import ItemBasedSelector from './ItemBasedSelector';
 import api from '../../utils/api';
+import { cartAPI } from '../../api/commerceApi';
 import { redirectToPayHereCheckout } from '../../utils/payhere';
 import './Providers.css';
 
@@ -74,6 +75,8 @@ const Providers = () => {
   const [selectedBulkPackage, setSelectedBulkPackage] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [cartLoading, setCartLoading] = useState(false);
+  const [cartSaving, setCartSaving] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
@@ -206,10 +209,42 @@ const Providers = () => {
     fetchProviders();
   }, []);
 
+  const refreshCartFromDb = async () => {
+    if (!user || String(user.role).toLowerCase() !== 'customer') return;
+
+    try {
+      setCartLoading(true);
+      const result = await cartAPI.get();
+      const dbItems = result?.data || [];
+      setCartItems((prev) => {
+        const bulkOnly = prev.filter((x) => x.kind === 'bulk');
+        return [...dbItems, ...bulkOnly];
+      });
+    } catch (err) {
+      console.error('Failed to load cart:', err);
+    } finally {
+      setCartLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshCartFromDb();
+  }, [user?.id, user?.token]);
+
   const getServiceGroup = (pricingType) => {
     const t = String(pricingType || '').toLowerCase();
     if (t.includes('kg') || t.includes('bulk') || t.includes('per_kg') || t.includes('perkg')) return 'bulk';
-    if (t.includes('item') || t.includes('piece') || t.includes('unit') || t.includes('per_item') || t.includes('peritem')) return 'item';
+    if (
+      t.includes('item') ||
+      t.includes('piece') ||
+      t.includes('bundle') ||
+      t.includes('set') ||
+      t.includes('unit') ||
+      t.includes('per_item') ||
+      t.includes('peritem')
+    ) {
+      return 'item';
+    }
     return 'item';
   };
 
@@ -286,35 +321,64 @@ const Providers = () => {
     setShowItemSelector(true);
   };
 
-  const addItemSelectionsToCart = (selectedItems) => {
-    if (!selectedProvider || !selectedItemService || !Array.isArray(selectedItems) || selectedItems.length === 0) {
+  const addItemSelectionsToCart = async (selectedItems) => {
+    if (!selectedProvider || !Array.isArray(selectedItems) || selectedItems.length === 0) {
       return;
     }
 
-    const mappedItems = selectedItems.map((entry) => ({
-      id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-      kind: 'item',
-      providerId: selectedProvider.id,
-      providerName: selectedProvider.name,
-      serviceId: selectedItemService.serviceId,
-      serviceName: selectedItemService.serviceName,
-      itemId: Number(entry.itemId || 0),
-      itemName: entry.itemName,
-      quantity: Number(entry.quantity || 0),
-      unitPrice: Number(entry.unitPrice || 0),
-      price: Number(entry.lineTotal || 0)
-    }));
+    if (String(user?.role).toLowerCase() !== 'customer') {
+      alert('Please log in as a customer to add items to cart.');
+      return;
+    }
 
-    setCartItems((prev) => [...prev, ...mappedItems]);
-    setShowCartModal(true);
+    try {
+      setCartSaving(true);
+      for (const entry of selectedItems) {
+        await cartAPI.add({
+          providerId: Number(selectedProvider.id),
+          itemId: Number(entry.itemId),
+          quantity: Number(entry.quantity || 1)
+        });
+      }
+      await refreshCartFromDb();
+      setShowCartModal(true);
+    } catch (err) {
+      console.error('Add to cart failed:', err);
+      alert(err.response?.data?.message || 'Failed to save items to cart');
+    } finally {
+      setCartSaving(false);
+    }
   };
 
-  const removeCartItem = (id) => {
-    setCartItems((prev) => prev.filter((x) => x.id !== id));
+  const removeCartItem = async (cartRow) => {
+    if (cartRow?.kind === 'bulk') {
+      setCartItems((prev) => prev.filter((x) => x.id !== cartRow.id));
+      return;
+    }
+
+    if (!cartRow?.cartItemId) return;
+
+    try {
+      const result = await cartAPI.remove(cartRow.cartItemId);
+      const dbItems = result?.data || [];
+      setCartItems((prev) => {
+        const bulkOnly = prev.filter((x) => x.kind === 'bulk');
+        return [...dbItems, ...bulkOnly];
+      });
+    } catch (err) {
+      console.error('Remove cart item failed:', err);
+      alert(err.response?.data?.message || 'Failed to remove item');
+    }
   };
 
-  const clearCart = () => {
-    setCartItems([]);
+  const clearCart = async () => {
+    try {
+      await cartAPI.clear();
+      setCartItems((prev) => prev.filter((x) => x.kind === 'bulk'));
+    } catch (err) {
+      console.error('Clear cart failed:', err);
+      alert(err.response?.data?.message || 'Failed to clear cart');
+    }
   };
 
   const buildCartItemsDescription = () => {
@@ -1004,7 +1068,11 @@ const Providers = () => {
             </div>
             <p className="service-mode-subtitle">{cartItems.length} item(s)</p>
 
-            {cartItems.length === 0 ? (
+            {cartLoading ? (
+              <div className="no-bookings" style={{ padding: '2rem 1rem', minHeight: '200px' }}>
+                <p>Loading cart...</p>
+              </div>
+            ) : cartItems.length === 0 ? (
               <div className="no-bookings" style={{ padding: '2rem 1rem', minHeight: '200px' }}>
                 <Package size={48} />
                 <h3>Your cart is empty</h3>
@@ -1013,18 +1081,18 @@ const Providers = () => {
             ) : (
               <div className="cart-list cart-list-scroll">
                 {cartItems.map((it) => (
-                  <div key={it.id} className="cart-row">
+                  <div key={it.cartItemId || it.id} className="cart-row">
                     <div className="cart-row-main">
                       <div className="cart-row-title">{it.kind === 'item' ? it.itemName : it.serviceName}</div>
                       <div className="cart-row-sub">
                         {it.kind === 'item'
-                          ? `${it.providerName} • ${it.serviceName} • Qty ${it.quantity}`
+                          ? `${it.providerName} • Qty ${it.quantity} • Rs ${Number(it.unitPrice).toFixed(2)} each`
                           : `${it.providerName} • ${it.bags} bag • up to ${it.maxKg}kg`}
                       </div>
                     </div>
                     <div className="cart-row-right">
                       <div className="cart-row-price">Rs {Number(it.price).toFixed(2)}</div>
-                      <button type="button" className="cart-remove" onClick={() => removeCartItem(it.id)}>
+                      <button type="button" className="cart-remove" onClick={() => removeCartItem(it)}>
                         Remove
                       </button>
                     </div>

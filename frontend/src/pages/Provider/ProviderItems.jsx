@@ -12,7 +12,8 @@ const emptyForm = {
 };
 
 const ProviderItems = () => {
-  const { providerId, serviceTypeId } = useParams();
+  const { providerId, serviceId: serviceIdParam, serviceTypeId: legacyServiceId } = useParams();
+  const serviceId = serviceIdParam || legacyServiceId;
   const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
@@ -29,7 +30,7 @@ const ProviderItems = () => {
     try {
       setLoading(true);
       setError('');
-      const result = await serviceItemsAPI.getByServiceType(Number(serviceTypeId));
+      const result = await serviceItemsAPI.getByService(Number(serviceId));
       setItems(result?.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load items');
@@ -39,8 +40,13 @@ const ProviderItems = () => {
   };
 
   useEffect(() => {
+    if (!serviceId) {
+      setLoading(false);
+      setError('Invalid service id in URL');
+      return;
+    }
     loadItems();
-  }, [serviceTypeId]);
+  }, [serviceId]);
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -95,7 +101,7 @@ const ProviderItems = () => {
     setSuccess('');
 
     const payload = {
-      serviceTypeId: Number(serviceTypeId),
+      serviceId: Number(serviceId),
       itemName: form.itemName.trim(),
       description: form.description.trim(),
       price: Number(form.price),
@@ -125,7 +131,7 @@ const ProviderItems = () => {
     if (!window.confirm(`Delete "${item.itemName}"?`)) return;
 
     try {
-      await serviceItemsAPI.delete(item.itemId, Number(serviceTypeId));
+      await serviceItemsAPI.delete(item.itemId, Number(serviceId));
       setSuccess('Item deleted');
       await loadItems();
     } catch (err) {
@@ -145,7 +151,7 @@ const ProviderItems = () => {
         </button>
         <div>
           <h1>Manage Service Items</h1>
-          <p>Service Type ID: {serviceTypeId} — add items customers can order</p>
+          <p>Service ID: {serviceId} — add items customers can order</p>
         </div>
         <button type="button" className="pi-add-btn" onClick={openAddForm}>
           <Plus size={18} /> Add Item
