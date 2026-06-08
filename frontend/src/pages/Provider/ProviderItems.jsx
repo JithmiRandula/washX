@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, Package, ImagePlus } from 'lucide-react';
-import { serviceItemsAPI } from '../../api/commerceApi';
+import { ArrowLeft, Plus, Pencil, Trash2, Package, ImagePlus, RotateCcw } from 'lucide-react';
+import { serviceItemsAPI, uploadAPI } from '../../api/commerceApi';
 import './ProviderItems.css';
 
 const emptyForm = {
@@ -25,6 +25,7 @@ const ProviderItems = () => {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [imagePreview, setImagePreview] = useState('/wash1.jpg');
+  const [imageFile, setImageFile] = useState(null);
 
   const loadItems = async () => {
     try {
@@ -52,6 +53,7 @@ const ProviderItems = () => {
     setForm(emptyForm);
     setImagePreview('/wash1.jpg');
     setEditingId(null);
+    setImageFile(null);
   };
 
   const openAddForm = () => {
@@ -61,6 +63,7 @@ const ProviderItems = () => {
 
   const openEditForm = (item) => {
     setEditingId(item.itemId);
+    setImageFile(null);
     setForm({
       itemName: item.itemName,
       description: item.description || '',
@@ -80,11 +83,11 @@ const ProviderItems = () => {
       return;
     }
 
+    setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => {
       const url = reader.result;
       setImagePreview(url);
-      setForm((prev) => ({ ...prev, imageUrl: url }));
     };
     reader.readAsDataURL(file);
   };
@@ -100,15 +103,26 @@ const ProviderItems = () => {
     setError('');
     setSuccess('');
 
-    const payload = {
-      serviceId: Number(serviceId),
-      itemName: form.itemName.trim(),
-      description: form.description.trim(),
-      price: Number(form.price),
-      imageUrl: form.imageUrl || '/wash1.jpg'
-    };
-
     try {
+      let imageUrl = form.imageUrl || '/wash1.jpg';
+
+      // If user selected a local file, upload it to Cloudinary first
+      if (imageFile) {
+        const upload = await uploadAPI.uploadServiceItemImage(imageFile, Number(serviceId));
+        if (!upload?.success || !upload?.url) {
+          throw new Error(upload?.message || 'Image upload failed');
+        }
+        imageUrl = upload.url;
+      }
+
+      const payload = {
+        serviceId: Number(serviceId),
+        itemName: form.itemName.trim(),
+        description: form.description.trim(),
+        price: Number(form.price),
+        imageUrl
+      };
+
       if (editingId) {
         await serviceItemsAPI.update(editingId, payload);
         setSuccess('Item updated successfully');
@@ -127,15 +141,29 @@ const ProviderItems = () => {
     }
   };
 
+  const isItemActive = (item) => item.isAvailable !== false;
+
   const handleDelete = async (item) => {
-    if (!window.confirm(`Delete "${item.itemName}"?`)) return;
+    if (!window.confirm(`Hide "${item.itemName}" from customers?\n\nThe item stays in the database (IsAvailable = 0) but won't appear for customers.`)) return;
 
     try {
+      setError('');
       await serviceItemsAPI.delete(item.itemId, Number(serviceId));
-      setSuccess('Item deleted');
+      setSuccess('Item hidden from customers (saved in database as inactive)');
       await loadItems();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete item');
+    }
+  };
+
+  const handleRestore = async (item) => {
+    try {
+      setError('');
+      await serviceItemsAPI.restore(item.itemId, Number(serviceId));
+      setSuccess('Item restored and visible to customers');
+      await loadItems();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to restore item');
     }
   };
 
@@ -151,7 +179,7 @@ const ProviderItems = () => {
         </button>
         <div>
           <h1>Manage Service Items</h1>
-          <p>Service ID: {serviceId} — add items customers can order</p>
+          <p>Service ID: {serviceId} — delete hides items from customers but keeps them in the database</p>
         </div>
         <button type="button" className="pi-add-btn" onClick={openAddForm}>
           <Plus size={18} /> Add Item
@@ -234,7 +262,7 @@ const ProviderItems = () => {
 
       {loading ? (
         <p className="pi-muted">Loading items...</p>
-      ) : items.length === 0 ? (
+      ) : items.filter(isItemActive).length === 0 && items.length === 0 ? (
         <div className="pi-empty">
           <Package size={48} />
           <h3>No items yet</h3>
@@ -249,12 +277,15 @@ const ProviderItems = () => {
                 <th>Name</th>
                 <th>Description</th>
                 <th>Price</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.itemId}>
+              {items.map((item) => {
+                const active = isItemActive(item);
+                return (
+                <tr key={item.itemId} className={active ? '' : 'pi-row-inactive'}>
                   <td>
                     <img
                       src={item.imageUrl || '/wash1.jpg'}
@@ -265,16 +296,30 @@ const ProviderItems = () => {
                   <td>{item.itemName}</td>
                   <td>{item.description || '—'}</td>
                   <td>Rs.{Number(item.price).toFixed(2)}</td>
+                  <td>
+                    <span className={`pi-status-badge ${active ? 'pi-status-active' : 'pi-status-deleted'}`}>
+                      {active ? 'Active' : 'Deleted'}
+                    </span>
+                  </td>
                   <td className="pi-actions">
-                    <button type="button" onClick={() => openEditForm(item)} title="Edit">
-                      <Pencil size={16} />
-                    </button>
-                    <button type="button" onClick={() => handleDelete(item)} title="Delete">
-                      <Trash2 size={16} />
-                    </button>
+                    {active ? (
+                      <>
+                        <button type="button" onClick={() => openEditForm(item)} title="Edit">
+                          <Pencil size={16} />
+                        </button>
+                        <button type="button" onClick={() => handleDelete(item)} title="Soft delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => handleRestore(item)} title="Restore">
+                        <RotateCcw size={16} />
+                      </button>
+                    )}
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

@@ -55,6 +55,22 @@ public class ServiceItemsController : ControllerBase
         }
     }
 
+    /// <summary>Provider manage page — includes soft-deleted items (IsAvailable = 0).</summary>
+    [Authorize(Roles = "provider")]
+    [HttpGet("manage/by-service/{serviceId:int}")]
+    public async Task<IActionResult> GetForManage(int serviceId)
+    {
+        try
+        {
+            var items = await _service.GetProviderServiceItems(serviceId);
+            return Ok(new { success = true, count = items.Count, data = items });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
     /// <summary>Legacy route alias — same as by-service/{id}.</summary>
     [AllowAnonymous]
     [HttpGet("by-service-type/{serviceId:int}")]
@@ -90,7 +106,22 @@ public class ServiceItemsController : ControllerBase
         try
         {
             await _service.DeleteServiceItem(itemId, serviceId);
-            return Ok(new { success = true, message = "Service item deleted successfully" });
+            return Ok(new { success = true, message = "Item hidden from customers (soft delete). Row kept in database." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "provider")]
+    [HttpPost("{itemId:int}/restore")]
+    public async Task<IActionResult> Restore(int itemId, [FromQuery] int serviceId)
+    {
+        try
+        {
+            await _service.RestoreServiceItem(itemId, serviceId);
+            return Ok(new { success = true, message = "Item restored and visible to customers again" });
         }
         catch (ArgumentException ex)
         {

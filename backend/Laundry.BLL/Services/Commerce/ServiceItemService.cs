@@ -26,6 +26,14 @@ public sealed class ServiceItemService(ServiceItemRepository repository)
         return _repository.GetServiceItems(serviceId);
     }
 
+    public Task<List<ServiceItem>> GetProviderServiceItems(int serviceId)
+    {
+        if (serviceId <= 0)
+            throw new ArgumentException("Invalid service id");
+
+        return _repository.GetProviderServiceItems(serviceId);
+    }
+
     public Task UpdateServiceItem(int itemId, ServiceItem item)
     {
         if (itemId <= 0)
@@ -47,6 +55,14 @@ public sealed class ServiceItemService(ServiceItemRepository repository)
             throw new ArgumentException("Invalid item or service id");
 
         return _repository.DeleteServiceItem(itemId, serviceId);
+    }
+
+    public Task RestoreServiceItem(int itemId, int serviceId)
+    {
+        if (itemId <= 0 || serviceId <= 0)
+            throw new ArgumentException("Invalid item or service id");
+
+        return _repository.RestoreServiceItem(itemId, serviceId);
     }
 
     private static void ValidateItem(ServiceItem item)

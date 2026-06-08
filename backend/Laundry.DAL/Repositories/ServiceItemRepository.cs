@@ -34,6 +34,17 @@ public sealed class ServiceItemRepository(SqlHelper sql)
             CommandType.StoredProcedure);
     }
 
+    public Task<List<ServiceItem>> GetProviderServiceItems(int serviceId)
+    {
+        SqlParameter[] parameters = [new("@ServiceId", serviceId)];
+
+        return _sql.ExecuteListAsync(
+            "sp_GetProviderServiceItems",
+            parameters,
+            MapServiceItem,
+            CommandType.StoredProcedure);
+    }
+
     public Task UpdateServiceItem(int itemId, int serviceId, string itemName, string? description, decimal price, string? imageUrl)
     {
         SqlParameter[] parameters =
@@ -58,6 +69,17 @@ public sealed class ServiceItemRepository(SqlHelper sql)
         ];
 
         return _sql.ExecuteAsync("sp_DeleteServiceItem", parameters);
+    }
+
+    public Task RestoreServiceItem(int itemId, int serviceId)
+    {
+        SqlParameter[] parameters =
+        [
+            new("@ItemId", itemId),
+            new("@ServiceId", serviceId)
+        ];
+
+        return _sql.ExecuteAsync("sp_RestoreServiceItem", parameters);
     }
 
     private static ServiceItem MapServiceItem(SqlDataReader reader) => new()

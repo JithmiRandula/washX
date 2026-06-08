@@ -703,7 +703,7 @@ const Providers = () => {
     });
     setShowCardForm(false);
   };
-
+    
   const handleCardNumberChange = (e) => {
     let value = e.target.value.replace(/\s/g, '');
     if (value.length <= 16 && /^\d*$/.test(value)) {

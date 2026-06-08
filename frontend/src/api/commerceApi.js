@@ -58,6 +58,12 @@ export const serviceItemsAPI = {
     return response.data;
   },
 
+  /** Provider manage page — includes soft-deleted items */
+  getForManage: async (serviceId) => {
+    const response = await api.get(`/serviceitems/manage/by-service/${serviceId}`);
+    return response.data;
+  },
+
   /** @deprecated use getByService */
   getByServiceType: async (serviceId) => serviceItemsAPI.getByService(serviceId),
 
@@ -87,6 +93,27 @@ export const serviceItemsAPI = {
     const response = await api.delete(`/serviceitems/${itemId}`, {
       params: { serviceId }
     });
+    return response.data;
+  },
+
+  restore: async (itemId, serviceId) => {
+    const response = await api.post(`/serviceitems/${itemId}/restore`, null, {
+      params: { serviceId }
+    });
+    return response.data;
+  }
+};
+
+export const uploadAPI = {
+  uploadServiceItemImage: async (file, serviceId) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('serviceId', serviceId);
+
+    const response = await api.post('/uploads/service-item-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
     return response.data;
   }
 };

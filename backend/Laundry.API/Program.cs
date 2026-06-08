@@ -1,8 +1,11 @@
 using Laundry.DAL.DbHelper;
 using Laundry.DAL.Repositories;
+using Laundry.API;
 using Laundry.BLL.Services.Auth;
 using Laundry.BLL.Services.Payments;
 using Laundry.BLL.Services.Commerce;
+using CloudinaryDotNet;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -34,6 +37,14 @@ builder.Services.AddScoped<ServiceItemRepository>();
 builder.Services.AddScoped<ServiceItemService>();
 builder.Services.AddScoped<CartRepository>();
 builder.Services.AddScoped<CartService>();
+
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
+builder.Services.AddSingleton(provider =>
+{
+    var settings = provider.GetRequiredService<IOptions<CloudinarySettings>>().Value;
+    var account = new Account(settings.CloudName, settings.ApiKey, settings.ApiSecret);
+    return new Cloudinary(account) { Api = { Secure = true } };
+});
 
 builder.Services.AddHttpLogging(_ => { });
 
