@@ -227,6 +227,85 @@
   filter: grayscale(0.6);
 }
 
+/* Bulk item cards */
+.pi-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pi-card {
+  background: white;
+  border: 1px solid #e6edf3;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+}
+
+.pi-card-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.pi-card-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pi-card-actions button {
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+}
+
+.pi-card-body {
+  width: 100%;
+  text-align: center;
+}
+
+.pi-card-image-wrap {
+  width: 100%;
+  height: 110px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+}
+
+.pi-card-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pi-card-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0.4rem 0;
+}
+
+.pi-card-meta {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .pi-card-image-wrap { height: 90px; }
+  .pi-card-price { font-size: 1.1rem; }
+}
+
 .pi-status-badge {
   display: inline-block;
   padding: 0.2rem 0.55rem;

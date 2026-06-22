@@ -117,3 +117,56 @@ export const uploadAPI = {
     return response.data;
   }
 };
+
+export const bulkItemsAPI = {
+  getByService: async (serviceId) => {
+    const response = await api.get(`/bulkitems/by-service/${serviceId}`);
+    return response.data;
+  },
+
+  getForManage: async (serviceId) => {
+    const response = await api.get(`/bulkitems/manage/by-service/${serviceId}`);
+    return response.data;
+  },
+
+  add: async (payload) => {
+    const response = await api.post('/bulkitems', payload);
+    return response.data;
+  },
+
+  update: async (bulkItemId, payload) => {
+    const response = await api.put(`/bulkitems/${bulkItemId}`, payload);
+    return response.data;
+  },
+
+  delete: async (bulkItemId, serviceId) => {
+    const response = await api.delete(`/bulkitems/${bulkItemId}`, { params: { serviceId } });
+    return response.data;
+  },
+
+  restore: async (bulkItemId, serviceId) => {
+    const response = await api.post(`/bulkitems/${bulkItemId}/restore`, null, { params: { serviceId } });
+    return response.data;
+  }
+};
+
+export const ordersAPI = {
+  create: async (payload) => {
+    const response = await api.post('/orders', payload);
+    return response.data;
+  }
+};
+
+// upload for bulk items
+uploadAPI.uploadBulkItemImage = async (file, serviceId) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('serviceId', serviceId);
+
+  // reuse existing service-item upload endpoint
+  const response = await api.post('/uploads/service-item-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
+  return response.data;
+};

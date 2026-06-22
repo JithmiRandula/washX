@@ -17,10 +17,54 @@ const PaymentResult = ({ status }) => {
   const isSuccess = status === 'success';
 
   useEffect(() => {
-    if (isSuccess) {
-      sessionStorage.removeItem('washx_checkout_cart');
-      sessionStorage.removeItem('washx_payhere_order');
-    }
+    const saveOrderIfSuccess = async () => {
+      if (!isSuccess) return;
+
+      try {
+        const orderRef =
+          searchParams.get('order_id') || sessionStorage.getItem('washx_payhere_order');
+        const cartJson = sessionStorage.getItem('washx_checkout_cart');
+        if (!orderRef || !cartJson) {
+          sessionStorage.removeItem('washx_checkout_cart');
+          sessionStorage.removeItem('washx_payhere_order');
+          return;
+        }
+
+        const cart = JSON.parse(cartJson);
+        const items = (cart || []).map((c) => ({
+          ProviderId: c.providerId,
+          ServiceId: c.serviceId,
+          ItemId: c.itemId || null,
+          Kind: c.kind || 'item',
+          Quantity: c.quantity || 1,
+          UnitPrice: Number(c.unitPrice || c.unitPrice || 0) || 0,
+          Price: Number(c.price || 0) || 0,
+          Description: c.description || ''
+        }));
+
+        const total = items.reduce((s, it) => s + (Number(it.Price) || 0), 0);
+
+        // lazy import API to avoid cycles
+        const { ordersAPI } = await import('../../api/commerceApi');
+
+        await ordersAPI.create({
+          OrderReference: orderRef,
+          CustomerId: user?.customerId ?? null,
+          TotalAmount: total,
+          PaymentProvider: 'PayHere',
+          PaymentStatus: 'Paid',
+          Notes: null,
+          Items: items
+        });
+      } catch (e) {
+        console.error('Failed to save order:', e);
+      } finally {
+        sessionStorage.removeItem('washx_checkout_cart');
+        sessionStorage.removeItem('washx_payhere_order');
+      }
+    };
+
+    saveOrderIfSuccess();
   }, [isSuccess]);
 
   return (

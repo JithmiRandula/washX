@@ -48,7 +48,7 @@ import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import ItemBasedSelector from './ItemBasedSelector';
 import api from '../../utils/api';
-import { cartAPI } from '../../api/commerceApi';
+import { cartAPI, bulkItemsAPI } from '../../api/commerceApi';
 import { redirectToPayHereCheckout } from '../../utils/payhere';
 import './Providers.css';
 
@@ -73,6 +73,8 @@ const Providers = () => {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkService, setBulkService] = useState(null);
   const [selectedBulkPackage, setSelectedBulkPackage] = useState(null);
+  const [bulkPkgs, setBulkPkgs] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [showCartModal, setShowCartModal] = useState(false);
   const [cartLoading, setCartLoading] = useState(false);
@@ -260,30 +262,37 @@ const Providers = () => {
     return `Rs ${Number(service?.price ?? 0).toFixed(2)} ${unit}`;
   };
 
-  const getBulkPackages = (service) => {
-    const unitPrice = Number(service?.price ?? 0);
-    const base = [
-      { bags: 1, maxKg: 5, discount: 1 },
-      { bags: 2, maxKg: 10, discount: 0.97 },
-      { bags: 3, maxKg: 15, discount: 0.95 },
-      { bags: 4, maxKg: 20, discount: 0.93 }
-    ];
-
-    return base.map((p) => {
-      const raw = unitPrice * p.maxKg;
-      const price = Math.round(raw * p.discount * 100) / 100;
-      return {
-        id: `${service?.serviceId || 'svc'}-${p.bags}`,
-        ...p,
-        price
-      };
-    });
-  };
+  
 
   const openBulkPackageModal = (service) => {
     setBulkService(service);
     setSelectedBulkPackage(null);
+    setBulkPkgs([]);
     setShowBulkModal(true);
+    // fetch provider-defined bulk packages for this service
+    (async () => {
+      try {
+        setBulkLoading(true);
+        const resp = await bulkItemsAPI.getByService(Number(service.serviceId));
+        const rows = resp?.data || resp || [];
+        // map api rows to modal package shape
+        const mapped = rows.map((r) => ({
+          id: r.bulkItemId || r.id || `${r.serviceId}-${r.includedCount}`,
+          bags: Number(r.includedCount || r.bags || 1),
+          maxKg: Number(r.maxWeightKg || r.maxKg || 0),
+          price: Number(r.price || 0),
+          title: r.name || r.serviceName || '',
+          imageUrl: r.imageUrl || r.image || null,
+          description: r.description || ''
+        }));
+        if (mapped.length > 0) setBulkPkgs(mapped);
+      } catch (err) {
+        // ignore and fallback to generated packages
+        console.error('Failed to load bulk packages from API', err);
+      } finally {
+        setBulkLoading(false);
+      }
+    })();
   };
 
   const closeBulkPackageModal = () => {
@@ -292,8 +301,9 @@ const Providers = () => {
     setSelectedBulkPackage(null);
   };
 
-  const addBulkToCart = () => {
-    if (!selectedProvider || !bulkService || !selectedBulkPackage) return;
+  const addBulkToCart = (pkg) => {
+    const p = pkg || selectedBulkPackage;
+    if (!selectedProvider || !bulkService || !p) return;
 
     const id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     const item = {
@@ -305,13 +315,14 @@ const Providers = () => {
       serviceName: bulkService.serviceName,
       pricingType: bulkService.pricingType,
       unitPrice: Number(bulkService.price ?? 0),
-      bags: selectedBulkPackage.bags,
-      maxKg: selectedBulkPackage.maxKg,
-      price: selectedBulkPackage.price
+      bags: p.bags,
+      maxKg: p.maxKg,
+      price: p.price
     };
 
     setCartItems((prev) => [...prev, item]);
-    closeBulkPackageModal();
+    // if we are showing modal, close it; otherwise stay on page
+    if (showBulkModal) closeBulkPackageModal();
     setShowCartModal(true);
   };
 
@@ -993,58 +1004,52 @@ const Providers = () => {
 
   // Bulk Package Modal (Bag-based picker)
   if (showBulkModal && bulkService) {
-    const pkgs = getBulkPackages(bulkService);
+    const pkgs = (bulkPkgs && bulkPkgs.length > 0) ? bulkPkgs : [];
 
     return (
       <>
         <CustomerNavbar />
-        <div className="sp-overlay">
-          <div className="bulk-modal">
-            <div className="bulk-modal-header">
-              <h2 className="bulk-modal-title">{bulkService.serviceName}</h2>
-              <button className="bulk-close-btn" onClick={closeBulkPackageModal}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="bulk-cards-row">
-              {pkgs.map((p) => {
-                const selected = selectedBulkPackage?.id === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`bulk-card ${selected ? 'selected' : ''}`}
-                    onClick={() => setSelectedBulkPackage(p)}
-                  >
-                    <div className="bulk-card-top">
-                      <div className="bulk-bag-label">{p.bags} BAG</div>
-                      <div className="bulk-bag-icons">
-                        {Array.from({ length: p.bags }).map((_, i) => (
-                          <ShoppingBag key={i} size={20} />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="bulk-price">Rs.{Number(p.price).toFixed(2)}</div>
-                    <div className="bulk-sub">{p.bags} bag{p.bags > 1 ? 's' : ''} included</div>
-                    <div className="bulk-sub">Up to {p.maxKg}Kg</div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="bulk-actions">
-              <button
-                type="button"
-                className="bulk-add-btn"
-                onClick={addBulkToCart}
-                disabled={!selectedBulkPackage}
-              >
-                Add
+        <div className="bulk-page" style={{ padding: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h2 style={{ margin: 0 }}>{bulkService.serviceName}</h2>
+            <div>
+              <button className="bulk-close-btn" onClick={closeBulkPackageModal} style={{ marginRight: 12 }}>
+                Close
               </button>
             </div>
           </div>
+
+          {pkgs.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <Package size={48} />
+              <h3 style={{ marginTop: '1rem' }}>No packages available</h3>
+              <p>This provider has not defined any bulk packages for this service.</p>
+              <div style={{ marginTop: '1rem' }}>
+                <button className="bulk-close-btn" onClick={closeBulkPackageModal}>Close</button>
+              </div>
+            </div>
+          ) : (
+            <div className="bulk-cards-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+              {pkgs.map((p) => (
+                <div key={p.id} className="bulk-card" style={{ padding: '1rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>{p.bags} BAG</div>
+                  </div>
+                  <div style={{ textAlign: 'center', marginTop: 12 }}>
+                    <img src={p.imageUrl || bulkService.imageUrl || '/wash1.jpg'} alt={p.title || bulkService.serviceName} style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 6 }} />
+                  </div>
+                  <div style={{ textAlign: 'center', marginTop: 12, fontSize: '1.4rem', fontWeight: 800 }}>Rs.{Number(p.price).toFixed(2)}</div>
+                  <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>{p.bags} bag{p.bags > 1 ? 's' : ''} included</div>
+                  <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 4 }}>Up to {p.maxKg}Kg</div>
+                  <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+                    <button className="bulk-add-btn" onClick={() => addBulkToCart(p)} style={{ padding: '0.6rem 1rem', borderRadius: 8, background: '#5964a4', color: '#fff', border: 'none' }}>
+                      Add
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <CartButton />
       </>

@@ -84,7 +84,7 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
   const handleAddSelected = () => {
     const selectedItems = items
       .filter((item) => Number(quantities[item.itemId] || 0) > 0)
-      .map((item) => {
+      .map((item) => { 
         const quantity = Number(quantities[item.itemId] || 0);
         return {
           itemId: item.itemId,

@@ -408,6 +408,14 @@ const ProviderServices = () => {
                       <List size={14} /> Manage Items
                     </Link>
                   )}
+                  {(service.serviceMode === 'bulk' || getServiceMode(service.prices?.[0]?.unit) === 'bulk') && (
+                    <Link
+                      to={`/provider/${providerId}/bulk-items/${service._id}`}
+                      className="ps-manage-items-link"
+                    >
+                      <List size={14} /> Manage Items
+                    </Link>
+                  )}
 
                   {/* Toggle */}
                   <button

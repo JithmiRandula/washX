@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Pencil, Trash2, Package, ImagePlus, RotateCcw } from 'lucide-react';
-import { serviceItemsAPI, uploadAPI } from '../../api/commerceApi';
+import { bulkItemsAPI, uploadAPI } from '../../api/commerceApi';
 import './ProviderItems.css';
 
 const emptyForm = {
-  itemName: '',
+  name: '',
+  includedCount: 1,
+  maxWeightKg: '',
   description: '',
   price: '',
   imageUrl: '/wash1.jpg'
 };
 
-const ProviderItems = () => {
+const ProviderBulkItems = () => {
   const { providerId, serviceId: serviceIdParam, serviceTypeId: legacyServiceId } = useParams();
   const serviceId = serviceIdParam || legacyServiceId;
   const navigate = useNavigate();
@@ -31,10 +33,10 @@ const ProviderItems = () => {
     try {
       setLoading(true);
       setError('');
-      const result = await serviceItemsAPI.getByService(Number(serviceId));
+      const result = await bulkItemsAPI.getForManage(Number(serviceId));
       setItems(result?.data || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load items');
+      setError(err.response?.data?.message || 'Failed to load bulk items');
     } finally {
       setLoading(false);
     }
@@ -62,12 +64,20 @@ const ProviderItems = () => {
   };
 
   const openEditForm = (item) => {
-    setEditingId(item.itemId);
+    setEditingId(item.bulkItemId);
     setImageFile(null);
+    // prefer explicit fields returned by API
+    const baseDesc = item.description || '';
+    const includedCount = Number(item.includedCount ?? 1);
+    const maxWeightKg = item.maxWeightKg != null ? String(item.maxWeightKg) : '';
+
     setForm({
-      itemName: item.itemName,
-      description: item.description || '',
-      price: String(item.price),
+      name: item.name,
+      includedCount: includedCount,
+      maxWeightKg: String(maxWeightKg),
+      
+      description: baseDesc,
+      price: String(item.price ?? ''),
       imageUrl: item.imageUrl || '/wash1.jpg'
     });
     setImagePreview(item.imageUrl || '/wash1.jpg');
@@ -94,8 +104,8 @@ const ProviderItems = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.itemName.trim() || !form.price) {
-      setError('Item name and price are required');
+    if (!form.name.trim() || !form.price) {
+      setError('Name and price are required');
       return;
     }
 
@@ -108,34 +118,39 @@ const ProviderItems = () => {
 
       // If user selected a local file, upload it to Cloudinary first
       if (imageFile) {
-        const upload = await uploadAPI.uploadServiceItemImage(imageFile, Number(serviceId));
+        const upload = await uploadAPI.uploadBulkItemImage(imageFile, Number(serviceId));
         if (!upload?.success || !upload?.url) {
           throw new Error(upload?.message || 'Image upload failed');
         }
         imageUrl = upload.url;
       }
 
+      // description (no per-bag weights UI)
+      const composedDescription = form.description?.trim() || '';
+
       const payload = {
         serviceId: Number(serviceId),
-        itemName: form.itemName.trim(),
-        description: form.description.trim(),
+        name: form.name.trim(),
+        includedCount: Number(form.includedCount) || 1,
+        maxWeightKg: form.maxWeightKg ? Number(form.maxWeightKg) : null,
         price: Number(form.price),
-        imageUrl
+        imageUrl,
+        description: composedDescription || null
       };
 
       if (editingId) {
-        await serviceItemsAPI.update(editingId, payload);
-        setSuccess('Item updated successfully');
+        await bulkItemsAPI.update(editingId, payload);
+        setSuccess('Bulk item updated successfully');
       } else {
-        await serviceItemsAPI.add(payload);
-        setSuccess('Item added successfully');
+        await bulkItemsAPI.add(payload);
+        setSuccess('Bulk item added successfully');
       }
 
       setShowForm(false);
       resetForm();
       await loadItems();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save item');
+      setError(err.response?.data?.message || 'Failed to save bulk item');
     } finally {
       setSaving(false);
     }
@@ -144,26 +159,26 @@ const ProviderItems = () => {
   const isItemActive = (item) => item.isAvailable !== false;
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Hide "${item.itemName}" from customers?\n\nThe item stays in the database (IsAvailable = 0) but won't appear for customers.`)) return;
+    if (!window.confirm(`Delete "${item.name}" permanently? This operation cannot be undone.`)) return;
 
     try {
       setError('');
-      await serviceItemsAPI.delete(item.itemId, Number(serviceId));
-      setSuccess('Item hidden from customers (saved in database as inactive)');
+      await bulkItemsAPI.delete(item.bulkItemId, Number(serviceId));
+      setSuccess('Bulk item deleted');
       await loadItems();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete item');
+      setError(err.response?.data?.message || 'Failed to delete bulk item');
     }
   };
 
   const handleRestore = async (item) => {
     try {
       setError('');
-      await serviceItemsAPI.restore(item.itemId, Number(serviceId));
-      setSuccess('Item restored and visible to customers');
+      await bulkItemsAPI.restore(item.bulkItemId, Number(serviceId));
+      setSuccess('Bulk item restored and visible to customers');
       await loadItems();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to restore item');
+      setError(err.response?.data?.message || 'Failed to restore bulk item');
     }
   };
 
@@ -178,10 +193,10 @@ const ProviderItems = () => {
           <ArrowLeft size={18} /> Back to Services
         </button>
         <div>
-          <h1>Manage Service Items</h1>
+          <h1>Manage Bulk Items</h1>
         </div>
         <button type="button" className="pi-add-btn" onClick={openAddForm}>
-          <Plus size={18} /> Add Item
+          <Plus size={18} /> Add Bulk Item
         </button>
       </header>
 
@@ -190,19 +205,52 @@ const ProviderItems = () => {
 
       {showForm && (
         <form className="pi-form" onSubmit={handleSubmit}>
-          <h3>{editingId ? 'Edit Item' : 'Add New Item'}</h3>
+          <h3>{editingId ? 'Edit Bulk Item' : 'Add New Bulk Item'}</h3>
           <div className="pi-form-body">
             <div className="pi-form-fields">
               <label>
-                Item Name *
+                Name *
                 <input
-                  value={form.itemName}
-                  onChange={(e) => setForm((p) => ({ ...p, itemName: e.target.value }))}
-                  placeholder="e.g. Shirt on Hanger"
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="e.g. 1 BAG"
                   required
                 />
               </label>
               <label>
+                Bags *
+                <select
+                  value={form.includedCount}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setForm((p) => {
+                      const next = { ...p, includedCount: val };
+                      // auto-fill name when it matches a simple pattern or is empty
+                      const nameLooksAuto = !p.name || /^\d+\s*bag(s)?$/i.test(p.name.trim()) || /^\d+\s*bag(s)?/i.test(p.name.trim());
+                      if (nameLooksAuto) next.name = `${val} BAG`;
+                      
+                      return next;
+                    });
+                  }}
+                  required
+                >
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Up to (kg)
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.maxWeightKg}
+                  onChange={(e) => setForm((p) => ({ ...p, maxWeightKg: e.target.value }))}
+                  placeholder="e.g. 5"
+                />
+              </label>
+              <label className="pi-full">
                 Price (Rs) *
                 <input
                   type="number"
@@ -221,6 +269,7 @@ const ProviderItems = () => {
                   placeholder="Short description for customers"
                 />
               </label>
+              {/* per-bag weights removed as requested */}
               <label className="pi-full">
                 Image URL (optional)
                 <input
@@ -253,7 +302,7 @@ const ProviderItems = () => {
               Cancel
             </button>
             <button type="submit" className="pi-btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : editingId ? 'Update Item' : 'Save Item'}
+              {saving ? 'Saving...' : editingId ? 'Update Bulk Item' : 'Save Bulk Item'}
             </button>
           </div>
         </form>
@@ -264,49 +313,27 @@ const ProviderItems = () => {
       ) : items.filter(isItemActive).length === 0 && items.length === 0 ? (
         <div className="pi-empty">
           <Package size={48} />
-          <h3>No items yet</h3>
-          <p>Add your first item for this service type.</p>
+          <h3>No bulk items yet</h3>
+          <p>Add your first bulk option for this service.</p>
         </div>
       ) : (
-        <div className="pi-table-wrap">
-          <table className="pi-table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const active = isItemActive(item);
-                return (
-                <tr key={item.itemId} className={active ? '' : 'pi-row-inactive'}>
-                  <td>
-                    <img
-                      src={item.imageUrl || '/wash1.jpg'}
-                      alt={item.itemName}
-                      className="pi-thumb"
-                    />
-                  </td>
-                  <td>{item.itemName}</td>
-                  <td>{item.description || '—'}</td>
-                  <td>Rs.{Number(item.price).toFixed(2)}</td>
-                  <td>
-                    <span className={`pi-status-badge ${active ? 'pi-status-active' : 'pi-status-deleted'}`}>
-                      {active ? 'Active' : 'Deleted'}
-                    </span>
-                  </td>
-                  <td className="pi-actions">
+        <div className="pi-cards-grid">
+          {items.map((item) => {
+            const active = isItemActive(item);
+            const includedCount = Number(item.includedCount ?? 1);
+            const maxWeightKg = item.maxWeightKg != null ? item.maxWeightKg : '';
+
+            return (
+              <div key={item.bulkItemId} className={`pi-card ${active ? '' : 'pi-row-inactive'}`}>
+                <div className="pi-card-header">
+                  <div className="pi-card-title">{item.name}</div>
+                  <div className="pi-card-actions">
                     {active ? (
                       <>
                         <button type="button" onClick={() => openEditForm(item)} title="Edit">
                           <Pencil size={16} />
                         </button>
-                        <button type="button" onClick={() => handleDelete(item)} title="Soft delete">
+                        <button type="button" onClick={() => handleDelete(item)} title="Delete">
                           <Trash2 size={16} />
                         </button>
                       </>
@@ -315,16 +342,24 @@ const ProviderItems = () => {
                         <RotateCcw size={16} />
                       </button>
                     )}
-                  </td>
-                </tr>
-              );
-              })}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+
+                <div className="pi-card-body">
+                  <div className="pi-card-image-wrap">
+                    <img src={item.imageUrl || '/wash1.jpg'} alt={item.name} />
+                  </div>
+                  <div className="pi-card-price">Rs.{Number(item.price).toFixed(2)}</div>
+                  <div className="pi-card-meta">{includedCount} bag{includedCount > 1 ? 's' : ''} included</div>
+                  <div className="pi-card-meta">{maxWeightKg ? `Up to ${Number(maxWeightKg)}Kg` : '—'}</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
 
-export default ProviderItems;
+export default ProviderBulkItems;

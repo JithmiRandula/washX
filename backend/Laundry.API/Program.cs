@@ -37,6 +37,10 @@ builder.Services.AddScoped<ServiceItemRepository>();
 builder.Services.AddScoped<ServiceItemService>();
 builder.Services.AddScoped<CartRepository>();
 builder.Services.AddScoped<CartService>();
+builder.Services.AddScoped<BulkItemRepository>();
+builder.Services.AddScoped<BulkItemService>();
+builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<OrderService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddSingleton(provider =>

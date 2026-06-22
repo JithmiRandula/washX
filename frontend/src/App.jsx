@@ -26,6 +26,7 @@ import ProviderOrders from './pages/Provider/ProviderOrders';
 import ProviderAnalytics from './pages/Provider/ProviderAnalytics';
 import ProviderProfile from './pages/Provider/ProviderProfile';
 import ProviderItems from './pages/Provider/ProviderItems';
+import ProviderBulkItems from './pages/Provider/ProviderBulkItems';
 import ProviderLayout from './layouts/ProviderLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
@@ -122,6 +123,7 @@ function AppContent() {
             <Route path="dashboard" element={<ProviderDashboard />} />
             <Route path="services" element={<ProviderServices />} />
             <Route path="items/:serviceId" element={<ProviderItems />} />
+            <Route path="bulk-items/:serviceId" element={<ProviderBulkItems />} />
             <Route path="orders" element={<ProviderOrders />} />
             <Route path="analytics" element={<ProviderAnalytics />} />
             <Route path="profile" element={<ProviderProfile />} />
