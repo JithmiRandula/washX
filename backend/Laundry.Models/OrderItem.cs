@@ -11,6 +11,12 @@ public sealed class OrderItem
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal Price { get; set; }
+    public string? Status { get; set; } = "pending";
     public string? Description { get; set; }
     public DateTime? CreatedAt { get; set; }
+
+    // Populated by detailed queries (joins)
+    public string? ProviderName { get; set; }
+    public string? ItemName { get; set; }
+    public string? ImageUrl { get; set; }
 }

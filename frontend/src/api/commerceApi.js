@@ -42,8 +42,9 @@ export const cartAPI = {
     return { ...response.data, data: rows.map(mapCartRow) };
   },
 
-  add: async ({ providerId, itemId, quantity = 1 }) => {
-    const response = await api.post('/cart', { providerId, itemId, quantity });
+  // payload: { providerId, itemId?, bulkItemId?, kind?, quantity, bags?, maxKg?, unitPrice?, price?, description? }
+  add: async (payload) => {
+    const response = await api.post('/cart', payload);
     const rows = response.data?.data || [];
     return { ...response.data, data: rows.map(mapCartRow) };
   },
@@ -180,6 +181,16 @@ export const bulkItemsAPI = {
 export const ordersAPI = {
   create: async (payload) => {
     const response = await api.post('/orders', payload);
+    return response.data;
+  },
+
+  getMine: async () => {
+    const response = await api.get('/orders/mine');
+    return response.data;
+  },
+
+  getById: async (orderId) => {
+    const response = await api.get(`/orders/${orderId}`);
     return response.data;
   }
 };

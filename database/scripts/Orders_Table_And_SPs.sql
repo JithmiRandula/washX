@@ -34,6 +34,7 @@ BEGIN
         UnitPrice DECIMAL(18,2) NOT NULL,
         Price DECIMAL(18,2) NOT NULL,
         Description NVARCHAR(MAX) NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'pending',
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
     );
     CREATE INDEX IX_OrderItems_OrderId ON dbo.OrderItems(OrderId);
@@ -123,12 +124,27 @@ CREATE PROCEDURE dbo.SP_AddOrderItem
     @Quantity INT,
     @UnitPrice DECIMAL(18,2),
     @Price DECIMAL(18,2),
-    @Description NVARCHAR(MAX) = NULL
+    @Description NVARCHAR(MAX) = NULL,
+    @Status NVARCHAR(50) = 'pending'
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.OrderItems (OrderId, ProviderId, ServiceId, ItemId, Kind, Quantity, UnitPrice, Price, Description)
-    VALUES (@OrderId, @ProviderId, @ServiceId, @ItemId, @Kind, @Quantity, @UnitPrice, @Price, @Description);
+    INSERT INTO dbo.OrderItems (OrderId, ProviderId, ServiceId, ItemId, Kind, Quantity, UnitPrice, Price, Description, Status)
+    VALUES (@OrderId, @ProviderId, @ServiceId, @ItemId, @Kind, @Quantity, @UnitPrice, @Price, @Description, @Status);
+END
+GO
+
+IF OBJECT_ID('dbo.SP_UpdateOrderItemStatus', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_UpdateOrderItemStatus;
+GO
+CREATE PROCEDURE dbo.SP_UpdateOrderItemStatus
+    @OrderItemId INT,
+    @Status NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.OrderItems SET Status = @Status WHERE OrderItemId = @OrderItemId;
+    SELECT @@ROWCOUNT AS RowsAffected;
 END
 GO
 
@@ -156,5 +172,39 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SELECT * FROM dbo.Orders WHERE CustomerId = @CustomerId ORDER BY CreatedAt DESC;
+END
+GO
+
+-- Provider: get all orders that include items for a provider (with optional status filter)
+IF OBJECT_ID('dbo.SP_GetOrdersByProvider', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_GetOrdersByProvider;
+GO
+CREATE PROCEDURE dbo.SP_GetOrdersByProvider
+    @ProviderId INT,
+    @Status NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT DISTINCT o.*
+    FROM dbo.Orders o
+    INNER JOIN dbo.OrderItems oi ON o.OrderId = oi.OrderId
+    WHERE oi.ProviderId = @ProviderId
+      AND (@Status IS NULL OR oi.Status = @Status)
+    ORDER BY o.CreatedAt DESC;
+END
+GO
+
+-- Provider: get items for a provider within an order
+IF OBJECT_ID('dbo.SP_GetOrderItemsForProvider', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_GetOrderItemsForProvider;
+GO
+CREATE PROCEDURE dbo.SP_GetOrderItemsForProvider
+    @OrderId INT,
+    @ProviderId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM dbo.OrderItems WHERE OrderId = @OrderId AND ProviderId = @ProviderId ORDER BY OrderItemId;
 END
 GO

@@ -9,76 +9,289 @@ public sealed class OrderRepository(SqlHelper sql)
 {
     private readonly SqlHelper _sql = sql;
 
+    // ── Inline SQL fragments shared by list and detail queries ──────────────
+
+    // Subquery: comma-separated distinct provider names for an order.
+    // Uses STUFF + FOR XML PATH — works on SQL Server 2012+, no SP required.
+    private const string ProviderNamesSub = @"
+        ISNULL(
+            STUFF((
+                SELECT DISTINCT ', ' + p2.BusinessName
+                FROM dbo.OrderItems oi2
+                INNER JOIN dbo.Providers p2 ON p2.ProviderId = oi2.ProviderId
+                WHERE oi2.OrderId = o.OrderId
+                FOR XML PATH('')
+            ), 1, 2, ''),
+        '') ";
+
+    // Subquery: total item count for an order.
+    private const string ItemCountSub =
+        "(SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId)";
+
+    // Derived overall status — uses correlated subqueries, no GROUP BY / STRING_AGG.
+    private const string OverallStatusExpr = @"
+        CASE
+            WHEN (SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId) = 0
+                THEN 'pending'
+            WHEN (SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId AND oi.Status = 'completed')
+               = (SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId)
+                THEN 'completed'
+            WHEN EXISTS (SELECT 1 FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId AND oi.Status = 'in-progress')
+                THEN 'in-progress'
+            WHEN o.PaymentStatus = 'Paid'
+                THEN 'confirmed'
+            ELSE 'pending'
+        END ";
+
+    // ── Write operations (inline SQL — no stored procedures required) ────────
+
     public async Task<int> AddOrder(Order order)
     {
+        const string sql = @"
+            INSERT INTO dbo.Orders
+                (OrderReference, CustomerId, TotalAmount, PaymentProvider, PaymentStatus, Notes)
+            OUTPUT INSERTED.OrderId
+            VALUES
+                (@OrderReference, @CustomerId, @TotalAmount, @PaymentProvider, @PaymentStatus, @Notes)";
+
         SqlParameter[] parameters = [
-            new("@OrderReference", order.OrderReference),
-            new("@CustomerId", order.CustomerId),
-            new("@TotalAmount", order.TotalAmount),
+            new("@OrderReference",  order.OrderReference),
+            new("@CustomerId",      order.CustomerId),
+            new("@TotalAmount",     order.TotalAmount),
             new("@PaymentProvider", (object?)order.PaymentProvider ?? DBNull.Value),
-            new("@PaymentStatus", (object?)order.PaymentStatus ?? DBNull.Value),
-            new("@Notes", (object?)order.Notes ?? DBNull.Value)
+            new("@PaymentStatus",   (object?)order.PaymentStatus   ?? DBNull.Value),
+            new("@Notes",           (object?)order.Notes           ?? DBNull.Value)
         ];
 
-        var id = await _sql.ExecuteScalarAsync<int>("SP_AddOrder", parameters, CommandType.StoredProcedure);
-        return id;
+        return await _sql.ExecuteScalarAsync<int>(sql, parameters, CommandType.Text);
     }
 
     public Task AddOrderItem(int orderId, OrderItem item)
     {
+        const string sql = @"
+            INSERT INTO dbo.OrderItems
+                (OrderId, ProviderId, ServiceId, ItemId, Kind, Quantity, UnitPrice, Price, Description, Status)
+            VALUES
+                (@OrderId, @ProviderId, @ServiceId, @ItemId, @Kind, @Quantity, @UnitPrice, @Price, @Description, @Status)";
+
         SqlParameter[] parameters = [
-            new("@OrderId", orderId),
-            new("@ProviderId", item.ProviderId),
-            new("@ServiceId", (object?)item.ServiceId ?? DBNull.Value),
-            new("@ItemId", (object?)item.ItemId ?? DBNull.Value),
-            new("@Kind", item.Kind),
-            new("@Quantity", item.Quantity),
-            new("@UnitPrice", item.UnitPrice),
-            new("@Price", item.Price),
-            new("@Description", (object?)item.Description ?? DBNull.Value)
+            new("@OrderId",     orderId),
+            new("@ProviderId",  item.ProviderId),
+            new("@ServiceId",   (object?)item.ServiceId  ?? DBNull.Value),
+            new("@ItemId",      (object?)item.ItemId     ?? DBNull.Value),
+            new("@Kind",        string.IsNullOrEmpty(item.Kind) ? "item" : item.Kind),
+            new("@Quantity",    item.Quantity),
+            new("@UnitPrice",   item.UnitPrice),
+            new("@Price",       item.Price),
+            new("@Description", (object?)item.Description ?? DBNull.Value),
+            new("@Status",      item.Status ?? "pending")
         ];
 
-        return _sql.ExecuteAsync("SP_AddOrderItem", parameters);
+        return _sql.ExecuteNonQueryAsync(sql, parameters, CommandType.Text);
     }
 
+    // ── Customer read operations ─────────────────────────────────────────────
+
+    // List view — no SP, no STRING_AGG, works on SQL Server 2012+
+    public Task<List<Order>> GetOrdersByCustomer(int customerId)
+    {
+        var sql = $@"
+            SELECT
+                o.OrderId,
+                o.OrderReference,
+                o.CustomerId,
+                o.TotalAmount,
+                o.PaymentStatus,
+                o.PaymentProvider,
+                o.Notes,
+                o.CreatedAt,
+                {ItemCountSub} AS ItemCount,
+                {ProviderNamesSub} AS ProviderNames,
+                {OverallStatusExpr} AS OverallStatus
+            FROM dbo.Orders o
+            WHERE o.CustomerId = @CustomerId
+            ORDER BY o.CreatedAt DESC";
+
+        SqlParameter[] parameters = [new("@CustomerId", customerId)];
+        return _sql.ExecuteListAsync(sql, parameters, MapOrderSummary);
+    }
+
+    // Detail view — order header + items with names joined from ServiceItems / BulkItems
     public async Task<Order?> GetOrderById(int orderId)
     {
         SqlParameter[] parameters = [new("@OrderId", orderId)];
 
-        // First result: order
-        var order = await _sql.ExecuteSingleAsync("SP_GetOrderById", parameters, MapOrder, CommandType.StoredProcedure);
+        var headerSql = $@"
+            SELECT
+                o.OrderId,
+                o.OrderReference,
+                o.CustomerId,
+                o.TotalAmount,
+                o.PaymentProvider,
+                o.PaymentStatus,
+                o.Notes,
+                o.CreatedAt,
+                {ItemCountSub} AS ItemCount,
+                {ProviderNamesSub} AS ProviderNames,
+                {OverallStatusExpr} AS OverallStatus
+            FROM dbo.Orders o
+            WHERE o.OrderId = @OrderId";
+
+        var order = await _sql.ExecuteSingleAsync(headerSql, parameters, MapOrderSummary);
         if (order is null) return null;
 
-        // Second result set: items - use ExecuteListAsync with same SP
-        var items = await _sql.ExecuteListAsync("SELECT * FROM dbo.OrderItems WHERE OrderId = @OrderId", parameters, MapOrderItem, CommandType.Text);
-        order.Items = items;
+        const string itemsSql = @"
+            SELECT
+                oi.OrderItemId,
+                oi.OrderId,
+                oi.ProviderId,
+                oi.ServiceId,
+                oi.ItemId,
+                oi.Kind,
+                oi.Quantity,
+                oi.UnitPrice,
+                oi.Price,
+                oi.Description,
+                oi.Status,
+                oi.CreatedAt,
+                p.BusinessName AS ProviderName,
+                CASE
+                    WHEN oi.Kind = 'item' THEN COALESCE(si.ItemName, oi.Description)
+                    WHEN oi.Kind = 'bulk' THEN COALESCE(b.Name,      oi.Description)
+                    ELSE oi.Description
+                END AS ItemName,
+                CASE
+                    WHEN oi.Kind = 'item' THEN si.ImageUrl
+                    WHEN oi.Kind = 'bulk' THEN b.ImageUrl
+                    ELSE NULL
+                END AS ImageUrl
+            FROM dbo.OrderItems oi
+            LEFT JOIN dbo.Providers    p  ON p.ProviderId = oi.ProviderId
+            LEFT JOIN dbo.ServiceItems si ON si.ItemId    = oi.ItemId AND oi.Kind = 'item'
+            LEFT JOIN dbo.BulkItems    b  ON b.BulkItemId = oi.ItemId AND oi.Kind = 'bulk'
+            WHERE oi.OrderId = @OrderId
+            ORDER BY oi.OrderItemId";
+
+        order.Items = await _sql.ExecuteListAsync(itemsSql, parameters, MapOrderItemDetailed);
         return order;
     }
 
-    private static Order MapOrder(SqlDataReader reader) => new()
+    // ── Provider read operations ─────────────────────────────────────────────
+
+    public async Task<List<Order>> GetOrdersByProvider(int providerId)
     {
-        OrderId = reader.GetInt32(reader.GetOrdinal("OrderId")),
-        OrderReference = reader.GetString(reader.GetOrdinal("OrderReference")),
-        CustomerId = reader.GetInt32(reader.GetOrdinal("CustomerId")),
-        TotalAmount = reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
-        PaymentProvider = reader.IsDBNull(reader.GetOrdinal("PaymentProvider")) ? null : reader.GetString(reader.GetOrdinal("PaymentProvider")),
-        PaymentStatus = reader.IsDBNull(reader.GetOrdinal("PaymentStatus")) ? null : reader.GetString(reader.GetOrdinal("PaymentStatus")),
-        Notes = reader.IsDBNull(reader.GetOrdinal("Notes")) ? null : reader.GetString(reader.GetOrdinal("Notes")),
-        CreatedAt = reader.IsDBNull(reader.GetOrdinal("CreatedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+        SqlParameter[] p = [new("@ProviderId", providerId)];
+        var orders = await _sql.ExecuteListAsync(
+            @"SELECT DISTINCT o.*
+              FROM dbo.Orders o
+              JOIN dbo.OrderItems oi ON o.OrderId = oi.OrderId
+              WHERE oi.ProviderId = @ProviderId
+              ORDER BY o.CreatedAt DESC",
+            p, MapOrder);
+
+        foreach (var order in orders)
+        {
+            SqlParameter[] p2 = [new("@OrderId", order.OrderId), new("@ProviderId", providerId)];
+            order.Items = await _sql.ExecuteListAsync(
+                "SELECT * FROM dbo.OrderItems WHERE OrderId = @OrderId AND ProviderId = @ProviderId ORDER BY OrderItemId",
+                p2, MapOrderItem);
+        }
+        return orders;
+    }
+
+    public async Task<int?> GetOrderItemProviderId(int orderItemId)
+    {
+        SqlParameter[] p = [new("@OrderItemId", orderItemId)];
+        return await _sql.ExecuteSingleAsync(
+            "SELECT ProviderId FROM dbo.OrderItems WHERE OrderItemId = @OrderItemId",
+            p, r => r.GetInt32(0));
+    }
+
+    public async Task<int> UpdateOrderItemStatus(int orderItemId, string status)
+    {
+        SqlParameter[] p = [new("@OrderItemId", orderItemId), new("@Status", status)];
+        return await _sql.ExecuteNonQueryAsync("SP_UpdateOrderItemStatus", p, CommandType.StoredProcedure);
+    }
+
+    // ── Mappers ──────────────────────────────────────────────────────────────
+
+    private static Order MapOrderSummary(SqlDataReader r) => new()
+    {
+        OrderId         = r.GetInt32(r.GetOrdinal("OrderId")),
+        OrderReference  = r.GetString(r.GetOrdinal("OrderReference")),
+        CustomerId      = r.GetInt32(r.GetOrdinal("CustomerId")),
+        TotalAmount     = r.GetDecimal(r.GetOrdinal("TotalAmount")),
+        PaymentProvider = NullStr(r, "PaymentProvider"),
+        PaymentStatus   = NullStr(r, "PaymentStatus"),
+        Notes           = NullStr(r, "Notes"),
+        CreatedAt       = NullDt(r, "CreatedAt"),
+        ItemCount       = NullInt(r, "ItemCount"),
+        ProviderNames   = NullStr(r, "ProviderNames"),
+        OverallStatus   = NullStr(r, "OverallStatus")
     };
 
-    private static OrderItem MapOrderItem(SqlDataReader reader) => new()
+    private static Order MapOrder(SqlDataReader r) => new()
     {
-        OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
-        OrderId = reader.GetInt32(reader.GetOrdinal("OrderId")),
-        ProviderId = reader.GetInt32(reader.GetOrdinal("ProviderId")),
-        ServiceId = reader.IsDBNull(reader.GetOrdinal("ServiceId")) ? null : reader.GetInt32(reader.GetOrdinal("ServiceId")),
-        ItemId = reader.IsDBNull(reader.GetOrdinal("ItemId")) ? null : reader.GetInt32(reader.GetOrdinal("ItemId")),
-        Kind = reader.GetString(reader.GetOrdinal("Kind")),
-        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
-        UnitPrice = reader.GetDecimal(reader.GetOrdinal("UnitPrice")),
-        Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-        Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
-        CreatedAt = reader.IsDBNull(reader.GetOrdinal("CreatedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+        OrderId         = r.GetInt32(r.GetOrdinal("OrderId")),
+        OrderReference  = r.GetString(r.GetOrdinal("OrderReference")),
+        CustomerId      = r.GetInt32(r.GetOrdinal("CustomerId")),
+        TotalAmount     = r.GetDecimal(r.GetOrdinal("TotalAmount")),
+        PaymentProvider = NullStr(r, "PaymentProvider"),
+        PaymentStatus   = NullStr(r, "PaymentStatus"),
+        Notes           = NullStr(r, "Notes"),
+        CreatedAt       = NullDt(r, "CreatedAt")
     };
+
+    private static OrderItem MapOrderItem(SqlDataReader r) => new()
+    {
+        OrderItemId = r.GetInt32(r.GetOrdinal("OrderItemId")),
+        OrderId     = r.GetInt32(r.GetOrdinal("OrderId")),
+        ProviderId  = r.GetInt32(r.GetOrdinal("ProviderId")),
+        ServiceId   = NullInt(r, "ServiceId"),
+        ItemId      = NullInt(r, "ItemId"),
+        Kind        = r.GetString(r.GetOrdinal("Kind")),
+        Quantity    = r.GetInt32(r.GetOrdinal("Quantity")),
+        UnitPrice   = r.GetDecimal(r.GetOrdinal("UnitPrice")),
+        Price       = r.GetDecimal(r.GetOrdinal("Price")),
+        Description = NullStr(r, "Description"),
+        Status      = NullStr(r, "Status") ?? "pending",
+        CreatedAt   = NullDt(r, "CreatedAt")
+    };
+
+    private static OrderItem MapOrderItemDetailed(SqlDataReader r) => new()
+    {
+        OrderItemId  = r.GetInt32(r.GetOrdinal("OrderItemId")),
+        OrderId      = r.GetInt32(r.GetOrdinal("OrderId")),
+        ProviderId   = r.GetInt32(r.GetOrdinal("ProviderId")),
+        ServiceId    = NullInt(r, "ServiceId"),
+        ItemId       = NullInt(r, "ItemId"),
+        Kind         = r.GetString(r.GetOrdinal("Kind")),
+        Quantity     = r.GetInt32(r.GetOrdinal("Quantity")),
+        UnitPrice    = r.GetDecimal(r.GetOrdinal("UnitPrice")),
+        Price        = r.GetDecimal(r.GetOrdinal("Price")),
+        Description  = NullStr(r, "Description"),
+        Status       = NullStr(r, "Status") ?? "pending",
+        CreatedAt    = NullDt(r, "CreatedAt"),
+        ProviderName = NullStr(r, "ProviderName"),
+        ItemName     = NullStr(r, "ItemName"),
+        ImageUrl     = NullStr(r, "ImageUrl")
+    };
+
+    private static int? NullInt(SqlDataReader r, string col)
+    {
+        try { var o = r.GetOrdinal(col); return r.IsDBNull(o) ? null : r.GetInt32(o); }
+        catch (IndexOutOfRangeException) { return null; }
+    }
+
+    private static string? NullStr(SqlDataReader r, string col)
+    {
+        try { var o = r.GetOrdinal(col); return r.IsDBNull(o) ? null : r.GetString(o); }
+        catch (IndexOutOfRangeException) { return null; }
+    }
+
+    private static DateTime? NullDt(SqlDataReader r, string col)
+    {
+        try { var o = r.GetOrdinal(col); return r.IsDBNull(o) ? null : r.GetDateTime(o); }
+        catch (IndexOutOfRangeException) { return null; }
+    }
 }

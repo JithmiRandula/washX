@@ -11,4 +11,9 @@ public sealed class Order
     public string? Notes { get; set; }
     public DateTime? CreatedAt { get; set; }
     public List<OrderItem>? Items { get; set; }
+
+    // Populated by SP_GetCustomerOrders / aggregate queries (null on simple GetById)
+    public int? ItemCount { get; set; }
+    public string? ProviderNames { get; set; }
+    public string? OverallStatus { get; set; }
 }

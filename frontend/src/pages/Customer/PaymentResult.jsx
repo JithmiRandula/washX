@@ -33,14 +33,14 @@ const PaymentResult = ({ status }) => {
 
         const cart = JSON.parse(cartJson);
         const items = (cart || []).map((c) => ({
-          ProviderId: c.providerId,
-          ServiceId: c.serviceId,
-          ItemId: c.itemId || null,
-          Kind: c.kind || 'item',
-          Quantity: c.quantity || 1,
-          UnitPrice: Number(c.unitPrice || c.unitPrice || 0) || 0,
-          Price: Number(c.price || 0) || 0,
-          Description: c.description || ''
+          ProviderId: c.providerId || 0,
+          ServiceId:  c.serviceId  || null,
+          ItemId:     c.itemId     || null,
+          Kind:       c.kind       || 'item',
+          Quantity:   c.quantity   || 1,
+          UnitPrice:  Number(c.unitPrice || 0) || 0,
+          Price:      Number(c.price     || 0) || 0,
+          Description: c.description || c.title || c.itemName || ''
         }));
 
         const total = items.reduce((s, it) => s + (Number(it.Price) || 0), 0);

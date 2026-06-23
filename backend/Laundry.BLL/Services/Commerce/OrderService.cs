@@ -16,6 +16,7 @@ public sealed class OrderService(OrderRepository repository)
         {
             foreach (var item in order.Items)
             {
+                item.Status ??= "pending";
                 await _repo.AddOrderItem(orderId, item);
             }
         }
@@ -24,4 +25,19 @@ public sealed class OrderService(OrderRepository repository)
     }
 
     public Task<Order?> GetOrder(int orderId) => _repo.GetOrderById(orderId);
+
+    public Task<List<Order>> GetOrdersByCustomer(int customerId) =>
+        _repo.GetOrdersByCustomer(customerId);
+
+    public Task<List<Order>> GetOrdersByProvider(int providerId) =>
+        _repo.GetOrdersByProvider(providerId);
+
+    public async Task<bool> UpdateOrderItemStatus(int orderItemId, string status, int providerId)
+    {
+        var owner = await _repo.GetOrderItemProviderId(orderItemId);
+        if (!owner.HasValue || owner.Value != providerId) return false;
+
+        var affected = await _repo.UpdateOrderItemStatus(orderItemId, status);
+        return affected > 0;
+    }
 }

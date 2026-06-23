@@ -1,487 +1,330 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, MapPin, Phone, Mail, Package, Star, ArrowLeft, Settings } from 'lucide-react';
+import {
+  Calendar, Clock, Package, ArrowLeft, CheckCircle,
+  XCircle, Loader, ShoppingBag, RefreshCw
+} from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
+import { ordersAPI } from '../../api/commerceApi';
 import './Bookings.css';
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+const STATUS_META = {
+  pending:     { label: 'Pending',     color: '#f59e0b', bg: '#fef3c7' },
+  confirmed:   { label: 'Confirmed',   color: '#2563eb', bg: '#dbeafe' },
+  'in-progress': { label: 'In Progress', color: '#7c3aed', bg: '#ede9fe' },
+  completed:   { label: 'Completed',   color: '#10b981', bg: '#d1fae5' },
+  cancelled:   { label: 'Cancelled',   color: '#ef4444', bg: '#fee2e2' },
+};
+
+const statusMeta = (s) => STATUS_META[s] ?? STATUS_META.pending;
+
+const fmt = {
+  date: (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-LK', {
+      year: 'numeric', month: 'short', day: 'numeric'
+    });
+  },
+  time: (d) => {
+    if (!d) return '';
+    return new Date(d).toLocaleTimeString('en-LK', {
+      hour: '2-digit', minute: '2-digit'
+    });
+  },
+  money: (n) => `Rs ${Number(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+};
+
+const deriveTabStatus = (overallStatus, paymentStatus) => {
+  if (overallStatus) return overallStatus;
+  if (paymentStatus === 'Paid') return 'confirmed';
+  if (paymentStatus === 'Failed' || paymentStatus === 'Cancelled') return 'cancelled';
+  return 'pending';
+};
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+
+const StatusBadge = ({ status }) => {
+  const meta = statusMeta(status);
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '0.25rem 0.75rem',
+      borderRadius: '999px',
+      fontSize: '0.75rem',
+      fontWeight: 700,
+      color: meta.color,
+      background: meta.bg,
+      letterSpacing: '0.03em'
+    }}>
+      {meta.label}
+    </span>
+  );
+};
+
+// ── Order detail view ─────────────────────────────────────────────────────────
+
+const OrderDetail = ({ order, onBack }) => {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    ordersAPI.getById(order.orderId ?? order.OrderId)
+      .then((res) => setDetail(res?.data ?? res))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [order.orderId, order.OrderId]);
+
+  const displayOrder = detail ?? order;
+  const items = displayOrder?.items ?? displayOrder?.Items ?? [];
+  const status = deriveTabStatus(
+    displayOrder?.overallStatus ?? displayOrder?.OverallStatus,
+    displayOrder?.paymentStatus ?? displayOrder?.PaymentStatus
+  );
+
+  return (
+    <div className="detail-page">
+      <CustomerNavbar />
+      <div className="detail-container">
+        <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1rem' }}>
+          {/* Back */}
+          <button
+            onClick={onBack}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#6b7280', fontWeight: 600, marginBottom: '1.5rem', fontSize: '0.95rem'
+            }}
+          >
+            <ArrowLeft size={18} /> Back to My Bookings
+          </button>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6b7280' }}>
+              <Loader size={32} style={{ animation: 'spin 1s linear infinite' }} />
+              <p style={{ marginTop: '1rem' }}>Loading order details…</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Header card */}
+              <div style={{
+                background: 'white', borderRadius: '1rem',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                padding: '1.5rem 2rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                      Order Reference
+                    </p>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#1f2937', margin: 0 }}>
+                      {displayOrder?.orderReference ?? displayOrder?.OrderReference ?? '—'}
+                    </h2>
+                    {(displayOrder?.providerNames ?? displayOrder?.ProviderNames) && (
+                      <p style={{ color: '#6b7280', marginTop: '0.4rem', fontSize: '0.9rem' }}>
+                        {displayOrder?.providerNames ?? displayOrder?.ProviderNames}
+                      </p>
+                    )}
+                  </div>
+                  <StatusBadge status={status} />
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: '1.25rem',
+                  marginTop: '1.5rem',
+                  paddingTop: '1.5rem',
+                  borderTop: '1px solid #f3f4f6'
+                }}>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Date Placed</p>
+                    <p style={{ fontWeight: 600, color: '#1f2937' }}>
+                      {fmt.date(displayOrder?.createdAt ?? displayOrder?.CreatedAt)}
+                    </p>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                      {fmt.time(displayOrder?.createdAt ?? displayOrder?.CreatedAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Total Amount</p>
+                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: '1.1rem' }}>
+                      {fmt.money(displayOrder?.totalAmount ?? displayOrder?.TotalAmount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Payment</p>
+                    <p style={{ fontWeight: 600, color: '#1f2937' }}>
+                      {displayOrder?.paymentProvider ?? displayOrder?.PaymentProvider ?? '—'}
+                    </p>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                      {displayOrder?.paymentStatus ?? displayOrder?.PaymentStatus ?? '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Items</p>
+                    <p style={{ fontWeight: 600, color: '#1f2937' }}>{items.length} item{items.length !== 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items list */}
+              <div style={{
+                background: 'white', borderRadius: '1rem',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                padding: '1.5rem 2rem'
+              }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1.25rem' }}>
+                  Order Items
+                </h3>
+
+                {items.length === 0 ? (
+                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem 0' }}>No items found.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {items.map((item, idx) => {
+                      const name = item.itemName ?? item.ItemName ?? item.description ?? item.Description ?? 'Item';
+                      const kind = (item.kind ?? item.Kind ?? 'item').toLowerCase();
+                      const qty = item.quantity ?? item.Quantity ?? 1;
+                      const unitPrice = item.unitPrice ?? item.UnitPrice ?? 0;
+                      const linePrice = item.price ?? item.Price ?? 0;
+                      const provider = item.providerName ?? item.ProviderName ?? '';
+                      const imgUrl = item.imageUrl ?? item.ImageUrl ?? null;
+                      const itemStatus = item.status ?? item.Status ?? 'pending';
+
+                      return (
+                        <div key={item.orderItemId ?? item.OrderItemId ?? idx} style={{
+                          display: 'flex', alignItems: 'center', gap: '1rem',
+                          padding: '0.875rem 1rem',
+                          background: '#f9fafb',
+                          borderRadius: '0.75rem',
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          {/* Image */}
+                          <div style={{
+                            width: 52, height: 52, borderRadius: '0.5rem',
+                            overflow: 'hidden', flexShrink: 0,
+                            background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            {imgUrl ? (
+                              <img src={imgUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <Package size={22} color="#9ca3af" />
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontWeight: 600, color: '#1f2937', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {name}
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                              <span style={{
+                                fontSize: '0.7rem', padding: '0.1rem 0.5rem',
+                                borderRadius: '999px', fontWeight: 600,
+                                background: kind === 'bulk' ? '#dbeafe' : '#f3f4f6',
+                                color: kind === 'bulk' ? '#1d4ed8' : '#6b7280'
+                              }}>
+                                {kind === 'bulk' ? 'Bulk Package' : 'Item'}
+                              </span>
+                              {provider && <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>{provider}</span>}
+                            </div>
+                          </div>
+
+                          {/* Qty & price */}
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <p style={{ fontWeight: 700, color: '#1f2937', margin: 0 }}>{fmt.money(linePrice)}</p>
+                            <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: 0 }}>
+                              {qty} × {fmt.money(unitPrice)}
+                            </p>
+                          </div>
+
+                          {/* Item status badge */}
+                          <StatusBadge status={itemStatus} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Total row */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '2px solid #f3f4f6'
+                }}>
+                  <span style={{ fontWeight: 700, color: '#1f2937', fontSize: '1rem' }}>Total</span>
+                  <span style={{ fontWeight: 700, color: '#1f2937', fontSize: '1.25rem' }}>
+                    {fmt.money(displayOrder?.totalAmount ?? displayOrder?.TotalAmount)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {(displayOrder?.notes ?? displayOrder?.Notes) && (
+                <div style={{
+                  background: 'white', borderRadius: '1rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  padding: '1.25rem 2rem'
+                }}>
+                  <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.5rem' }}>Notes</h3>
+                  <p style={{ color: '#6b7280', margin: 0 }}>{displayOrder?.notes ?? displayOrder?.Notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Main Bookings page ────────────────────────────────────────────────────────
 
 const Bookings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [showOrderSidebar, setShowOrderSidebar] = useState(false);
-  const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [editableItems, setEditableItems] = useState([]);
-  const [useTransportService, setUseTransportService] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const bookings = [
-    {
-      id: '1',
-      providerName: 'CleanWash Express',
-      providerImage: '/api/placeholder/300/200',
-      status: 'in-progress',
-      items: 3,
-      amount: 45,
-      transportAvailable: true,
-      transportCost: 10,
-      pickupDate: '2025-12-08',
-      deliveryDate: '2025-12-09',
-      address: '123 Main St, Downtown',
-      phone: '+1 234-567-8900',
-      email: 'info@cleanwash.com',
-      services: ['Dry Cleaning', 'Wash & Fold'],
-      rating: 4.5,
-      description: 'Professional dry cleaning with eco-friendly solvents and premium fabric care. Our state-of-the-art facility uses advanced cleaning technologies to ensure your garments receive the highest quality treatment. We specialize in delicate fabrics, designer clothing, and everyday wear with expert stain removal, precise pressing, and careful handling. Our experienced team provides personalized service with same-day and next-day options available. We are committed to environmental sustainability using biodegradable solvents and energy-efficient processes.',
-      location: {
-        lat: 40.7128,
-        lng: -74.0060
-      },
-      orderItems: [
-        { name: 'Business Shirt', quantity: 2, price: 15 },
-        { name: 'Jeans', quantity: 1, price: 30 }
-      ]
-    },
-    {
-      id: '2',
-      providerName: 'Premium Laundry Care',
-      providerImage: '/api/placeholder/300/200',
-      status: 'completed',
-      items: 5,
-      amount: 75,
-      transportAvailable: false,
-      transportCost: 0,
-      pickupDate: '2025-12-05',
-      deliveryDate: '2025-12-06',
-      address: '456 Oak Ave, Midtown',
-      phone: '+1 234-567-8901',
-      email: 'contact@premium.com',
-      services: ['Premium Care', 'Steam Press'],
-      rating: 4.8,
-      description: 'Premium laundry service with hand-pressed finishing and stain removal.',
-      location: {
-        lat: 40.7589,
-        lng: -73.9851
-      },
-      orderItems: [
-        { name: 'Dress Shirt', quantity: 3, price: 25 },
-        { name: 'Suit Jacket', quantity: 1, price: 40 },
-        { name: 'Trousers', quantity: 1, price: 10 }
-      ]
-    },
-    {
-      id: '3',
-      providerName: 'Express Wash Co.',
-      providerImage: '/api/placeholder/300/200',
-      status: 'pending',
-      items: 2,
-      amount: 35,
-      pickupDate: '2025-12-10',
-      deliveryDate: '2025-12-11',
-      address: '789 Pine St, Uptown',
-      phone: '+1 234-567-8902',
-      email: 'hello@expresswash.com',
-      services: ['Express Service', 'Ironing'],
-      rating: 4.3,
-      location: {
-        lat: 40.7831,
-        lng: -73.9712
-      },
-      orderItems: [
-        { name: 'Casual Shirt', quantity: 2, price: 35 }
-      ]
+  const loadOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await ordersAPI.getMine();
+      setOrders(res?.data ?? []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+      setError(err?.response?.data?.message || 'Failed to load your bookings.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, []);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'in-progress': return '#2563eb';
-      case 'completed': return '#10b981';
-      default: return '#6b7280';
-    }
-  };
+  useEffect(() => { loadOrders(); }, [loadOrders]);
 
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'pending': return 'Pending Pickup';
-      case 'in-progress': return 'In Progress';
-      case 'completed': return 'Completed';
-      default: return status;
-    }
-  };
+  if (selectedOrder) {
+    return <OrderDetail order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
+  }
 
-  const filteredBookings = bookings.filter(booking => {
+  const normalizeStatus = (o) =>
+    deriveTabStatus(o?.overallStatus ?? o?.OverallStatus, o?.paymentStatus ?? o?.PaymentStatus);
+
+  const filteredOrders = orders.filter((o) => {
     if (activeTab === 'all') return true;
-    return booking.status === activeTab;
+    if (activeTab === 'in-progress') {
+      const s = normalizeStatus(o);
+      return s === 'in-progress' || s === 'confirmed';
+    }
+    return normalizeStatus(o) === activeTab;
   });
 
-  // Individual Booking Detail Component
-  const BookingDetail = ({ booking, onBack }) => {
-    const handleTransportToggle = () => {
-      if (booking.transportAvailable) {
-        setUseTransportService(!useTransportService);
-      } else {
-        alert('Transport service is not available for this provider.');
-      }
-    };
-
-    const calculateTotalAmount = () => {
-      let total = booking.amount;
-      if (useTransportService && booking.transportAvailable) {
-        total += booking.transportCost;
-      }
-      return total;
-    };
-
-    return (
-      <div className="detail-page">
-        <CustomerNavbar />
-
-        <div className="detail-container">
-          <div className="detail-content">
-            <div className="detail-main">
-              <div className="detail-provider-section">
-                {/* Laundry Image with provider name overlay */}
-                <div className="detail-inner-image-section">
-                  <img 
-                    src="/wash1.jpg" 
-                    alt="Laundry Service"
-                    className="detail-inner-laundry-image"
-                  />
-                  <div className="detail-image-overlay">
-                    <div className="detail-overlay-settings">
-                      <Settings size={32} className="detail-settings-icon" />
-                    </div>
-                    <div className="detail-overlay-content">
-                      <h2 className="detail-overlay-title">{booking.providerName}</h2>
-                      <div className="detail-overlay-services">
-                        {booking.services.map((service, index) => (
-                          <span key={index} className="detail-overlay-service-tag">{service}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Description first */}
-                <p className="detail-description">{booking.description}</p>
-
-                {/* Rating and reviews */}
-                <div className="detail-rating">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star 
-                      key={star} 
-                      size={18} 
-                      color={star <= booking.rating ? '#f59e0b' : '#d1d5db'}
-                    />
-                  ))}
-                  <span className="detail-rating-value">{booking.rating}</span>
-                </div>
-              </div>
-
-              <div className="booking-order-info-grid">
-                <div className="booking-info-box">
-                  <div className="booking-info-box-header">ORDER INFORMATION</div>
-                  <div className="booking-info-row">
-                    <Package size={16} className="booking-info-icon" />
-                    <span className="booking-info-text">{booking.items} items</span>
-                  </div>
-                  <div className="booking-info-row">
-                    <Calendar size={16} className="booking-info-icon" />
-                    <span className="booking-info-text">Pickup: {booking.pickupDate}</span>
-                  </div>
-                  <div className="booking-info-row">
-                    <Clock size={16} className="booking-info-icon" />
-                    <span className="booking-info-text">Delivery: {booking.deliveryDate}</span>
-                  </div>
-                </div>
-
-                <div className="booking-info-box">
-                  <div className="booking-info-box-header">CONTACT & LOCATION</div>
-                  <div className="booking-info-row">
-                    <MapPin size={16} className="booking-info-icon" />
-                    <span className="booking-info-text">{booking.address}</span>
-                  </div>
-                  <div className="booking-info-row">
-                    <Phone size={16} className="booking-info-icon" />
-                    <span className="booking-info-text">{booking.phone}</span>
-                  </div>
-                  <div className="booking-info-row">
-                    <Mail size={16} className="booking-info-icon" />
-                    <span className="booking-info-text">{booking.email}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="detail-image-section">
-              <div className="detail-image-container">
-                <img 
-                  src="/map1.png" 
-                  alt="Location Map"
-                  className="detail-provider-image"
-                />
-              </div>
-              
-              <div className="detail-image-container">
-                <div className="detail-calendar">
-                  <div className="detail-calendar-header">
-                    <button className="detail-calendar-nav">&lt;</button>
-                    <span className="detail-calendar-month">December 2025</span>
-                    <button className="detail-calendar-nav">&gt;</button>
-                  </div>
-                  <div className="detail-calendar-grid">
-                    <div className="detail-calendar-day-header">Sun</div>
-                    <div className="detail-calendar-day-header">Mon</div>
-                    <div className="detail-calendar-day-header">Tue</div>
-                    <div className="detail-calendar-day-header">Wed</div>
-                    <div className="detail-calendar-day-header">Thu</div>
-                    <div className="detail-calendar-day-header">Fri</div>
-                    <div className="detail-calendar-day-header">Sat</div>
-                    
-                    {/* Calendar Days for December 2025 */}
-                    {[...Array(31)].map((_, i) => {
-                      const day = i + 1;
-                      const isPickupDate = day === 8; // December 8th - Pickup
-                      const isDeliveryDate = day === 9; // December 9th - Delivery
-                      
-                      return (
-                        <div 
-                          key={i} 
-                          className={`detail-calendar-day ${
-                            isPickupDate ? 'pickup-date' : 
-                            isDeliveryDate ? 'delivery-date' : 
-                            day < 8 ? 'disabled' : ''
-                          }`}
-                          title={
-                            isPickupDate ? 'Pickup Date' :
-                            isDeliveryDate ? 'Delivery Date' : ''
-                          }
-                        >
-                          {day}
-                          {isPickupDate && <span className="date-label">Pickup</span>}
-                          {isDeliveryDate && <span className="date-label">Delivery</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Order Details Sidebar */}
-        <div className={`detail-order-sidebar ${showOrderSidebar ? 'open' : ''}`}>
-          <div className="detail-sidebar-header">
-            <h3>Order Details</h3>
-            <div className="detail-sidebar-controls">
-              {!isEditingOrder ? (
-                <button 
-                  className="detail-edit-button"
-                  onClick={() => {
-                    setIsEditingOrder(true);
-                    setEditableItems([
-                      { name: 'Formal Shirt', type: 'Dry Clean', quantity: 2, price: 12.00 },
-                      { name: 'Business Suit', type: 'Dry Clean', quantity: 1, price: 25.00 },
-                      { name: 'Cotton T-Shirt', type: 'Wash & Fold', quantity: 3, price: 9.00 }
-                    ]);
-                  }}
-                >
-                  Edit
-                </button>
-              ) : (
-                <div className="detail-edit-controls">
-                  <button 
-                    className="detail-save-button"
-                    onClick={() => setIsEditingOrder(false)}
-                  >
-                    Save
-                  </button>
-                  <button 
-                    className="detail-cancel-button"
-                    onClick={() => {
-                      setIsEditingOrder(false);
-                      setEditableItems([]);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <button 
-                className="detail-sidebar-close"
-                onClick={() => setShowOrderSidebar(false)}
-              >
-                ×
-              </button>
-            </div>
-          </div>
-          
-          <div className="detail-sidebar-content">
-            <div className="detail-order-summary">
-              <h4>Order Summary</h4>
-              <div className="detail-order-info">
-                <div className="detail-order-row">
-                  <span>Order ID:</span>
-                  <span>#{booking.id}</span>
-                </div>
-                <div className="detail-order-row">
-                  <span>Status:</span>
-                  <span className="status-badge">{booking.status}</span>
-                </div>
-                <div className="detail-order-row">
-                  <span>Total Amount:</span>
-                  <span className="amount">Rs.{booking.amount}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="detail-order-items">
-              <h4>Items</h4>
-              <div className="detail-item-list">
-                {!isEditingOrder ? (
-                  // View Mode
-                  <>
-                    <div className="detail-item">
-                      <div className="detail-item-info">
-                        <span className="detail-item-name">Formal Shirt</span>
-                        <span className="detail-item-type">Dry Clean</span>
-                      </div>
-                      <div className="detail-item-details">
-                        <span className="detail-item-qty-price">Qty: 2Rs.12.00</span>
-                      </div>
-                    </div>
-                    
-                    <div className="detail-item">
-                      <div className="detail-item-info">
-                        <span className="detail-item-name">Business Suit</span>
-                        <span className="detail-item-type">Dry Clean</span>
-                      </div>
-                      <div className="detail-item-details">
-                        <span className="detail-item-qty-price">Qty: 1Rs.25.00</span>
-                      </div>
-                    </div>
-                    
-                    <div className="detail-item">
-                      <div className="detail-item-info">
-                        <span className="detail-item-name">Cotton T-Shirt</span>
-                        <span className="detail-item-type">Wash & Fold</span>
-                      </div>
-                      <div className="detail-item-details">
-                        <span className="detail-item-qty-price">Qty: 3Rs.9.00</span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  // Edit Mode
-                  editableItems.map((item, index) => (
-                    <div key={index} className="detail-item edit-mode">
-                      <div className="detail-item-info">
-                        <input 
-                          type="text" 
-                          value={item.name}
-                          onChange={(e) => {
-                            const newItems = [...editableItems];
-                            newItems[index].name = e.target.value;
-                            setEditableItems(newItems);
-                          }}
-                          className="detail-item-name-input"
-                        />
-                        <select 
-                          value={item.type}
-                          onChange={(e) => {
-                            const newItems = [...editableItems];
-                            newItems[index].type = e.target.value;
-                            setEditableItems(newItems);
-                          }}
-                          className="detail-item-type-select"
-                        >
-                          <option value="Dry Clean">Dry Clean</option>
-                          <option value="Wash & Fold">Wash & Fold</option>
-                          <option value="Ironing">Ironing</option>
-                          <option value="Express Service">Express Service</option>
-                        </select>
-                      </div>
-                      <div className="detail-item-edit-controls">
-                        <div className="detail-quantity-controls">
-                          <label>Qty:</label>
-                          <input 
-                            type="number" 
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const newItems = [...editableItems];
-                              newItems[index].quantity = parseInt(e.target.value) || 1;
-                              setEditableItems(newItems);
-                            }}
-                            className="detail-quantity-input"
-                          />
-                        </div>
-                        <div className="detail-price-controls">
-                          <label>Rs.</label>
-                          <input 
-                            type="number" 
-                            step="0.01"
-                            min="0"
-                            value={item.price}
-                            onChange={(e) => {
-                              const newItems = [...editableItems];
-                              newItems[index].price = parseFloat(e.target.value) || 0;
-                              setEditableItems(newItems);
-                            }}
-                            className="detail-price-input"
-                          />
-                        </div>
-                        <button 
-                          className="detail-remove-item"
-                          onClick={() => {
-                            const newItems = editableItems.filter((_, i) => i !== index);
-                            setEditableItems(newItems);
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-                
-                {isEditingOrder && (
-                  <button 
-                    className="detail-add-item"
-                    onClick={() => {
-                      setEditableItems([...editableItems, { 
-                        name: 'New Item', 
-                        type: 'Dry Clean', 
-                        quantity: 1, 
-                        price: 10.00 
-                      }]);
-                    }}
-                  >
-                    + Add Item
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="detail-service-notes">
-              <h4>Service Notes</h4>
-              <p>Handle with care - delicate items included. Express service requested for business suit.</p>
-            </div>
-          </div>
-        </div>
-        
-        {showOrderSidebar && <div className="detail-sidebar-overlay" onClick={() => setShowOrderSidebar(false)}></div>}
-      </div>
-    );
-  };
-
-  // Show detail page if booking is selected
-  if (selectedBooking) {
-    return <BookingDetail booking={selectedBooking} onBack={() => setSelectedBooking(null)} />;
-  }
+  const count = (statuses) =>
+    orders.filter((o) => statuses.includes(normalizeStatus(o))).length;
 
   return (
     <>
@@ -493,125 +336,165 @@ const Bookings = () => {
             <p>Track and manage your laundry orders</p>
           </div>
 
-        <div className="bookings-container">
-          {/* Stats Summary */}
-          <div className="stats-cards">
-            <div className="stat-card total">
-              <div className="stat-number">{bookings.length}</div>
-              <div className="stat-label">Total Orders</div>
-            </div>
-            <div className="stat-card pending">
-              <div className="stat-number">{bookings.filter(b => b.status === 'pending').length}</div>
-              <div className="stat-label">Pending</div>
-            </div>
-            <div className="stat-card progress">
-              <div className="stat-number">{bookings.filter(b => b.status === 'in-progress').length}</div>
-              <div className="stat-label">In Progress</div>
-            </div>
-            <div className="stat-card completed">
-              <div className="stat-number">{bookings.filter(b => b.status === 'completed').length}</div>
-              <div className="stat-label">Completed</div>
-            </div>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="filter-tabs">
-            <button 
-              className={`tab ${activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveTab('all')}
-            >
-              All Orders
-            </button>
-            <button 
-              className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
-              onClick={() => setActiveTab('pending')}
-            >
-              Pending
-            </button>
-            <button 
-              className={`tab ${activeTab === 'in-progress' ? 'active' : ''}`}
-              onClick={() => setActiveTab('in-progress')}
-            >
-              In Progress
-            </button>
-            <button 
-              className={`tab ${activeTab === 'completed' ? 'active' : ''}`}
-              onClick={() => setActiveTab('completed')}
-            >
-              Completed
-            </button>
-          </div>
-
-          {/* Bookings List */}
-          <div className="bookings-list">
-            {filteredBookings.map(booking => (
-              <div 
-                key={booking.id} 
-                className="booking-card"
-                onClick={() => setSelectedBooking(booking)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="booking-content">
-                  <div className="left-content">
-                    <div className="provider-section">
-                      <h3>{booking.providerName}</h3>
-                      <div className="rating">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star 
-                            key={star} 
-                            size={16} 
-                            color={star <= booking.rating ? '#fbbf24' : '#d1d5db'}
-                          />
-                        ))}
-                        <span>{booking.rating}</span>
-                      </div>
-                      <div className="services-tags">
-                        {booking.services.map((service, index) => (
-                          <span key={index} className="service-tag">{service}</span>
-                        ))}
-                      </div>
-                      <p className="service-description">{booking.description}</p>
-                    </div>
-
-                    <div className="detail-section">
-                      <h4>Order Information</h4>
-                      <div className="sidebar-booking-info-grid\">
-                        <div className="sidebar-booking-info-item\">
-                          <Package size={16} />
-                          <span>{booking.items} items</span>
-                        </div>
-                        <div className="sidebar-booking-info-item\">
-                          <Calendar size={16} />
-                          <span>Pickup: {booking.pickupDate}</span>
-                        </div>
-                        <div className="sidebar-booking-info-item\">
-                          <Clock size={16} />
-                          <span>Delivery: {booking.deliveryDate}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="booking-image">
-                    <img 
-                      src="/wash1.jpg" 
-                      alt={booking.providerName}
-                      className="provider-image"
-                    />
-                  </div>
-                </div>
+          <div className="bookings-container">
+            {/* Stats */}
+            <div className="stats-cards">
+              <div className="stat-card total">
+                <div className="stat-number">{orders.length}</div>
+                <div className="stat-label">Total Orders</div>
               </div>
-            ))}
-          </div>
-
-          {filteredBookings.length === 0 && (
-            <div className="no-bookings">
-              <Package size={48} />
-              <h3>No bookings found</h3>
-              <p>You don't have any {activeTab === 'all' ? '' : activeTab} orders yet.</p>
+              <div className="stat-card pending">
+                <div className="stat-number">{count(['pending'])}</div>
+                <div className="stat-label">Pending</div>
+              </div>
+              <div className="stat-card progress">
+                <div className="stat-number">{count(['in-progress', 'confirmed'])}</div>
+                <div className="stat-label">In Progress</div>
+              </div>
+              <div className="stat-card completed">
+                <div className="stat-number">{count(['completed'])}</div>
+                <div className="stat-label">Completed</div>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Tabs */}
+            <div className="filter-tabs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {['all', 'pending', 'in-progress', 'completed'].map((tab) => (
+                  <button
+                    key={tab}
+                    className={`tab${activeTab === tab ? ' active' : ''}`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab === 'all' ? 'All Orders'
+                      : tab === 'in-progress' ? 'In Progress'
+                      : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={loadOrders}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  background: 'none', border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem', padding: '0.4rem 0.75rem',
+                  cursor: 'pointer', color: '#6b7280', fontSize: '0.85rem'
+                }}
+              >
+                <RefreshCw size={14} /> Refresh
+              </button>
+            </div>
+
+            {/* Content */}
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6b7280' }}>
+                <Loader size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                <p style={{ marginTop: '1rem' }}>Loading your orders…</p>
+              </div>
+            ) : error ? (
+              <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ef4444' }}>
+                <XCircle size={40} />
+                <p style={{ marginTop: '1rem', fontWeight: 600 }}>{error}</p>
+                <button
+                  onClick={loadOrders}
+                  style={{
+                    marginTop: '1rem', padding: '0.6rem 1.5rem',
+                    background: '#2563eb', color: 'white', border: 'none',
+                    borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600
+                  }}
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="no-bookings">
+                <ShoppingBag size={48} />
+                <h3>No orders found</h3>
+                <p>
+                  {activeTab === 'all'
+                    ? "You haven't placed any orders yet."
+                    : `No ${activeTab === 'in-progress' ? 'in-progress' : activeTab} orders.`}
+                </p>
+                {activeTab === 'all' && (
+                  <button
+                    onClick={() => navigate(-1)}
+                    style={{
+                      marginTop: '1rem', padding: '0.6rem 1.5rem',
+                      background: '#2563eb', color: 'white', border: 'none',
+                      borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600
+                    }}
+                  >
+                    Find Providers
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="bookings-list">
+                {filteredOrders.map((order) => {
+                  const orderId = order.orderId ?? order.OrderId;
+                  const ref = order.orderReference ?? order.OrderReference ?? '—';
+                  const providerNames = order.providerNames ?? order.ProviderNames ?? '';
+                  const total = order.totalAmount ?? order.TotalAmount ?? 0;
+                  const itemCount = order.itemCount ?? order.ItemCount ?? 0;
+                  const createdAt = order.createdAt ?? order.CreatedAt;
+                  const status = normalizeStatus(order);
+
+                  return (
+                    <div
+                      key={orderId}
+                      className="booking-card"
+                      onClick={() => setSelectedOrder(order)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="booking-content" style={{ padding: '1.25rem 1.5rem' }}>
+                        <div className="left-content" style={{ flex: 1, minWidth: 0 }}>
+                          {/* Provider & ref */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1f2937' }}>
+                                {providerNames || 'Order'}
+                              </h3>
+                              <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
+                                Ref: {ref}
+                              </p>
+                            </div>
+                            <StatusBadge status={status} />
+                          </div>
+
+                          {/* Meta row */}
+                          <div style={{
+                            display: 'flex', flexWrap: 'wrap', gap: '1rem',
+                            marginTop: '1rem', color: '#6b7280', fontSize: '0.85rem'
+                          }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Calendar size={14} />
+                              {fmt.date(createdAt)}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Clock size={14} />
+                              {fmt.time(createdAt)}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Package size={14} />
+                              {itemCount} item{itemCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Total */}
+                        <div style={{ textAlign: 'right', marginLeft: 'auto', paddingLeft: '1rem', flexShrink: 0 }}>
+                          <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Total</p>
+                          <p style={{ fontWeight: 700, color: '#1f2937', fontSize: '1.1rem', margin: '0.2rem 0 0' }}>
+                            {fmt.money(total)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

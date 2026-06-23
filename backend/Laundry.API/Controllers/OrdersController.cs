@@ -26,21 +26,38 @@ public sealed class OrdersController : ControllerBase
     {
         try
         {
-            if (order is null) return BadRequest("Order payload is required");
+            if (order is null) return BadRequest(new { success = false, message = "Order payload is required" });
 
             var userId = GetUserId();
             if (userId is null) return Unauthorized(new { success = false, message = "Invalid token" });
 
-            // Resolve customer id from authenticated user and attach to order
             var customerId = await _cartService.ResolveCustomerIdAsync(userId.Value);
             order.CustomerId = customerId;
 
             var id = await _orderService.CreateOrder(order);
 
-            // Clear customer's cart after successful order creation
-            await _cartService.ClearCartAsync(userId.Value);
+            // Clear cart non-fatally — order is already saved
+            try { await _cartService.ClearCartAsync(userId.Value); } catch { /* ignore */ }
 
-            return CreatedAtAction(nameof(GetOrder), new { orderId = id }, new { orderId = id });
+            return Ok(new { success = true, orderId = id });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMyOrders()
+    {
+        try
+        {
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized(new { success = false });
+
+            var customerId = await _cartService.ResolveCustomerIdAsync(userId.Value);
+            var orders = await _orderService.GetOrdersByCustomer(customerId);
+            return Ok(new { success = true, count = orders.Count, data = orders });
         }
         catch (ArgumentException ex)
         {
@@ -53,7 +70,34 @@ public sealed class OrdersController : ControllerBase
     {
         var order = await _orderService.GetOrder(orderId);
         if (order is null) return NotFound();
-        return Ok(order);
+        return Ok(new { success = true, data = order });
+    }
+
+    // Provider endpoints: list orders for provider and update order item status
+    [Authorize(Roles = "provider")]
+    [HttpGet("provider/mine")]
+    public async Task<IActionResult> GetProviderOrders()
+    {
+        var providerId = await ResolveProviderIdFromClaimsAsync();
+        if (!providerId.HasValue) return BadRequest(new { message = "Provider account not found" });
+
+        var orders = await _orderService.GetOrdersByProvider(providerId.Value);
+        return Ok(orders);
+    }
+
+    [Authorize(Roles = "provider")]
+    [HttpPatch("items/{orderItemId:int}/status")]
+    public async Task<IActionResult> UpdateOrderItemStatus(int orderItemId, [FromBody] UpdateStatusRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req?.Status)) return BadRequest(new { message = "Status is required" });
+
+        var providerId = await ResolveProviderIdFromClaimsAsync();
+        if (!providerId.HasValue) return BadRequest(new { message = "Provider account not found" });
+
+        var affected = await _orderService.UpdateOrderItemStatus(orderItemId, req.Status, providerId.Value);
+        if (!affected) return NotFound(new { message = "Order item not found or not owned by provider" });
+
+        return Ok(new { message = "Status updated" });
     }
 
     private int? GetUserId()
@@ -61,4 +105,19 @@ public sealed class OrdersController : ControllerBase
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(claim, out var userId) ? userId : null;
     }
+
+    private async Task<int?> ResolveProviderIdFromClaimsAsync()
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(claim) || !int.TryParse(claim, out var userId)) return null;
+
+        // use repository to map user->provider
+        var userRepo = HttpContext.RequestServices.GetService(typeof(Laundry.DAL.Repositories.UserRepository)) as Laundry.DAL.Repositories.UserRepository;
+        if (userRepo is null) return null;
+
+        var prov = await userRepo.GetProviderIdByUserId(userId);
+        return prov.HasValue ? prov.Value : null;
+    }
 }
+
+public sealed class UpdateStatusRequest { public string? Status { get; set; } }
