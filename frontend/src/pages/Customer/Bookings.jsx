@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Calendar, Clock, Package, ArrowLeft, CheckCircle,
-  XCircle, Loader, ShoppingBag, RefreshCw
+  XCircle, Loader, ShoppingBag, RefreshCw, Star
 } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import { ordersAPI } from '../../api/commerceApi';
+import { reviewsApi } from '../../api/reviewsApi';
+import ReviewModal from '../../components/ReviewModal/ReviewModal';
 import './Bookings.css';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -66,9 +68,10 @@ const StatusBadge = ({ status }) => {
 
 // ── Order detail view ─────────────────────────────────────────────────────────
 
-const OrderDetail = ({ order, onBack }) => {
-  const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
+const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
+  const [detail,      setDetail]      = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [reviewModal, setReviewModal] = useState(null); // { orderId, providerId, providerName, orderRef }
 
   useEffect(() => {
     ordersAPI.getById(order.orderId ?? order.OrderId)
@@ -82,6 +85,11 @@ const OrderDetail = ({ order, onBack }) => {
   const status = deriveTabStatus(
     displayOrder?.overallStatus ?? displayOrder?.OverallStatus,
     displayOrder?.paymentStatus ?? displayOrder?.PaymentStatus
+  );
+
+  const thisOrderId = displayOrder?.orderId ?? displayOrder?.OrderId;
+  const reviewableForThis = (reviewableOrders ?? []).filter(
+    r => (r.orderId ?? r.OrderId) === thisOrderId
   );
 
   return (
@@ -272,7 +280,53 @@ const OrderDetail = ({ order, onBack }) => {
                   <p style={{ color: '#6b7280', margin: 0 }}>{displayOrder?.notes ?? displayOrder?.Notes}</p>
                 </div>
               )}
+
+              {/* Write a Review — shown for each reviewable provider in this order */}
+              {reviewableForThis.length > 0 && (
+                <div style={{
+                  background: 'white', borderRadius: '1rem',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  padding: '1.5rem 2rem'
+                }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Star size={18} fill="#fbbf24" color="#fbbf24" /> Rate Your Experience
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {reviewableForThis.map(r => {
+                      const pid   = r.providerId  ?? r.ProviderId;
+                      const pname = r.providerName ?? r.ProviderName ?? 'Provider';
+                      const oref  = displayOrder?.orderReference ?? displayOrder?.OrderReference ?? '';
+                      return (
+                        <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <span style={{ fontWeight: 500, color: '#374151' }}>{pname}</span>
+                          <button
+                            onClick={() => setReviewModal({ orderId: thisOrderId, providerId: pid, providerName: pname, orderRef: oref })}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '0.4rem',
+                              padding: '0.5rem 1.1rem',
+                              background: '#6366f1', color: 'white',
+                              border: 'none', borderRadius: '0.5rem',
+                              fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
+                            }}
+                          >
+                            <Star size={14} /> Write a Review
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
+          )}
+
+          {/* Review modal */}
+          {reviewModal && (
+            <ReviewModal
+              {...reviewModal}
+              onClose={() => setReviewModal(null)}
+              onSuccess={() => { setReviewModal(null); onReviewSuccess?.(); }}
+            />
           )}
         </div>
       </div>
@@ -285,11 +339,19 @@ const OrderDetail = ({ order, onBack }) => {
 const Bookings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('all');
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [activeTab,        setActiveTab]        = useState('all');
+  const [orders,           setOrders]           = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [error,            setError]            = useState(null);
+  const [selectedOrder,    setSelectedOrder]    = useState(null);
+  const [reviewableOrders, setReviewableOrders] = useState([]);
+
+  const loadReviewable = useCallback(async () => {
+    try {
+      const res = await reviewsApi.getReviewableOrders();
+      setReviewableOrders(res?.data ?? []);
+    } catch { /* silently ignore — not critical */ }
+  }, []);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -305,10 +367,17 @@ const Bookings = () => {
     }
   }, []);
 
-  useEffect(() => { loadOrders(); }, [loadOrders]);
+  useEffect(() => { loadOrders(); loadReviewable(); }, [loadOrders, loadReviewable]);
 
   if (selectedOrder) {
-    return <OrderDetail order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
+    return (
+      <OrderDetail
+        order={selectedOrder}
+        reviewableOrders={reviewableOrders}
+        onBack={() => setSelectedOrder(null)}
+        onReviewSuccess={() => { loadReviewable(); }}
+      />
+    );
   }
 
   const normalizeStatus = (o) =>
@@ -439,6 +508,10 @@ const Bookings = () => {
                   const createdAt = order.createdAt ?? order.CreatedAt;
                   const status = normalizeStatus(order);
 
+                  const hasReviewable = reviewableOrders.some(
+                    r => (r.orderId ?? r.OrderId) === orderId
+                  );
+
                   return (
                     <div
                       key={orderId}
@@ -459,6 +532,16 @@ const Bookings = () => {
                               </p>
                             </div>
                             <StatusBadge status={status} />
+                            {hasReviewable && (
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                                padding: '0.2rem 0.6rem',
+                                background: '#fef3c7', color: '#92400e',
+                                borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600
+                              }}>
+                                <Star size={11} fill="#f59e0b" color="#f59e0b" /> Leave a Review
+                              </span>
+                            )}
                           </div>
 
                           {/* Meta row */}
