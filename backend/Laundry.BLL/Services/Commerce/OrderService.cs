@@ -40,4 +40,10 @@ public sealed class OrderService(OrderRepository repository)
         var affected = await _repo.UpdateOrderItemStatus(orderItemId, status);
         return affected > 0;
     }
+
+    public async Task<bool> UpdateOrderStatusByProvider(int orderId, int providerId, string status)
+    {
+        var affected = await _repo.UpdateOrderStatusByProvider(orderId, providerId, status);
+        return affected > 0;
+    }
 }

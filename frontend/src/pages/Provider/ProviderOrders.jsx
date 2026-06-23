@@ -1,163 +1,149 @@
-import React, { useState } from 'react';
-import { Search, Filter, Eye, Check, X, Clock, MapPin, Phone, CreditCard, Banknote } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Filter, Eye, Check, X, Clock, MapPin, Phone, CreditCard, Banknote, RefreshCw } from 'lucide-react';
+import { providerOrdersAPI } from '../../api/commerceApi';
 import './ProviderOrders.css';
 
+const STATUS_COLORS = {
+  pending:     '#f59e0b',
+  'in-progress': '#2563eb',
+  completed:   '#10b981',
+  cancelled:   '#dc2626'
+};
+
+const STATUS_LABELS = {
+  pending:     'Pending',
+  'in-progress': 'In Progress',
+  completed:   'Completed',
+  cancelled:   'Cancelled'
+};
+
+const formatDate = (d) => d ? new Date(d).toLocaleString() : '—';
+
+const StatusBadge = ({ status }) => (
+  <span
+    className="provider-order-status"
+    style={{ background: `${STATUS_COLORS[status] ?? '#6b7280'}20`, color: STATUS_COLORS[status] ?? '#6b7280' }}
+  >
+    {STATUS_LABELS[status] ?? status}
+  </span>
+);
+
 const ProviderOrders = () => {
-  const [orders, setOrders] = useState([
-    {
-      id: 'ORD001',
-      customer: 'John Doe',
-      phone: '+1 234 567 8900',
-      address: '123 Main St, City Center',
-      service: 'Regular Wash + Iron',
-      items: 5,
-      amount: 45,
-      status: 'pending',
-      paymentMethod: 'cash_on_delivery',
-      date: '2026-01-21T10:30:00',
-      pickupDate: '2026-01-21T14:00:00',
-      deliveryDate: '2026-01-22T10:00:00'
-    },
-    {
-      id: 'ORD002',
-      customer: 'Jane Smith',
-      phone: '+1 234 567 8901',
-      address: '456 Oak Ave, Downtown',
-      service: 'Express Wash',
-      items: 3,
-      amount: 25,
-      status: 'ready',
-      paymentMethod: 'online_payment',
-      date: '2026-01-21T09:15:00',
-      pickupDate: '2026-01-21T11:00:00',
-      deliveryDate: '2026-01-21T16:00:00'
-    },
-    {
-      id: 'ORD003',
-      customer: 'Bob Johnson',
-      phone: '+1 234 567 8902',
-      address: '789 Pine Rd, Suburbs',
-      service: 'Dry Cleaning',
-      items: 2,
-      amount: 70,
-      status: 'completed',
-      paymentMethod: 'online_payment',
-      date: '2026-01-20T16:45:00',
-      pickupDate: '2026-01-20T18:00:00',
-      deliveryDate: '2026-01-21T12:00:00'
-    },
-    {
-      id: 'ORD004',
-      customer: 'Alice Brown',
-      phone: '+1 234 567 8903',
-      address: '321 Elm St, Uptown',
-      service: 'Premium Wash',
-      items: 8,
-      amount: 85,
-      status: 'completed',
-      paymentMethod: 'cash_on_delivery',
-      date: '2026-01-19T14:20:00',
-      pickupDate: '2026-01-19T16:30:00',
-      deliveryDate: '2026-01-20T11:00:00'
-    },
-    {
-      id: 'ORD005',
-      customer: 'Mike Wilson',
-      phone: '+1 234 567 8904',
-      address: '555 Cedar Lane, Midtown',
-      service: 'Regular Wash',
-      items: 4,
-      amount: 32,
-      status: 'pending',
-      paymentMethod: 'cash_on_delivery',
-      date: '2026-01-21T15:20:00',
-      pickupDate: '2026-01-22T09:00:00',
-      deliveryDate: '2026-01-22T17:00:00'
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [actionLoading, setAction]  = useState(null); // orderId being updated
+  const [filterStatus, setFilter]   = useState('all');
+  const [searchTerm, setSearch]     = useState('');
+  const [selectedOrder, setSelected] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await providerOrdersAPI.getMine();
+      setOrders(res?.data ?? []);
+    } catch (err) {
+      setError('Failed to load orders. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  }, []);
 
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  useEffect(() => { load(); }, [load]);
 
-  const statusOptions = [
-    { value: 'all', label: 'All Orders' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'ready', label: 'Ready' },
-    { value: 'completed', label: 'Completed' }
-  ];
-
-  const filteredOrders = orders.filter(order => {
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesSearch = order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.id.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+  // Normalize an order so the rest of the component always uses camelCase
+  const norm = (o) => ({
+    orderId:         o.orderId         ?? o.OrderId,
+    orderReference:  o.orderReference  ?? o.OrderReference  ?? '—',
+    totalAmount:     o.totalAmount     ?? o.TotalAmount      ?? 0,
+    paymentProvider: o.paymentProvider ?? o.PaymentProvider  ?? '',
+    paymentStatus:   o.paymentStatus   ?? o.PaymentStatus    ?? '',
+    customerName:    o.customerName    ?? o.CustomerName     ?? '—',
+    customerPhone:   o.customerPhone   ?? o.CustomerPhone    ?? '',
+    customerAddress: o.customerAddress ?? o.CustomerAddress  ?? '',
+    itemCount:       o.itemCount       ?? o.ItemCount        ?? 0,
+    providerStatus:  o.providerStatus  ?? o.ProviderStatus   ?? 'pending',
+    createdAt:       o.createdAt       ?? o.CreatedAt,
+    notes:           o.notes           ?? o.Notes            ?? '',
+    items: (o.items ?? o.Items ?? []).map(i => ({
+      orderItemId: i.orderItemId ?? i.OrderItemId,
+      itemName:    i.itemName    ?? i.ItemName    ?? i.description ?? i.Description ?? '—',
+      description: i.description ?? i.Description ?? '',
+      quantity:    i.quantity    ?? i.Quantity    ?? 1,
+      unitPrice:   i.unitPrice   ?? i.UnitPrice   ?? 0,
+      price:       i.price       ?? i.Price       ?? 0,
+      status:      i.status      ?? i.Status      ?? 'pending',
+      imageUrl:    i.imageUrl    ?? i.ImageUrl    ?? null,
+    }))
   });
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'in-progress': return '#2563eb';
-      case 'ready': return '#10b981';
-      case 'completed': return '#6b7280';
-      default: return '#6b7280';
+  const updateStatus = async (orderId, status) => {
+    setAction(orderId);
+    try {
+      await providerOrdersAPI.updateStatus(orderId, status);
+      setOrders(prev =>
+        prev.map(o => {
+          const id = o.orderId ?? o.OrderId;
+          return id === orderId ? { ...o, providerStatus: status, ProviderStatus: status } : o;
+        })
+      );
+      if ((selectedOrder?.orderId ?? selectedOrder?.OrderId) === orderId)
+        setSelected(s => ({ ...s, providerStatus: status, ProviderStatus: status }));
+    } catch {
+      alert('Failed to update order status. Please try again.');
+    } finally {
+      setAction(null);
     }
   };
 
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'pending': return 'Pending';
-      case 'in-progress': return 'In Progress';
-      case 'ready': return 'Ready for Pickup';
-      case 'completed': return 'Completed';
-      default: return status;
-    }
-  };
+  const normalized = orders.map(norm);
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(orders.map(order =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
-  };
+  const filtered = normalized.filter(o => {
+    const matchStatus = filterStatus === 'all' || o.providerStatus === filterStatus;
+    const term = searchTerm.toLowerCase();
+    const matchSearch = !term
+      || o.customerName.toLowerCase().includes(term)
+      || o.orderReference.toLowerCase().includes(term);
+    return matchStatus && matchSearch;
+  });
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  const orderStats = {
-    pending: orders.filter(o => o.status === 'pending').length,
-    inProgress: orders.filter(o => o.status === 'in-progress').length,
-    ready: orders.filter(o => o.status === 'ready').length,
-    completed: orders.filter(o => o.status === 'completed').length
+  const stats = {
+    pending:    normalized.filter(o => o.providerStatus === 'pending').length,
+    inProgress: normalized.filter(o => o.providerStatus === 'in-progress').length,
+    completed:  normalized.filter(o => o.providerStatus === 'completed').length,
+    cancelled:  normalized.filter(o => o.providerStatus === 'cancelled').length
   };
 
   return (
     <div className="provider-orders-page">
       <div className="provider-orders-container">
+        {/* Header */}
         <div className="provider-orders-header">
           <div>
             <h1>Orders Management</h1>
             <p>Manage and track all customer orders</p>
           </div>
-          
           <div className="provider-order-stats">
             <div className="provider-stat-item">
-              <span className="provider-stat-value">{orderStats.pending}</span>
+              <span className="provider-stat-value" style={{ color: '#f59e0b' }}>{stats.pending}</span>
               <span className="provider-stat-label">Pending</span>
             </div>
             <div className="provider-stat-item">
-              <span className="provider-stat-value">{orderStats.inProgress}</span>
+              <span className="provider-stat-value" style={{ color: '#2563eb' }}>{stats.inProgress}</span>
               <span className="provider-stat-label">In Progress</span>
             </div>
             <div className="provider-stat-item">
-              <span className="provider-stat-value">{orderStats.ready}</span>
-              <span className="provider-stat-label">Ready</span>
-            </div>
-            <div className="provider-stat-item">
-              <span className="provider-stat-value">{orderStats.completed}</span>
+              <span className="provider-stat-value" style={{ color: '#10b981' }}>{stats.completed}</span>
               <span className="provider-stat-label">Completed</span>
             </div>
+            <div className="provider-stat-item">
+              <span className="provider-stat-value" style={{ color: '#dc2626' }}>{stats.cancelled}</span>
+              <span className="provider-stat-label">Cancelled</span>
+            </div>
+            <button className="provider-refresh-btn" onClick={load} disabled={loading}>
+              <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+            </button>
           </div>
         </div>
 
@@ -169,239 +155,195 @@ const ProviderOrders = () => {
               type="text"
               placeholder="Search by customer name or order ID..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
             />
           </div>
-          
           <div className="provider-filter-box">
             <Filter size={20} />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+            <select value={filterStatus} onChange={e => setFilter(e.target.value)}>
+              <option value="all">All Orders</option>
+              <option value="pending">Pending</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
 
-        {/* Orders List */}
-        <div className="provider-orders-grid">
-          {filteredOrders.length > 0 ? (
-            filteredOrders.map((order) => (
-              <div key={order.id} className="provider-order-card">
-                <div className="provider-order-header">
-                  <div className="provider-order-info">
-                    <h3>#{order.id}</h3>
-                    <span 
-                      className="provider-order-status"
-                      style={{ 
-                        background: `${getStatusColor(order.status)}20`,
-                        color: getStatusColor(order.status)
-                      }}
-                    >
-                      {getStatusLabel(order.status)}
-                    </span>
-                  </div>
-                  <button 
-                    className="provider-view-btn"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    <Eye size={16} />
-                  </button>
-                </div>
-
-                <div className="provider-order-details">
-                  <div className="provider-customer-info">
-                    <h4>{order.customer}</h4>
-                    <p className="provider-phone">
-                      <Phone size={14} />
-                      {order.phone}
-                    </p>
-                    <p className="provider-address">
-                      <MapPin size={14} />
-                      {order.address}
-                    </p>
+        {/* Body */}
+        {loading ? (
+          <div className="provider-no-orders"><h3>Loading orders…</h3></div>
+        ) : error ? (
+          <div className="provider-no-orders" style={{ color: '#dc2626' }}>
+            <h3>{error}</h3>
+            <button className="provider-action-btn provider-accept-btn" onClick={load} style={{ marginTop: '1rem', flex: 'none' }}>
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div className="provider-orders-grid">
+            {filtered.length > 0 ? filtered.map(o => {
+              const busy = actionLoading === o.orderId;
+              return (
+                <div key={o.orderId} className="provider-order-card">
+                  <div className="provider-order-header">
+                    <div className="provider-order-info">
+                      <h3>#{o.orderReference}</h3>
+                      <StatusBadge status={o.providerStatus} />
+                    </div>
+                    <button className="provider-view-btn" onClick={() => setSelected(o)}>
+                      <Eye size={16} />
+                    </button>
                   </div>
 
-                  <div className="provider-service-info">
-                    <p className="provider-service">{order.service}</p>
-                    <p className="provider-items">{order.items} items • Rs {order.amount}</p>
-                    <p className="provider-date">
-                      <Clock size={14} />
-                      {formatDate(order.date)}
-                    </p>
-                  </div>
+                  <div className="provider-order-details">
+                    <div className="provider-customer-info">
+                      <h4>{o.customerName}</h4>
+                      {o.customerPhone && (
+                        <p className="provider-phone"><Phone size={14} />{o.customerPhone}</p>
+                      )}
+                      {o.customerAddress && (
+                        <p className="provider-address"><MapPin size={14} />{o.customerAddress}</p>
+                      )}
+                    </div>
 
-                  <div className="po-payment-method">
-                    <div className={`po-payment-badge ${order.paymentMethod === 'online_payment' ? 'po-online' : 'po-cod'}`}>
-                      {order.paymentMethod === 'online_payment' ? (
-                        <><CreditCard size={14} /> Online Payment</>
-                      ) : (
-                        <><Banknote size={14} /> Cash on Delivery</>
+                    <div className="provider-service-info">
+                      {o.items[0]?.itemName && (
+                        <p className="provider-service">
+                          {o.items[0].itemName}{o.itemCount > 1 ? ` +${o.itemCount - 1} more` : ''}
+                        </p>
+                      )}
+                      <p className="provider-items">{o.itemCount} item(s) &bull; Rs {Number(o.totalAmount).toFixed(2)}</p>
+                      <p className="provider-date"><Clock size={14} />{formatDate(o.createdAt)}</p>
+                    </div>
+
+                    <div className="po-payment-method">
+                      <div className={`po-payment-badge ${o.paymentProvider === 'PayHere' ? 'po-online' : 'po-cod'}`}>
+                        {o.paymentProvider === 'PayHere'
+                          ? <><CreditCard size={14} /> Online Payment</>
+                          : <><Banknote size={14} /> Cash on Delivery</>}
+                      </div>
+                    </div>
+
+                    <div className="provider-order-actions">
+                      {o.providerStatus === 'pending' && (
+                        <>
+                          <button
+                            className="provider-action-btn provider-accept-btn"
+                            disabled={busy}
+                            onClick={() => updateStatus(o.orderId, 'in-progress')}
+                          >
+                            <Check size={16} />{busy ? 'Updating…' : 'Accept'}
+                          </button>
+                          <button
+                            className="provider-action-btn provider-reject-btn"
+                            disabled={busy}
+                            onClick={() => updateStatus(o.orderId, 'cancelled')}
+                          >
+                            <X size={16} />Reject
+                          </button>
+                        </>
+                      )}
+                      {o.providerStatus === 'in-progress' && (
+                        <button
+                          className="provider-action-btn provider-complete-btn"
+                          disabled={busy}
+                          onClick={() => updateStatus(o.orderId, 'completed')}
+                        >
+                          <Check size={16} />{busy ? 'Updating…' : 'Complete'}
+                        </button>
                       )}
                     </div>
                   </div>
-
-                  {/* Status Actions */}
-                  <div className="provider-order-actions">
-                    {order.status === 'pending' && (
-                      <button 
-                        className="provider-action-btn provider-accept-btn"
-                        onClick={() => updateOrderStatus(order.id, 'in-progress')}
-                      >
-                        <Check size={16} />
-                        Accept Order
-                      </button>
-                    )}
-                    
-                    {order.status === 'in-progress' && (
-                      <button 
-                        className="provider-action-btn provider-ready-btn"
-                        onClick={() => updateOrderStatus(order.id, 'ready')}
-                      >
-                        <Check size={16} />
-                        Mark Ready
-                      </button>
-                    )}
-                    
-                    {order.status === 'ready' && (
-                      <button 
-                        className="provider-action-btn provider-complete-btn"
-                        onClick={() => updateOrderStatus(order.id, 'completed')}
-                      >
-                        <Check size={16} />
-                        Complete
-                      </button>
-                    )}
-                    
-                    {order.status === 'pending' && (
-                      <button 
-                        className="provider-action-btn provider-reject-btn"
-                        onClick={() => updateOrderStatus(order.id, 'rejected')}
-                      >
-                        <X size={16} />
-                        Reject
-                      </button>
-                    )}
-                  </div>
                 </div>
+              );
+            }) : (
+              <div className="provider-no-orders">
+                <h3>No orders found</h3>
+                <p>No orders match your current filters.</p>
               </div>
-            ))
-          ) : (
-            <div className="provider-no-orders">
-              <h3>No orders found</h3>
-              <p>No orders match your current filters.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Order Detail Modal */}
-        {selectedOrder && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <div className="modal-header">
-                <h2>Order Details - #{selectedOrder.id}</h2>
-                <button 
-                  className="close-btn"
-                  onClick={() => setSelectedOrder(null)}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="modal-body">
-                <div className="order-detail-section">
-                  <h3>Customer Information</h3>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <label>Name</label>
-                      <span>{selectedOrder.customer}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Phone</label>
-                      <span>{selectedOrder.phone}</span>
-                    </div>
-                    <div className="detail-item full-width">
-                      <label>Address</label>
-                      <span>{selectedOrder.address}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="order-detail-section">
-                  <h3>Service Information</h3>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <label>Service</label>
-                      <span>{selectedOrder.service}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Items</label>
-                      <span>{selectedOrder.items} pieces</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Amount</label>
-                      <span>Rs {selectedOrder.amount}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Payment Method</label>
-                      <span className={`po-modal-payment-badge ${selectedOrder.paymentMethod === 'online_payment' ? 'po-online' : 'po-cod'}`}>
-                        {selectedOrder.paymentMethod === 'online_payment' ? (
-                          <><CreditCard size={14} /> Online Payment</>
-                        ) : (
-                          <><Banknote size={14} /> Cash on Delivery</>
-                        )}
-                      </span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Status</label>
-                      <span 
-                        className="status-badge"
-                        style={{ 
-                          background: `${getStatusColor(selectedOrder.status)}20`,
-                          color: getStatusColor(selectedOrder.status)
-                        }}
-                      >
-                        {getStatusLabel(selectedOrder.status)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="order-detail-section">
-                  <h3>Timeline</h3>
-                  <div className="timeline">
-                    <div className="timeline-item">
-                      <label>Order Placed</label>
-                      <span>{formatDate(selectedOrder.date)}</span>
-                    </div>
-                    <div className="timeline-item">
-                      <label>Pickup Scheduled</label>
-                      <span>{formatDate(selectedOrder.pickupDate)}</span>
-                    </div>
-                    <div className="timeline-item">
-                      <label>Delivery Scheduled</label>
-                      <span>{formatDate(selectedOrder.deliveryDate)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button 
-                  className="btn-secondary"
-                  onClick={() => setSelectedOrder(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         )}
+
+        {/* Detail Modal */}
+        {selectedOrder && (() => {
+          const s = norm(selectedOrder);
+          return (
+            <div className="modal-overlay" onClick={() => setSelected(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>Order #{s.orderReference}</h2>
+                  <button className="close-btn" onClick={() => setSelected(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="order-detail-section">
+                    <h3>Customer Information</h3>
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <label>Name</label>
+                        <span>{s.customerName}</span>
+                      </div>
+                      <div className="detail-item">
+                        <label>Phone</label>
+                        <span>{s.customerPhone || '—'}</span>
+                      </div>
+                      <div className="detail-item full-width">
+                        <label>Address</label>
+                        <span>{s.customerAddress || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="order-detail-section">
+                    <h3>Order Information</h3>
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <label>Total Amount</label>
+                        <span>Rs {Number(s.totalAmount).toFixed(2)}</span>
+                      </div>
+                      <div className="detail-item">
+                        <label>Payment</label>
+                        <span className={`po-modal-payment-badge ${s.paymentProvider === 'PayHere' ? 'po-online' : 'po-cod'}`}>
+                          {s.paymentProvider === 'PayHere'
+                            ? <><CreditCard size={13} /> Online</>
+                            : <><Banknote size={13} /> Cash on Delivery</>}
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <label>Status</label>
+                        <StatusBadge status={s.providerStatus} />
+                      </div>
+                      <div className="detail-item">
+                        <label>Placed</label>
+                        <span>{formatDate(s.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {s.items.length > 0 && (
+                    <div className="order-detail-section">
+                      <h3>Items</h3>
+                      <div className="timeline">
+                        {s.items.map((item, idx) => (
+                          <div key={item.orderItemId ?? idx} className="timeline-item">
+                            <label>{item.itemName}</label>
+                            <span>
+                              {item.quantity} × Rs {Number(item.unitPrice).toFixed(2)} = Rs {Number(item.price).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn-secondary" onClick={() => setSelected(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

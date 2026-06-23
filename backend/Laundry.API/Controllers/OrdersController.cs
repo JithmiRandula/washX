@@ -9,7 +9,7 @@ namespace Laundry.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "customer")]
+[Authorize]
 public sealed class OrdersController : ControllerBase
 {
     private readonly OrderService _orderService;
@@ -22,6 +22,7 @@ public sealed class OrdersController : ControllerBase
         _cartService = cartService;
     }
 
+    [Authorize(Roles = "customer")]
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] Order order)
     {
@@ -53,6 +54,7 @@ public sealed class OrdersController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "customer")]
     [HttpGet("mine")]
     public async Task<IActionResult> GetMyOrders()
     {
@@ -84,11 +86,18 @@ public sealed class OrdersController : ControllerBase
     [HttpGet("provider/mine")]
     public async Task<IActionResult> GetProviderOrders()
     {
-        var providerId = await ResolveProviderIdFromClaimsAsync();
-        if (!providerId.HasValue) return BadRequest(new { message = "Provider account not found" });
+        try
+        {
+            var providerId = await ResolveProviderIdFromClaimsAsync();
+            if (!providerId.HasValue) return BadRequest(new { success = false, message = "Provider account not found" });
 
-        var orders = await _orderService.GetOrdersByProvider(providerId.Value);
-        return Ok(orders);
+            var orders = await _orderService.GetOrdersByProvider(providerId.Value);
+            return Ok(new { success = true, count = orders.Count, data = orders });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
     }
 
     [Authorize(Roles = "provider")]
@@ -104,6 +113,22 @@ public sealed class OrdersController : ControllerBase
         if (!affected) return NotFound(new { message = "Order item not found or not owned by provider" });
 
         return Ok(new { message = "Status updated" });
+    }
+
+    [Authorize(Roles = "provider")]
+    [HttpPatch("{orderId:int}/provider-status")]
+    public async Task<IActionResult> UpdateProviderOrderStatus(int orderId, [FromBody] UpdateStatusRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req?.Status))
+            return BadRequest(new { success = false, message = "Status is required" });
+
+        var providerId = await ResolveProviderIdFromClaimsAsync();
+        if (!providerId.HasValue) return BadRequest(new { success = false, message = "Provider account not found" });
+
+        var ok = await _orderService.UpdateOrderStatusByProvider(orderId, providerId.Value, req.Status);
+        if (!ok) return NotFound(new { success = false, message = "No matching order items found" });
+
+        return Ok(new { success = true, message = $"Order status updated to {req.Status}" });
     }
 
     private int? GetUserId()

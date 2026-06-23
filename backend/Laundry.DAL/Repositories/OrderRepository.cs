@@ -176,27 +176,31 @@ public sealed class OrderRepository(SqlHelper sql)
         return order;
     }
 
-    // ── Provider read operations ─────────────────────────────────────────────
+    // ── Provider read & write operations ────────────────────────────────────
 
     public async Task<List<Order>> GetOrdersByProvider(int providerId)
     {
         SqlParameter[] p = [new("@ProviderId", providerId)];
-        var orders = await _sql.ExecuteListAsync(
-            @"SELECT DISTINCT o.*
-              FROM dbo.Orders o
-              JOIN dbo.OrderItems oi ON o.OrderId = oi.OrderId
-              WHERE oi.ProviderId = @ProviderId
-              ORDER BY o.CreatedAt DESC",
-            p, MapOrder);
+        var orders = await _sql.ExecuteListAsync("SP_GetOrdersByProvider", p, MapProviderOrder, CommandType.StoredProcedure);
 
         foreach (var order in orders)
         {
             SqlParameter[] p2 = [new("@OrderId", order.OrderId), new("@ProviderId", providerId)];
-            order.Items = await _sql.ExecuteListAsync(
-                "SELECT * FROM dbo.OrderItems WHERE OrderId = @OrderId AND ProviderId = @ProviderId ORDER BY OrderItemId",
-                p2, MapOrderItem);
+            order.Items = await _sql.ExecuteListAsync("SP_GetProviderOrderItems", p2, MapOrderItemDetailed, CommandType.StoredProcedure);
         }
         return orders;
+    }
+
+    // Accept (in-progress) / Reject (cancelled) / Complete (completed)
+    public Task<int> UpdateOrderStatusByProvider(int orderId, int providerId, string status)
+    {
+        SqlParameter[] p =
+        [
+            new("@OrderId",    orderId),
+            new("@ProviderId", providerId),
+            new("@Status",     status)
+        ];
+        return _sql.ExecuteNonQueryAsync("SP_UpdateOrderStatusByProvider", p, CommandType.StoredProcedure);
     }
 
     public async Task<int?> GetOrderItemProviderId(int orderItemId)
@@ -207,10 +211,10 @@ public sealed class OrderRepository(SqlHelper sql)
             p, r => r.GetInt32(0));
     }
 
-    public async Task<int> UpdateOrderItemStatus(int orderItemId, string status)
+    public Task<int> UpdateOrderItemStatus(int orderItemId, string status)
     {
         SqlParameter[] p = [new("@OrderItemId", orderItemId), new("@Status", status)];
-        return await _sql.ExecuteNonQueryAsync("SP_UpdateOrderItemStatus", p, CommandType.StoredProcedure);
+        return _sql.ExecuteNonQueryAsync("SP_UpdateOrderItemStatus", p, CommandType.StoredProcedure);
     }
 
     // ── Mappers ──────────────────────────────────────────────────────────────
@@ -230,7 +234,7 @@ public sealed class OrderRepository(SqlHelper sql)
         OverallStatus   = NullStr(r, "OverallStatus")
     };
 
-    private static Order MapOrder(SqlDataReader r) => new()
+    private static Order MapProviderOrder(SqlDataReader r) => new()
     {
         OrderId         = r.GetInt32(r.GetOrdinal("OrderId")),
         OrderReference  = r.GetString(r.GetOrdinal("OrderReference")),
@@ -239,24 +243,14 @@ public sealed class OrderRepository(SqlHelper sql)
         PaymentProvider = NullStr(r, "PaymentProvider"),
         PaymentStatus   = NullStr(r, "PaymentStatus"),
         Notes           = NullStr(r, "Notes"),
-        CreatedAt       = NullDt(r, "CreatedAt")
+        CreatedAt       = NullDt(r, "CreatedAt"),
+        CustomerName    = NullStr(r, "CustomerName"),
+        CustomerPhone   = NullStr(r, "CustomerPhone"),
+        CustomerAddress = NullStr(r, "CustomerAddress"),
+        ItemCount       = NullInt(r, "ItemCount"),
+        ProviderStatus  = NullStr(r, "ProviderStatus")
     };
 
-    private static OrderItem MapOrderItem(SqlDataReader r) => new()
-    {
-        OrderItemId = r.GetInt32(r.GetOrdinal("OrderItemId")),
-        OrderId     = r.GetInt32(r.GetOrdinal("OrderId")),
-        ProviderId  = r.GetInt32(r.GetOrdinal("ProviderId")),
-        ServiceId   = NullInt(r, "ServiceId"),
-        ItemId      = NullInt(r, "ItemId"),
-        Kind        = r.GetString(r.GetOrdinal("Kind")),
-        Quantity    = r.GetInt32(r.GetOrdinal("Quantity")),
-        UnitPrice   = r.GetDecimal(r.GetOrdinal("UnitPrice")),
-        Price       = r.GetDecimal(r.GetOrdinal("Price")),
-        Description = NullStr(r, "Description"),
-        Status      = NullStr(r, "Status") ?? "pending",
-        CreatedAt   = NullDt(r, "CreatedAt")
-    };
 
     private static OrderItem MapOrderItemDetailed(SqlDataReader r) => new()
     {

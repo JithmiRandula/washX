@@ -195,6 +195,18 @@ export const ordersAPI = {
   }
 };
 
+export const providerOrdersAPI = {
+  getMine: async () => {
+    const response = await api.get('/orders/provider/mine');
+    return response.data;
+  },
+  // status: 'in-progress' (accept) | 'cancelled' (reject) | 'completed' (complete)
+  updateStatus: async (orderId, status) => {
+    const response = await api.patch(`/orders/${orderId}/provider-status`, { Status: status });
+    return response.data;
+  }
+};
+
 // upload for bulk items
 uploadAPI.uploadBulkItemImage = async (file, serviceId) => {
   const formData = new FormData();

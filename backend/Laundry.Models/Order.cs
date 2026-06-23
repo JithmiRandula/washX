@@ -12,8 +12,14 @@ public sealed class Order
     public DateTime? CreatedAt { get; set; }
     public List<OrderItem>? Items { get; set; }
 
-    // Populated by SP_GetCustomerOrders / aggregate queries (null on simple GetById)
+    // Populated by aggregate queries (null on simple GetById)
     public int? ItemCount { get; set; }
     public string? ProviderNames { get; set; }
     public string? OverallStatus { get; set; }
+
+    // Populated on provider list view only
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerAddress { get; set; }
+    public string? ProviderStatus { get; set; }
 }
