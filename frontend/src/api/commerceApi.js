@@ -1,19 +1,39 @@
 import api from '../utils/api';
 
-const mapCartRow = (row) => ({
-  cartItemId: Number(row?.cartItemId ?? row?.CartItemId ?? 0),
-  itemId: Number(row?.itemId ?? row?.ItemId ?? 0),
-  providerId: Number(row?.providerId ?? row?.ProviderId ?? 0),
-  providerName: row?.providerName ?? row?.ProviderName ?? '',
-  serviceId: Number(row?.serviceId ?? row?.ServiceId ?? row?.serviceTypeId ?? row?.ServiceTypeId ?? 0),
-  itemName: row?.itemName ?? row?.ItemName ?? '',
-  description: row?.description ?? row?.Description ?? '',
-  quantity: Number(row?.quantity ?? row?.Quantity ?? 0),
-  unitPrice: Number(row?.price ?? row?.Price ?? 0),
-  imageUrl: row?.imageUrl ?? row?.ImageUrl ?? '/wash1.jpg',
-  price: Number(row?.price ?? row?.Price ?? 0) * Number(row?.quantity ?? row?.Quantity ?? 0),
-  kind: 'item'
-});
+const mapCartRow = (row) => {
+  const kind = (row?.kind ?? row?.Kind ?? 'item').toLowerCase();
+  const base = {
+    cartItemId: Number(row?.cartItemId ?? row?.CartItemId ?? 0),
+    providerId: Number(row?.providerId ?? row?.ProviderId ?? 0),
+    providerName: row?.providerName ?? row?.ProviderName ?? '',
+    kind,
+    quantity: Number(row?.quantity ?? row?.Quantity ?? 0),
+    unitPrice: Number(row?.unitPrice ?? row?.UnitPrice ?? 0),
+    price: Number(row?.price ?? row?.Price ?? 0)
+  };
+
+  if (kind === 'bulk') {
+    return {
+      ...base,
+      bulkItemId: Number(row?.bulkItemId ?? row?.BulkItemId ?? 0),
+      bags: Number(row?.bags ?? row?.Bags ?? 0),
+      maxKg: Number(row?.maxKg ?? row?.MaxKg ?? 0),
+      title: row?.bulkName ?? row?.BulkName ?? row?.ItemName ?? '',
+      imageUrl: row?.bulkImageUrl ?? row?.BulkImageUrl ?? '/wash1.jpg'
+    };
+  }
+
+  // default: item
+  return {
+    ...base,
+    itemId: Number(row?.itemId ?? row?.ItemId ?? 0),
+    serviceId: Number(row?.serviceId ?? row?.ServiceId ?? row?.serviceTypeId ?? row?.ServiceTypeId ?? 0),
+    itemName: row?.itemName ?? row?.ItemName ?? '',
+    description: row?.itemDescription ?? row?.ItemDescription ?? row?.Description ?? row?.description ?? '',
+    imageUrl: row?.imageUrl ?? row?.ImageUrl ?? '/wash1.jpg',
+    price: Number(row?.price ?? row?.Price ?? row?.ItemPrice ?? 0) * Number(row?.quantity ?? row?.Quantity ?? 1)
+  };
+};
 
 export const cartAPI = {
   get: async () => {
@@ -24,6 +44,13 @@ export const cartAPI = {
 
   add: async ({ providerId, itemId, quantity = 1 }) => {
     const response = await api.post('/cart', { providerId, itemId, quantity });
+    const rows = response.data?.data || [];
+    return { ...response.data, data: rows.map(mapCartRow) };
+  },
+
+  // Generic add that supports bulk payloads: { providerId, itemId?, bulkItemId?, kind, quantity, bags, maxKg, unitPrice, price, description }
+  addGeneric: async (payload) => {
+    const response = await api.post('/cart', payload);
     const rows = response.data?.data || [];
     return { ...response.data, data: rows.map(mapCartRow) };
   },

@@ -53,7 +53,14 @@ public class CartController : ControllerBase
                 userId.Value,
                 request.ProviderId,
                 request.ItemId,
-                request.Quantity);
+                request.BulkItemId,
+                request.Kind ?? "item",
+                request.Quantity,
+                request.Bags,
+                request.MaxKg,
+                request.UnitPrice,
+                request.Price,
+                request.Description);
 
             var items = await _cartService.GetCartItemsAsync(userId.Value);
             return Ok(new { success = true, message = "Item added to cart", count = items.Count, data = items });

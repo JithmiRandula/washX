@@ -22,18 +22,28 @@ public sealed class CartService(CartRepository cartRepository, UserRepository us
         return await _cartRepository.GetCartItems(customerId);
     }
 
-    public async Task AddToCartAsync(int userId, int providerId, int itemId, int quantity)
+    public async Task AddToCartAsync(
+        int userId,
+        int providerId,
+        int? itemId,
+        int? bulkItemId,
+        string kind,
+        int quantity,
+        int? bags = null,
+        decimal? maxKg = null,
+        decimal? unitPrice = null,
+        decimal? price = null,
+        string? description = null)
     {
-        if (providerId <= 0 || itemId <= 0)
-            throw new ArgumentException("Invalid provider or item");
+        if (providerId <= 0)
+            throw new ArgumentException("Invalid provider");
 
         if (quantity <= 0)
             throw new ArgumentException("Quantity must be at least 1");
 
         var customerId = await ResolveCustomerIdAsync(userId);
 
-        for (var i = 0; i < quantity; i++)
-            await _cartRepository.AddToCart(customerId, providerId, itemId);
+        await _cartRepository.AddToCart(customerId, providerId, itemId, bulkItemId, kind ?? "item", quantity, bags, maxKg, unitPrice, price, description);
     }
 
     public async Task IncreaseQuantityAsync(int userId, int cartItemId)

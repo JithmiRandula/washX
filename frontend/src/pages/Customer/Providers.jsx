@@ -301,10 +301,56 @@ const Providers = () => {
     setSelectedBulkPackage(null);
   };
 
-  const addBulkToCart = (pkg) => {
+  const addBulkToCart = async (pkg) => {
     const p = pkg || selectedBulkPackage;
     if (!selectedProvider || !bulkService || !p) return;
+    // If user is logged in as customer, persist to DB
+    if (String(user?.role).toLowerCase() === 'customer') {
+      try {
+        setCartSaving(true);
 
+        const providerId = Number(selectedProvider?.id ?? selectedProvider?.providerId ?? 0);
+        const bulkItemId = Number(p.id ?? p.bulkItemId ?? 0);
+
+        if (!providerId || providerId <= 0) {
+          alert('Invalid provider selected — cannot add to cart');
+          return;
+        }
+
+        if (!bulkItemId || bulkItemId <= 0) {
+          alert('Invalid bulk package selected');
+          return;
+        }
+
+        const payload = {
+          providerId,
+          bulkItemId,
+          kind: 'bulk',
+          quantity: 1,
+          bags: p.bags,
+          maxKg: p.maxKg,
+          unitPrice: Number(p.unitPrice ?? p.price ?? 0),
+          price: Number(p.price ?? 0),
+          description: p.title || bulkService.serviceName
+        };
+
+        console.debug('Adding bulk to cart payload:', payload);
+
+        const resp = await cartAPI.addGeneric(payload);
+        const dbItems = resp?.data || [];
+        setCartItems(dbItems);
+        if (showBulkModal) closeBulkPackageModal();
+        setShowCartModal(true);
+      } catch (err) {
+        console.error('Failed to add bulk to cart:', err.response?.data || err);
+        alert(err.response?.data?.message || err.message || 'Failed to add package to cart');
+      } finally {
+        setCartSaving(false);
+      }
+      return;
+    }
+
+    // fallback: local-only cart (not persisted)
     const id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     const item = {
       id,
@@ -321,7 +367,6 @@ const Providers = () => {
     };
 
     setCartItems((prev) => [...prev, item]);
-    // if we are showing modal, close it; otherwise stay on page
     if (showBulkModal) closeBulkPackageModal();
     setShowCartModal(true);
   };
@@ -362,30 +407,29 @@ const Providers = () => {
   };
 
   const removeCartItem = async (cartRow) => {
-    if (cartRow?.kind === 'bulk') {
-      setCartItems((prev) => prev.filter((x) => x.id !== cartRow.id));
-      return;
+    // If this row comes from server, remove via API
+    if (cartRow?.cartItemId) {
+      try {
+        const result = await cartAPI.remove(cartRow.cartItemId);
+        const dbItems = result?.data || [];
+        setCartItems(dbItems);
+        return;
+      } catch (err) {
+        console.error('Remove cart item failed:', err);
+        alert(err.response?.data?.message || 'Failed to remove item');
+        return;
+      }
     }
 
-    if (!cartRow?.cartItemId) return;
-
-    try {
-      const result = await cartAPI.remove(cartRow.cartItemId);
-      const dbItems = result?.data || [];
-      setCartItems((prev) => {
-        const bulkOnly = prev.filter((x) => x.kind === 'bulk');
-        return [...dbItems, ...bulkOnly];
-      });
-    } catch (err) {
-      console.error('Remove cart item failed:', err);
-      alert(err.response?.data?.message || 'Failed to remove item');
-    }
+    // Local-only item (no cartItemId) — remove locally
+    setCartItems((prev) => prev.filter((x) => x.id !== cartRow.id));
   };
 
   const clearCart = async () => {
     try {
       await cartAPI.clear();
-      setCartItems((prev) => prev.filter((x) => x.kind === 'bulk'));
+      // refresh from DB (should be empty)
+      await refreshCartFromDb();
     } catch (err) {
       console.error('Clear cart failed:', err);
       alert(err.response?.data?.message || 'Failed to clear cart');
