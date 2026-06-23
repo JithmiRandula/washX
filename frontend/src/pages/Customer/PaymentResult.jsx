@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import { CheckCircle, XCircle } from 'lucide-react';
 import './PaymentResult.css';
+import { cartAPI } from '../../api/commerceApi';
 
 const PaymentResult = ({ status }) => {
   const { user } = useAuth();
@@ -47,6 +48,7 @@ const PaymentResult = ({ status }) => {
         // lazy import API to avoid cycles
         const { ordersAPI } = await import('../../api/commerceApi');
 
+        // Create order on server
         await ordersAPI.create({
           OrderReference: orderRef,
           CustomerId: user?.customerId ?? null,
@@ -56,6 +58,13 @@ const PaymentResult = ({ status }) => {
           Notes: null,
           Items: items
         });
+
+        // Ensure server-side cart is cleared (idempotent)
+        try {
+          await cartAPI.clear();
+        } catch (e) {
+          console.warn('Failed to clear server cart after order creation:', e);
+        }
       } catch (e) {
         console.error('Failed to save order:', e);
       } finally {

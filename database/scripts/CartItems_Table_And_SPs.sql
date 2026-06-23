@@ -128,6 +128,10 @@ BEGIN
         si.Description AS ItemDescription,
         si.Price AS ItemPrice,
         si.ImageUrl,
+        -- Bulk item metadata
+        b.Name AS BulkName,
+        b.ImageUrl AS BulkImageUrl,
+        b.IncludedCount AS BulkIncludedCount,
         p.BusinessName AS ProviderName
     FROM dbo.CartItems c
     LEFT JOIN dbo.ServiceItems si ON si.ItemId = c.ItemId
