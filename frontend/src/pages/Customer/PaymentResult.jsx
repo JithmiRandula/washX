@@ -21,55 +21,46 @@ const PaymentResult = ({ status }) => {
     const saveOrderIfSuccess = async () => {
       if (!isSuccess) return;
 
-      try {
-        const orderRef =
-          searchParams.get('order_id') || sessionStorage.getItem('washx_payhere_order');
-        const cartJson = sessionStorage.getItem('washx_checkout_cart');
-        if (!orderRef || !cartJson) {
-          sessionStorage.removeItem('washx_checkout_cart');
-          sessionStorage.removeItem('washx_payhere_order');
-          return;
-        }
+      // Read THEN clear synchronously before any await.
+      // This prevents React StrictMode's double-invocation from creating duplicate orders:
+      // the second call will find empty storage and exit early.
+      const orderRef =
+        searchParams.get('order_id') || sessionStorage.getItem('washx_payhere_order');
+      const cartJson = sessionStorage.getItem('washx_checkout_cart');
+      sessionStorage.removeItem('washx_checkout_cart');
+      sessionStorage.removeItem('washx_payhere_order');
 
+      if (!orderRef || !cartJson) return;
+
+      try {
         const cart = JSON.parse(cartJson);
         const items = (cart || []).map((c) => ({
-          ProviderId: c.providerId || 0,
-          ServiceId:  c.serviceId  || null,
-          ItemId:     c.itemId     || null,
-          Kind:       c.kind       || 'item',
-          Quantity:   c.quantity   || 1,
-          UnitPrice:  Number(c.unitPrice || 0) || 0,
-          Price:      Number(c.price     || 0) || 0,
+          ProviderId:  c.providerId || 0,
+          ServiceId:   c.serviceId  || null,
+          ItemId:      c.itemId     || null,
+          Kind:        c.kind       || 'item',
+          Quantity:    c.quantity   || 1,
+          UnitPrice:   Number(c.unitPrice || 0) || 0,
+          Price:       Number(c.price     || 0) || 0,
           Description: c.description || c.title || c.itemName || ''
         }));
 
         const total = items.reduce((s, it) => s + (Number(it.Price) || 0), 0);
 
-        // lazy import API to avoid cycles
         const { ordersAPI } = await import('../../api/commerceApi');
-
-        // Create order on server
         await ordersAPI.create({
           OrderReference: orderRef,
-          CustomerId: user?.customerId ?? null,
-          TotalAmount: total,
+          CustomerId:     user?.customerId ?? null,
+          TotalAmount:    total,
           PaymentProvider: 'PayHere',
-          PaymentStatus: 'Paid',
+          PaymentStatus:   'Paid',
           Notes: null,
           Items: items
         });
 
-        // Ensure server-side cart is cleared (idempotent)
-        try {
-          await cartAPI.clear();
-        } catch (e) {
-          console.warn('Failed to clear server cart after order creation:', e);
-        }
+        try { await cartAPI.clear(); } catch { /* non-fatal */ }
       } catch (e) {
         console.error('Failed to save order:', e);
-      } finally {
-        sessionStorage.removeItem('washx_checkout_cart');
-        sessionStorage.removeItem('washx_payhere_order');
       }
     };
 

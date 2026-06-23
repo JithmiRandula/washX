@@ -2,6 +2,7 @@ using Laundry.BLL.Services.Commerce;
 using Laundry.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Data.SqlClient;
 using System.Security.Claims;
 
 namespace Laundry.API.Controllers;
@@ -40,6 +41,11 @@ public sealed class OrdersController : ControllerBase
             try { await _cartService.ClearCartAsync(userId.Value); } catch { /* ignore */ }
 
             return Ok(new { success = true, orderId = id });
+        }
+        catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+        {
+            // Unique constraint violation — duplicate OrderReference (StrictMode double-submit)
+            return Ok(new { success = true, duplicate = true });
         }
         catch (Exception ex)
         {
