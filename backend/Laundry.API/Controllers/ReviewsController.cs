@@ -20,6 +20,20 @@ public sealed class ReviewsController : ControllerBase
 
     // ── Public endpoints ─────────────────────────────────────────────────────
 
+    [HttpGet("all-ratings")]
+    public async Task<IActionResult> GetAllProviderRatings()
+    {
+        try
+        {
+            var ratings = await _service.GetAllProviderRatings();
+            return Ok(new { success = true, data = ratings });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
     [HttpGet("provider/{providerId:int}")]
     public async Task<IActionResult> GetProviderReviews(int providerId)
     {

@@ -48,4 +48,7 @@ public sealed class ReviewService(ReviewRepository repo)
 
     public Task<List<ReviewableOrder>> GetReviewableOrders(int customerId) =>
         _repo.GetReviewableOrders(customerId);
+
+    public Task<List<ProviderRating>> GetAllProviderRatings() =>
+        _repo.GetAllProviderRatings();
 }

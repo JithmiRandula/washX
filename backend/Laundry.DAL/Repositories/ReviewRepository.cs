@@ -55,6 +55,12 @@ public sealed class ReviewRepository(SqlHelper sql)
             "SP_GetCustomerReviewableOrders", p, MapReviewableOrder, CommandType.StoredProcedure);
     }
 
+    public Task<List<ProviderRating>> GetAllProviderRatings()
+    {
+        return _sql.ExecuteListAsync(
+            "SP_GetAllProviderRatings", [], MapProviderRating, CommandType.StoredProcedure);
+    }
+
     // ── Mappers ──────────────────────────────────────────────────────────────
 
     private static Review MapReview(SqlDataReader r) => new()
@@ -68,6 +74,13 @@ public sealed class ReviewRepository(SqlHelper sql)
         CreatedAt      = NullDt(r, "CreatedAt"),
         CustomerName   = NullStr(r, "CustomerName"),
         OrderReference = NullStr(r, "OrderReference")
+    };
+
+    private static ProviderRating MapProviderRating(SqlDataReader r) => new()
+    {
+        ProviderId    = r.GetInt32(r.GetOrdinal("ProviderId")),
+        AverageRating = r.GetDouble(r.GetOrdinal("AverageRating")),
+        TotalReviews  = r.GetInt32(r.GetOrdinal("TotalReviews"))
     };
 
     private static RatingSummary MapRatingSummary(SqlDataReader r) => new()

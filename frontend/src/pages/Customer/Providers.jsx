@@ -134,13 +134,24 @@ const Providers = () => {
       try {
         setProvidersLoading(true);
         setProvidersError(null);
-        console.log('🔍 Fetching providers from API...');
-        const response = await api.get('/providers/with-services');
-        
-        console.log('✅ Received providers:', response.data.count);
-        
-        if (response.data.success) {
-          const transformedProviders = (response.data.data || []).map((provider) => {
+
+        const [providersRes, ratingsRes] = await Promise.all([
+          api.get('/providers/with-services'),
+          api.get('/reviews/all-ratings').catch(() => ({ data: { data: [] } }))
+        ]);
+
+        if (providersRes.data.success) {
+          // Build a fast lookup: { providerId -> { rating, reviews } }
+          const ratingsMap = {};
+          (ratingsRes.data?.data || []).forEach((r) => {
+            const pid = r.providerId ?? r.ProviderId;
+            ratingsMap[pid] = {
+              rating:  Number(r.averageRating ?? r.AverageRating ?? 0),
+              reviews: Number(r.totalReviews  ?? r.TotalReviews  ?? 0)
+            };
+          });
+
+          const transformedProviders = (providersRes.data.data || []).map((provider) => {
             const services = Array.isArray(provider.services) ? provider.services : [];
 
             const serviceNames = services
@@ -178,11 +189,14 @@ const Providers = () => {
               )
             );
 
+            const ratingData = ratingsMap[Number(provider.providerId)] ?? { rating: 0, reviews: 0 };
+
             return {
               id: provider.providerId,
               name: provider.businessName,
               image: '/wash1.jpg',
-              rating: Number(provider.rating ?? 0),
+              rating: ratingData.rating,
+              reviews: ratingData.reviews,
               address: provider.businessAddress || '',
               phone: '',
               email: '',
@@ -192,12 +206,10 @@ const Providers = () => {
               priceRange,
               description: provider.description || 'No description available',
               available: true,
-              reviews: 0,
               specialties
             };
           });
-          
-          console.log('✅ Transformed providers:', transformedProviders.length);
+
           setProviders(transformedProviders);
         }
       } catch (error) {
