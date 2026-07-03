@@ -1859,62 +1859,75 @@ const Providers = () => {
     );
   }
 
-  // Main Providers List (similar to bookings list)
+  // Main Providers List
   return (
     <>
       <CustomerNavbar />
-      <div className="bookings-page">
-        <div className="bookings-main">
-          <div className="bookings-header">
-            <h1>Find Providers</h1>
-            <p>Discover trusted laundry service providers near you</p>
+      <div className="cfp-page">
+        <div className="cfp-content">
+
+          {/* ── Header ── */}
+          <div className="cfp-header">
+            <div>
+              <h1 className="cfp-title">Find Providers</h1>
+              <p className="cfp-sub">Discover trusted laundry service providers near you</p>
+            </div>
+            <div className="cfp-header-meta">
+              {!providersLoading && !providersError && (
+                <span className="cfp-count">{filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} found</span>
+              )}
+            </div>
           </div>
 
-          <div className="bookings-container">
-            {/* Search and Filter Section */}
-            <div className="search-section">
-              <div className="search-bar">
-                <Search size={20} />
-                <input
-                  type="text"
-                  placeholder="Search providers by name..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                />
-              </div>
-              <button 
-                className="filter-toggle"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <SlidersHorizontal size={20} />
-                Filters
-              </button>
+          {/* ── Search + Filter bar ── */}
+          <div className="cfp-controls">
+            <div className="cfp-search">
+              <Search size={17} className="cfp-search-icon" />
+              <input
+                type="text"
+                className="cfp-search-input"
+                placeholder="Search providers by name…"
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+              />
+              {filters.search && (
+                <button className="cfp-search-clear" onClick={() => handleFilterChange('search', '')}>×</button>
+              )}
             </div>
 
-            {showFilters && (
-              <div className="filters-panel">
-                <div className="filters-header">
-                  <h3>Filters</h3>
-                  <button onClick={clearFilters} className="clear-filters">
-                    Clear All
-                  </button>
-                </div>
+            <div className="cfp-sort">
+              <select
+                className="cfp-sort-select"
+                value={filters.sortBy}
+                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+              >
+                <option value="rating">Top Rated</option>
+                <option value="distance">Nearest First</option>
+                <option value="price">Lowest Price</option>
+              </select>
+            </div>
 
-                <div className="filter-group">
-                  <label>Sort By</label>
-                  <select
-                    value={filters.sortBy}
-                    onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                  >
-                    <option value="rating">Highest Rating</option>
-                    <option value="distance">Nearest First</option>
-                    <option value="price">Lowest Price</option>
-                  </select>
-                </div>
+            <button
+              className={`cfp-filter-btn${showFilters ? ' cfp-filter-active' : ''}`}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+            </button>
+          </div>
 
-                <div className="filter-group">
-                  <label>Minimum Rating</label>
+          {/* ── Filter Panel ── */}
+          {showFilters && (
+            <div className="cfp-filter-panel">
+              <div className="cfp-fp-head">
+                <span className="cfp-fp-title">Filters</span>
+                <button className="cfp-fp-clear" onClick={clearFilters}>Clear All</button>
+              </div>
+              <div className="cfp-fp-grid">
+                <div className="cfp-fp-group">
+                  <label className="cfp-fp-label">Minimum Rating</label>
                   <select
+                    className="cfp-fp-select"
                     value={filters.minRating}
                     onChange={(e) => handleFilterChange('minRating', Number(e.target.value))}
                   >
@@ -1924,21 +1937,19 @@ const Providers = () => {
                     <option value="4.5">4.5+ Stars</option>
                   </select>
                 </div>
-
-                <div className="filter-group">
-                  <label>Maximum Distance: {filters.maxDistance} km</label>
+                <div className="cfp-fp-group">
+                  <label className="cfp-fp-label">Max Distance: {filters.maxDistance} km</label>
                   <input
-                    type="range"
-                    min="1"
-                    max="50"
+                    type="range" min="1" max="50"
+                    className="cfp-fp-range"
                     value={filters.maxDistance}
                     onChange={(e) => handleFilterChange('maxDistance', Number(e.target.value))}
                   />
                 </div>
-
-                <div className="filter-group">
-                  <label>Service Type</label>
+                <div className="cfp-fp-group">
+                  <label className="cfp-fp-label">Service Type</label>
                   <select
+                    className="cfp-fp-select"
                     value={filters.serviceType}
                     onChange={(e) => handleFilterChange('serviceType', e.target.value)}
                   >
@@ -1950,93 +1961,104 @@ const Providers = () => {
                   </select>
                 </div>
               </div>
-            )}
-
-            {/* Providers Grid */}
-            <div className="providers-grid">
-              {providersLoading ? (
-                <div className="loading-container">
-                  <LoadingSpinner size="large" />
-                </div>
-              ) : providersError ? (
-                <div className="no-bookings">
-                  <Package size={48} />
-                  <h3>Error Loading Providers</h3>
-                  <p>{providersError}</p>
-                  <button onClick={() => window.location.reload()} className="btn-clear">
-                    Retry
-                  </button>
-                </div>
-              ) : filteredProviders.length === 0 ? (
-                <div className="no-bookings">
-                  <Package size={48} />
-                  <h3>No providers found</h3>
-                  <p>Try adjusting your search criteria or filters.</p>
-                  <button onClick={clearFilters} className="btn-clear">
-                    Clear Filters
-                  </button>
-                </div>
-              ) : (
-                filteredProviders.map(provider => (
-                  <div 
-                    key={provider.id} 
-                    className="provider-card"
-                    onClick={() => openServiceTypePicker(provider)}
-                  >
-                    <div className="provider-image-container">
-                      <img 
-                        src={provider.image || '/wash1.jpg'} 
-                        alt={provider.name}
-                        className="provider-card-image"
-                        onError={(e) => { e.target.src = '/wash1.jpg'; }}
-                      />
-                      <div className="provider-status-tag">
-                        <span className="status-available">{provider.available ? 'Available' : 'Unavailable'}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="provider-card-content">
-                      <h3 className="provider-name">{provider.name}</h3>
-                      
-                      <div className="provider-rating">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star 
-                            key={star} 
-                            size={14} 
-                            fill={star <= Math.floor(provider.rating) ? "#fbbf24" : "none"}
-                            color="#fbbf24"
-                          />
-                        ))}
-                        <span>
-                          {provider.rating > 0 
-                            ? `${provider.rating.toFixed(1)} (${provider.reviews} reviews)` 
-                            : 'No reviews yet'}
-                        </span>
-                      </div>
-                      
-                      <p className="provider-description">
-                        {provider.description.length > 100 
-                          ? provider.description.substring(0, 100) + "..." 
-                          : provider.description
-                        }
-                      </p>
-                      
-                      <div className="provider-details">
-                        <div className="provider-detail-item">
-                          <MapPin size={14} />
-                          <span>{provider.distance} km</span>
-                        </div>
-                        <div className="provider-detail-item">
-                          <Package size={14} />
-                          <span>Rs {provider.priceRange}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
             </div>
-          </div>
+          )}
+
+          {/* ── Grid ── */}
+          {providersLoading ? (
+            <div className="cfp-loading">
+              <div className="cfp-spinner" />
+              <p>Loading providers…</p>
+            </div>
+          ) : providersError ? (
+            <div className="cfp-empty">
+              <Package size={48} />
+              <h3>Error loading providers</h3>
+              <p>{providersError}</p>
+              <button className="cfp-retry-btn" onClick={() => window.location.reload()}>Retry</button>
+            </div>
+          ) : filteredProviders.length === 0 ? (
+            <div className="cfp-empty">
+              <Package size={48} />
+              <h3>No providers found</h3>
+              <p>Try adjusting your search or filters.</p>
+              <button className="cfp-retry-btn" onClick={clearFilters}>Clear Filters</button>
+            </div>
+          ) : (
+            <div className="cfp-grid">
+              {filteredProviders.map(provider => (
+                <div
+                  key={provider.id}
+                  className="cfp-card"
+                  onClick={() => openServiceTypePicker(provider)}
+                >
+                  {/* Image */}
+                  <div className="cfp-card-img-wrap">
+                    <img
+                      src={provider.image || '/wash1.jpg'}
+                      alt={provider.name}
+                      className="cfp-card-img"
+                      onError={(e) => { e.target.src = '/wash1.jpg'; }}
+                    />
+                    <span className={`cfp-avail-badge${provider.available ? '' : ' cfp-unavail'}`}>
+                      {provider.available ? 'Available' : 'Unavailable'}
+                    </span>
+                    {provider.rating >= 4.5 && (
+                      <span className="cfp-top-badge">Top Rated</span>
+                    )}
+                  </div>
+
+                  {/* Body */}
+                  <div className="cfp-card-body">
+                    <h3 className="cfp-card-name">{provider.name}</h3>
+
+                    <div className="cfp-card-rating">
+                      {[1,2,3,4,5].map(s => (
+                        <Star
+                          key={s}
+                          size={13}
+                          fill={s <= Math.round(provider.rating) ? '#f59e0b' : 'none'}
+                          color={s <= Math.round(provider.rating) ? '#f59e0b' : '#d1d5db'}
+                        />
+                      ))}
+                      <span className="cfp-rating-num">
+                        {provider.rating > 0
+                          ? `${provider.rating.toFixed(1)} (${provider.reviews})`
+                          : 'No reviews yet'}
+                      </span>
+                    </div>
+
+                    <p className="cfp-card-desc">
+                      {provider.description.length > 90
+                        ? provider.description.slice(0, 90) + '…'
+                        : provider.description}
+                    </p>
+
+                    {provider.specialties?.length > 0 && (
+                      <div className="cfp-chips">
+                        {provider.specialties.slice(0, 3).map((sp, i) => (
+                          <span key={i} className="cfp-chip">{sp}</span>
+                        ))}
+                        {provider.specialties.length > 3 && (
+                          <span className="cfp-chip cfp-chip-more">+{provider.specialties.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="cfp-card-meta">
+                      <span className="cfp-meta-item"><MapPin size={12} /> {provider.distance} km</span>
+                      <span className="cfp-meta-item"><Package size={12} /> Rs {provider.priceRange}</span>
+                    </div>
+
+                    <button className="cfp-book-btn">
+                      Book Service
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
       </div>
       <CartButton />

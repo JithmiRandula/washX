@@ -1,260 +1,325 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AdminNavbar from '../../components/AdminNavbar/AdminNavbar';
-import { Users, Shield, Package, TrendingUp, Clock, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
+import { adminApi } from '../../api/adminApi';
+import {
+  Users, Shield, Package, TrendingUp,
+  Clock, CheckCircle, XCircle, DollarSign,
+  ArrowRight, Star, BarChart2
+} from 'lucide-react';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalProviders: 0,
-    totalOrders: 0,
-    monthlyRevenue: 0,
-    pendingProviders: 0,
-    activeOrders: 0,
+    totalUsers:      0,
+    totalProviders:  0,
+    totalOrders:     0,
+    monthlyRevenue:  0,
+    activeOrders:    0,
     completedOrders: 0,
-    cancelledOrders: 0
+    cancelledOrders: 0,
+    pendingOrders:   0,
+    totalRevenue:    0,
+    totalReviews:    0,
   });
-  
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data - replace with actual API calls
-    setStats({
-      totalUsers: 1234,
-      totalProviders: 56,
-      totalOrders: 892,
-      monthlyRevenue: 12456.78,
-      pendingProviders: 8,
-      activeOrders: 23,
-      completedOrders: 756,
-      cancelledOrders: 37
-    });
-
-    setRecentActivity([
-      {
-        id: 1,
-        type: 'user_registration',
-        message: 'New user registration: John Doe',
-        timestamp: '2 hours ago',
-        icon: Users,
-        color: '#1e3a8a'
-      },
-      {
-        id: 2,
-        type: 'provider_approval',
-        message: 'Provider approved: CleanPro Services',
-        timestamp: '4 hours ago',
-        icon: Shield,
-        color: '#1e3a8a'
-      },
-      {
-        id: 3,
-        type: 'order_completed',
-        message: 'Booking completed: Order #WX24001',
-        timestamp: '6 hours ago',
-        icon: CheckCircle,
-        color: '#1e3a8a'
-      },
-      {
-        id: 4,
-        type: 'provider_pending',
-        message: 'New provider application: QuickWash Express',
-        timestamp: '8 hours ago',
-        icon: Clock,
-        color: '#1e3a8a'
-      },
-      {
-        id: 5,
-        type: 'order_cancelled',
-        message: 'Order cancelled: #WX24003',
-        timestamp: '1 day ago',
-        icon: AlertCircle,
-        color: '#1e3a8a'
+    const load = async () => {
+      try {
+        const res = await adminApi.getStats();
+        const d = res?.data ?? {};
+        setStats({
+          totalUsers:      d.totalUsers      ?? d.TotalUsers      ?? 0,
+          totalProviders:  d.totalProviders  ?? d.TotalProviders  ?? 0,
+          totalOrders:     d.totalOrders     ?? d.TotalOrders     ?? 0,
+          monthlyRevenue:  Number(d.monthlyRevenue ?? d.MonthlyRevenue ?? 0),
+          activeOrders:    d.activeOrders    ?? d.ActiveOrders    ?? 0,
+          completedOrders: d.completedOrders ?? d.CompletedOrders ?? 0,
+          cancelledOrders: d.cancelledOrders ?? d.CancelledOrders ?? 0,
+          pendingOrders:   d.pendingOrders   ?? d.PendingOrders   ?? 0,
+          totalRevenue:    Number(d.totalRevenue ?? d.TotalRevenue ?? 0),
+          totalReviews:    d.totalReviews    ?? d.TotalReviews    ?? 0,
+        });
+      } catch (err) {
+        console.error('Failed to load dashboard stats:', err);
+      } finally {
+        setLoading(false);
       }
-    ]);
+    };
+    load();
   }, []);
 
-  const formatCurrency = (amount) => {
-    return `Rs ${amount.toLocaleString()}`;
-  };
+  const adminName =
+    user?.name ?? user?.firstName ?? user?.email?.split('@')[0] ?? 'Admin';
 
-  const StatCard = ({ title, value, icon: Icon, color, change }) => (
-    <div className="admin-stat-card">
-      <div className="admin-stat-icon" style={{ backgroundColor: `${color}20`, color: color }}>
-        <Icon size={32} />
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  const StatCard = ({ label, value, icon: Icon, accent, iconBg, iconColor, sub }) => (
+    <div className="adb-stat-card" style={{ borderLeftColor: accent }}>
+      <div className="adb-stat-icon" style={{ background: iconBg, color: iconColor }}>
+        <Icon size={22} />
       </div>
-      <div className="admin-stat-content">
-        <h3>{title}</h3>
-        <p className="admin-stat-number">{value}</p>
-        {change && (
-          <span className={`admin-stat-change ${change.type}`}>
-            {change.type === 'increase' ? '+' : ''}{change.value}%
-          </span>
-        )}
+      <div className="adb-stat-body">
+        <span className="adb-stat-num">{value}</span>
+        <span className="adb-stat-label">{label}</span>
+        {sub && <span className="adb-stat-sub">{sub}</span>}
       </div>
     </div>
   );
 
+  const orderPct = (count) =>
+    stats.totalOrders > 0 ? Math.round((count / stats.totalOrders) * 100) : 0;
+
   return (
-    <div className="admin-dashboard">
+    <div className="adb-page">
       <AdminNavbar />
-      
-      <div className="admin-content">
-        <div className="dashboard-header">
-          <h1>Dashboard Overview</h1>
-          <p>Welcome back, {user?.firstName}! Here's what's happening with your platform.</p>
-        </div>
 
-        <div className="admin-dashboard-stats">
-          <StatCard
-            title="Total Users"
-            value={stats.totalUsers.toLocaleString()}
-            icon={Users}
-            color="#1e3a8a"
-            change={{ type: 'increase', value: 12 }}
-          />
-          <StatCard
-            title="Active Providers"
-            value={stats.totalProviders}
-            icon={Shield}
-            color="#1e3a8a"
-            change={{ type: 'increase', value: 8 }}
-          />
-          <StatCard
-            title="Total Orders"
-            value={stats.totalOrders.toLocaleString()}
-            icon={Package}
-            color="#1e3a8a"
-            change={{ type: 'increase', value: 24 }}
-          />
-        </div>
+      <div className="adb-content">
 
-        <div className="dashboard-sections">
-          <div className="dashboard-row">
-            <div className="section recent-activity">
-              <div className="section-header">
-                <h2>Recent Activity</h2>
-                <span className="view-all">View All</span>
-              </div>
-              <div className="activity-list">
-                {recentActivity.map(activity => (
-                  <div key={activity.id} className="activity-item">
-                    <div className="activity-icon" style={{ backgroundColor: `${activity.color}20`, color: activity.color }}>
-                      <activity.icon size={16} />
-                    </div>
-                    <div className="activity-content">
-                      <span className="activity-message">{activity.message}</span>
-                      <span className="activity-time">{activity.timestamp}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="section order-summary">
-              <div className="section-header">
-                <h2>Order Summary</h2>
-                <span className="view-all">View Orders</span>
-              </div>
-              <div className="order-stats">
-                <div className="order-stat">
-                  <div className="order-stat-icon pending">
-                    <Clock size={20} />
-                  </div>
-                  <div className="order-stat-content">
-                    <span className="order-stat-number">{stats.activeOrders}</span>
-                    <span className="order-stat-label">Active Orders</span>
-                  </div>
-                </div>
-                <div className="order-stat">
-                  <div className="order-stat-icon completed">
-                    <CheckCircle size={20} />
-                  </div>
-                  <div className="order-stat-content">
-                    <span className="order-stat-number">{stats.completedOrders}</span>
-                    <span className="order-stat-label">Completed</span>
-                  </div>
-                </div>
-                <div className="order-stat">
-                  <div className="order-stat-icon cancelled">
-                    <AlertCircle size={20} />
-                  </div>
-                  <div className="order-stat-content">
-                    <span className="order-stat-number">{stats.cancelledOrders}</span>
-                    <span className="order-stat-label">Cancelled</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="adb-header">
+          <div>
+            <h1 className="adb-title">Dashboard Overview</h1>
+            <p className="adb-welcome">
+              Welcome back, <strong>{adminName}</strong>! Here&apos;s what&apos;s happening on your platform.
+            </p>
           </div>
-
-          <div className="dashboard-row">
-            <div className="section pending-approvals">
-              <div className="section-header">
-                <h2>Pending Approvals</h2>
-                <span className="view-all">View All</span>
-              </div>
-              <div className="approval-list">
-                <div className="approval-item">
-                  <div className="approval-info">
-                    <span className="approval-title">QuickWash Express</span>
-                    <span className="approval-subtitle">Provider Application</span>
-                  </div>
-                  <div className="approval-actions">
-                    <button className="approve-btn">Approve</button>
-                    <button className="reject-btn">Reject</button>
-                  </div>
-                </div>
-                <div className="approval-item">
-                  <div className="approval-info">
-                    <span className="approval-title">Premium Cleaners</span>
-                    <span className="approval-subtitle">Document Verification</span>
-                  </div>
-                  <div className="approval-actions">
-                    <button className="approve-btn">Approve</button>
-                    <button className="reject-btn">Reject</button>
-                  </div>
-                </div>
-                <div className="approval-item">
-                  <div className="approval-info">
-                    <span className="approval-title">Eco Clean Services</span>
-                    <span className="approval-subtitle">Provider Registration</span>
-                  </div>
-                  <div className="approval-actions">
-                    <button className="approve-btn">Approve</button>
-                    <button className="reject-btn">Reject</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="section quick-actions">
-              <div className="section-header">
-                <h2>Quick Actions</h2>
-              </div>
-              <div className="action-grid">
-                <button className="action-btn users">
-                  <Users size={20} />
-                  <span>Manage Users</span>
-                </button>
-                <button className="action-btn providers">
-                  <Shield size={20} />
-                  <span>Manage Providers</span>
-                </button>
-                <button className="action-btn orders">
-                  <Package size={20} />
-                  <span>View Orders</span>
-                </button>
-                <button className="action-btn analytics">
-                  <TrendingUp size={20} />
-                  <span>Analytics</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          <div className="adb-date-badge">{today}</div>
         </div>
+
+        {/* Stat Cards — row 1 */}
+        {loading ? (
+          <div className="adb-loading">
+            <div className="adb-spinner" />
+            <p>Loading stats…</p>
+          </div>
+        ) : (
+          <>
+            <div className="adb-stats-grid">
+              <StatCard
+                label="Total Users"
+                value={stats.totalUsers.toLocaleString()}
+                icon={Users}
+                accent="#1d4ed8"
+                iconBg="#dbeafe"
+                iconColor="#1d4ed8"
+              />
+              <StatCard
+                label="Active Providers"
+                value={stats.totalProviders.toLocaleString()}
+                icon={Shield}
+                accent="#0369a1"
+                iconBg="#e0f2fe"
+                iconColor="#0369a1"
+              />
+              <StatCard
+                label="Total Orders"
+                value={stats.totalOrders.toLocaleString()}
+                icon={Package}
+                accent="#0284c7"
+                iconBg="#f0f9ff"
+                iconColor="#0284c7"
+              />
+              <StatCard
+                label="Monthly Revenue"
+                value={`Rs ${stats.monthlyRevenue.toLocaleString()}`}
+                icon={TrendingUp}
+                accent="#059669"
+                iconBg="#ecfdf5"
+                iconColor="#059669"
+              />
+              <StatCard
+                label="Total Revenue"
+                value={`Rs ${stats.totalRevenue.toLocaleString()}`}
+                icon={DollarSign}
+                accent="#0f172a"
+                iconBg="#f1f5f9"
+                iconColor="#0f172a"
+              />
+              <StatCard
+                label="Total Reviews"
+                value={stats.totalReviews.toLocaleString()}
+                icon={Star}
+                accent="#d97706"
+                iconBg="#fffbeb"
+                iconColor="#d97706"
+              />
+            </div>
+
+            {/* Lower Sections */}
+            <div className="adb-lower">
+
+              {/* Order Status Breakdown */}
+              <div className="adb-section">
+                <div className="adb-section-head">
+                  <div className="adb-section-title">
+                    <BarChart2 size={18} />
+                    Order Status Breakdown
+                  </div>
+                  <button className="adb-link" onClick={() => navigate('/admin/orders')}>
+                    View Orders <ArrowRight size={14} />
+                  </button>
+                </div>
+
+                <div className="adb-order-rows">
+                  <div className="adb-order-row">
+                    <div className="adb-order-meta">
+                      <span className="adb-order-dot adb-dot-amber" />
+                      <span className="adb-order-name">Pending</span>
+                    </div>
+                    <div className="adb-order-bar-wrap">
+                      <div
+                        className="adb-order-bar adb-bar-amber"
+                        style={{ width: `${orderPct(stats.pendingOrders)}%` }}
+                      />
+                    </div>
+                    <span className="adb-order-count">{stats.pendingOrders}</span>
+                  </div>
+
+                  <div className="adb-order-row">
+                    <div className="adb-order-meta">
+                      <span className="adb-order-dot adb-dot-sky" />
+                      <span className="adb-order-name">Active</span>
+                    </div>
+                    <div className="adb-order-bar-wrap">
+                      <div
+                        className="adb-order-bar adb-bar-sky"
+                        style={{ width: `${orderPct(stats.activeOrders)}%` }}
+                      />
+                    </div>
+                    <span className="adb-order-count">{stats.activeOrders}</span>
+                  </div>
+
+                  <div className="adb-order-row">
+                    <div className="adb-order-meta">
+                      <span className="adb-order-dot adb-dot-green" />
+                      <span className="adb-order-name">Completed</span>
+                    </div>
+                    <div className="adb-order-bar-wrap">
+                      <div
+                        className="adb-order-bar adb-bar-green"
+                        style={{ width: `${orderPct(stats.completedOrders)}%` }}
+                      />
+                    </div>
+                    <span className="adb-order-count">{stats.completedOrders}</span>
+                  </div>
+
+                  <div className="adb-order-row">
+                    <div className="adb-order-meta">
+                      <span className="adb-order-dot adb-dot-red" />
+                      <span className="adb-order-name">Cancelled</span>
+                    </div>
+                    <div className="adb-order-bar-wrap">
+                      <div
+                        className="adb-order-bar adb-bar-red"
+                        style={{ width: `${orderPct(stats.cancelledOrders)}%` }}
+                      />
+                    </div>
+                    <span className="adb-order-count">{stats.cancelledOrders}</span>
+                  </div>
+                </div>
+
+                {/* Order totals strip */}
+                <div className="adb-order-totals">
+                  <div className="adb-ot-item">
+                    <Clock size={16} className="adb-ot-icon adb-ot-amber" />
+                    <span className="adb-ot-num">{stats.pendingOrders}</span>
+                    <span className="adb-ot-lbl">Pending</span>
+                  </div>
+                  <div className="adb-ot-div" />
+                  <div className="adb-ot-item">
+                    <CheckCircle size={16} className="adb-ot-icon adb-ot-green" />
+                    <span className="adb-ot-num">{stats.completedOrders}</span>
+                    <span className="adb-ot-lbl">Completed</span>
+                  </div>
+                  <div className="adb-ot-div" />
+                  <div className="adb-ot-item">
+                    <XCircle size={16} className="adb-ot-icon adb-ot-red" />
+                    <span className="adb-ot-num">{stats.cancelledOrders}</span>
+                    <span className="adb-ot-lbl">Cancelled</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="adb-section">
+                <div className="adb-section-head">
+                  <div className="adb-section-title">
+                    <ArrowRight size={18} />
+                    Quick Actions
+                  </div>
+                </div>
+
+                <div className="adb-quick-grid">
+                  <button className="adb-quick-btn adb-qb-blue" onClick={() => navigate('/admin/users')}>
+                    <div className="adb-qb-icon"><Users size={22} /></div>
+                    <span className="adb-qb-label">Manage Users</span>
+                    <span className="adb-qb-sub">{stats.totalUsers} registered</span>
+                  </button>
+
+                  <button className="adb-quick-btn adb-qb-sky" onClick={() => navigate('/admin/providers')}>
+                    <div className="adb-qb-icon"><Shield size={22} /></div>
+                    <span className="adb-qb-label">Manage Providers</span>
+                    <span className="adb-qb-sub">{stats.totalProviders} active</span>
+                  </button>
+
+                  <button className="adb-quick-btn adb-qb-indigo" onClick={() => navigate('/admin/orders')}>
+                    <div className="adb-qb-icon"><Package size={22} /></div>
+                    <span className="adb-qb-label">View Orders</span>
+                    <span className="adb-qb-sub">{stats.totalOrders} total</span>
+                  </button>
+
+                  <button className="adb-quick-btn adb-qb-darkblue" onClick={() => navigate('/admin/orders')}>
+                    <div className="adb-qb-icon"><TrendingUp size={22} /></div>
+                    <span className="adb-qb-label">Revenue</span>
+                    <span className="adb-qb-sub">Rs {stats.totalRevenue.toLocaleString()}</span>
+                  </button>
+                </div>
+
+                {/* Platform snapshot */}
+                <div className="adb-snapshot">
+                  <h4 className="adb-snap-title">Platform Snapshot</h4>
+                  <div className="adb-snap-rows">
+                    <div className="adb-snap-row">
+                      <span>Order completion rate</span>
+                      <strong style={{ color: '#059669' }}>
+                        {stats.totalOrders > 0
+                          ? `${Math.round((stats.completedOrders / stats.totalOrders) * 100)}%`
+                          : '—'}
+                      </strong>
+                    </div>
+                    <div className="adb-snap-row">
+                      <span>Avg order value</span>
+                      <strong>
+                        {stats.completedOrders > 0
+                          ? `Rs ${Math.round(stats.totalRevenue / stats.completedOrders).toLocaleString()}`
+                          : '—'}
+                      </strong>
+                    </div>
+                    <div className="adb-snap-row">
+                      <span>Total reviews</span>
+                      <strong>{stats.totalReviews}</strong>
+                    </div>
+                    <div className="adb-snap-row">
+                      <span>Pending orders</span>
+                      <strong style={{ color: stats.pendingOrders > 0 ? '#d97706' : '#059669' }}>
+                        {stats.pendingOrders}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

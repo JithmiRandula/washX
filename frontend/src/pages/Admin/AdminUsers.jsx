@@ -1,270 +1,321 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import AdminNavbar from '../../components/AdminNavbar/AdminNavbar';
-import { Search, Filter, UserCheck, UserX, Eye, MoreVertical } from 'lucide-react';
+import { adminApi } from '../../api/adminApi';
+import {
+  Search, Filter, UserCheck, UserX, Users,
+  ChevronLeft, ChevronRight, ShoppingBag, Shield
+} from 'lucide-react';
 import './AdminUsers.css';
 
-const AdminUsers = () => {
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [loading, setLoading] = useState(true);
+const ITEMS_PER_PAGE = 8;
 
-  // Sample users data
+const roleColor = (role) => {
+  const r = (role || '').toLowerCase();
+  if (r === 'customer') return { bg: '#dbeafe', color: '#1d4ed8' };
+  if (r === 'provider') return { bg: '#e0f2fe', color: '#0369a1' };
+  return { bg: '#f3f4f6', color: '#6b7280' };
+};
+
+const avatarColor = (role) => {
+  const r = (role || '').toLowerCase();
+  if (r === 'customer') return '#1d4ed8';
+  if (r === 'provider') return '#0369a1';
+  return '#64748b';
+};
+
+const AdminUsers = () => {
+  const [users, setUsers]             = useState([]);
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [filterRole, setFilterRole]   = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading]         = useState(true);
+
   useEffect(() => {
-    const sampleUsers = [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1 234-567-8900',
-        status: 'active',
-        joinDate: '2025-01-15',
-        totalOrders: 12,
-        totalSpent: 450.50,
-        address: '123 Main St, City, State'
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        phone: '+1 234-567-8901',
-        status: 'active',
-        joinDate: '2025-01-10',
-        totalOrders: 8,
-        totalSpent: 320.75,
-        address: '456 Oak Ave, City, State'
-      },
-      {
-        id: '3',
-        name: 'Mike Johnson',
-        email: 'mike.johnson@example.com',
-        phone: '+1 234-567-8902',
-        status: 'suspended',
-        joinDate: '2024-12-20',
-        totalOrders: 5,
-        totalSpent: 180.25,
-        address: '789 Pine St, City, State'
-      },
-      {
-        id: '4',
-        name: 'Sarah Wilson',
-        email: 'sarah.wilson@example.com',
-        phone: '+1 234-567-8903',
-        status: 'active',
-        joinDate: '2025-01-05',
-        totalOrders: 15,
-        totalSpent: 675.00,
-        address: '321 Elm Dr, City, State'
-      },
-      {
-        id: '5',
-        name: 'David Brown',
-        email: 'david.brown@example.com',
-        phone: '+1 234-567-8904',
-        status: 'inactive',
-        joinDate: '2024-11-15',
-        totalOrders: 2,
-        totalSpent: 85.50,
-        address: '654 Maple Ave, City, State'
+    const loadUsers = async () => {
+      try {
+        const res = await adminApi.getUsers();
+        const data = (res?.data || []).map(u => ({
+          id:          u.userId      ?? u.UserId,
+          name:        u.name        ?? u.Name        ?? '',
+          email:       u.email       ?? u.Email       ?? '',
+          phone:       u.phone       ?? u.Phone       ?? '',
+          status:      'active',
+          joinDate:    u.createdAt   ?? u.CreatedAt   ?? '',
+          totalOrders: u.totalOrders ?? u.TotalOrders ?? 0,
+          totalSpent:  Number(u.totalSpent ?? u.TotalSpent ?? 0),
+          address:     u.address     ?? u.Address     ?? '',
+          role:        u.role        ?? u.Role        ?? ''
+        }));
+        setUsers(data);
+      } catch (err) {
+        console.error('Failed to load users:', err);
+      } finally {
+        setLoading(false);
       }
-    ];
-    
-    setTimeout(() => {
-      setUsers(sampleUsers);
-      setFilteredUsers(sampleUsers);
-      setLoading(false);
-    }, 500);
+    };
+    loadUsers();
   }, []);
 
-  // Filter users based on search and status
-  useEffect(() => {
-    let filtered = users;
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterRole]);
 
+  const filtered = useMemo(() => {
+    let list = users;
     if (searchTerm) {
-      filtered = filtered.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm)
+      const q = searchTerm.toLowerCase();
+      list = list.filter(u =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.phone.includes(q)
       );
     }
-
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(user => user.status === filterStatus);
+    if (filterRole !== 'all') {
+      list = list.filter(u => u.role.toLowerCase() === filterRole);
     }
+    return list;
+  }, [users, searchTerm, filterRole]);
 
-    setFilteredUsers(filtered);
-  }, [users, searchTerm, filterStatus]);
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage     = Math.min(currentPage, totalPages);
+  const startIdx     = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageUsers    = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
-  const handleSuspendUser = (userId) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, status: user.status === 'suspended' ? 'active' : 'suspended' }
-        : user
-    ));
+  const customers  = users.filter(u => u.role.toLowerCase() === 'customer').length;
+  const providers  = users.filter(u => u.role.toLowerCase() === 'provider').length;
+  const suspended  = users.filter(u => u.status === 'suspended').length;
+
+  const goTo = (p) => setCurrentPage(Math.max(1, Math.min(p, totalPages)));
+
+  const pageNumbers = () => {
+    const pages = [];
+    const delta = 1;
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= safePage - delta && i <= safePage + delta)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+    return pages;
   };
+
+  const handleSuspendUser = (userId) =>
+    setUsers(users.map(u =>
+      u.id === userId ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' } : u
+    ));
 
   const handleDeleteUser = (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(user => user.id !== userId));
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return '#10b981';
-      case 'suspended': return '#f59e0b';
-      case 'inactive': return '#6b7280';
-      default: return '#6b7280';
-    }
+    if (window.confirm('Are you sure you want to delete this user?'))
+      setUsers(users.filter(u => u.id !== userId));
   };
 
   return (
-    <div className="admin-page">
+    <div className="au-page">
       <AdminNavbar />
-      
-      <div className="admin-content">
-        <div className="admin-header">
+
+      <div className="au-content">
+        {/* Page Header */}
+        <div className="au-page-header">
           <div>
-            <h1>User Management</h1>
-            <p>Manage and monitor all registered users</p>
+            <h1 className="au-page-title">User Management</h1>
+            <p className="au-page-sub">Manage and monitor all registered users</p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="admin-stats-row">
-          <div className="admin-stat-card">
-            <div className="stat-content">
-              <h3>{users.filter(u => u.status === 'active').length}</h3>
-              <p>Active Users</p>
-            </div>
-            <div className="stat-icon active">
-              <UserCheck size={24} />
+        {/* Stat Cards */}
+        <div className="au-stats-grid">
+          <div className="au-stat-card au-stat-blue">
+            <div className="au-stat-icon"><Users size={22} /></div>
+            <div className="au-stat-body">
+              <span className="au-stat-num">{users.length}</span>
+              <span className="au-stat-label">Total Users</span>
             </div>
           </div>
-          <div className="admin-stat-card">
-            <div className="stat-content">
-              <h3>{users.filter(u => u.status === 'suspended').length}</h3>
-              <p>Suspended Users</p>
-            </div>
-            <div className="stat-icon warning">
-              <UserX size={24} />
+          <div className="au-stat-card au-stat-indigo">
+            <div className="au-stat-icon"><ShoppingBag size={22} /></div>
+            <div className="au-stat-body">
+              <span className="au-stat-num">{customers}</span>
+              <span className="au-stat-label">Customers</span>
             </div>
           </div>
-          <div className="admin-stat-card">
-            <div className="stat-content">
-              <h3>{users.length}</h3>
-              <p>Total Users</p>
+          <div className="au-stat-card au-stat-purple">
+            <div className="au-stat-icon"><Shield size={22} /></div>
+            <div className="au-stat-body">
+              <span className="au-stat-num">{providers}</span>
+              <span className="au-stat-label">Providers</span>
             </div>
-            <div className="stat-icon total">
-              <Eye size={24} />
+          </div>
+          <div className="au-stat-card au-stat-amber">
+            <div className="au-stat-icon"><UserX size={22} /></div>
+            <div className="au-stat-body">
+              <span className="au-stat-num">{suspended}</span>
+              <span className="au-stat-label">Suspended</span>
             </div>
           </div>
         </div>
 
-        {/* Search and Filter */}
-        <div className="admin-controls">
-          <div className="search-bar">
-            <Search size={20} />
+        {/* Controls */}
+        <div className="au-controls">
+          <div className="au-search">
+            <Search size={18} className="au-search-icon" />
             <input
               type="text"
-              placeholder="Search users by name, email, or phone..."
+              placeholder="Search by name, email or phone…"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="au-search-input"
             />
+            {searchTerm && (
+              <button className="au-clear-btn" onClick={() => setSearchTerm('')}>×</button>
+            )}
           </div>
-          
-          <div className="filter-controls">
-            <Filter size={20} />
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
+
+          <div className="au-filter-row">
+            <Filter size={16} className="au-filter-icon" />
+            <select
+              value={filterRole}
+              onChange={e => setFilterRole(e.target.value)}
+              className="au-filter-select"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">All Roles</option>
+              <option value="customer">Customers</option>
+              <option value="provider">Providers</option>
             </select>
           </div>
         </div>
 
-        {/* Users Table */}
-        <div className="admin-table-container">
+        {/* Table */}
+        <div className="au-table-card">
+          <div className="au-table-header">
+            <span className="au-table-count">
+              {filtered.length === 0
+                ? 'No users found'
+                : `Showing ${startIdx + 1}–${Math.min(startIdx + ITEMS_PER_PAGE, filtered.length)} of ${filtered.length} users`}
+            </span>
+          </div>
+
           {loading ? (
-            <div className="loading-state">Loading users...</div>
+            <div className="au-loading">
+              <div className="au-spinner" />
+              <p>Loading users…</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="au-empty">
+              <Users size={48} />
+              <h3>No users found</h3>
+              <p>Try adjusting your search or filters.</p>
+            </div>
           ) : (
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Contact</th>
-                  <th>Status</th>
-                  <th>Join Date</th>
-                  <th>Orders</th>
-                  <th>Total Spent</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <div className="user-info">
-                        <div className="user-avatar">
-                          {user.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <div className="user-name">{user.name}</div>
-                          <div className="user-email">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="contact-info">
-                        <div>{user.phone}</div>
-                        <div className="user-address">{user.address}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <span 
-                        className="status-badge" 
-                        style={{ backgroundColor: `${getStatusColor(user.status)}20`, color: getStatusColor(user.status) }}
-                      >
-                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                      </span>
-                    </td>
-                    <td>{new Date(user.joinDate).toLocaleDateString()}</td>
-                    <td>{user.totalOrders}</td>
-                    <td>Rs {user.totalSpent.toFixed(2)}</td>
-                    <td>
-                      <div className="admin-user-action-buttons">
-                        <button 
-                          className={`admin-user-action-btn ${user.status === 'suspended' ? 'activate' : 'suspend'}`}
-                          onClick={() => handleSuspendUser(user.id)}
-                          title={user.status === 'suspended' ? 'Activate User' : 'Suspend User'}
-                        >
-                          {user.status === 'suspended' ? <UserCheck size={14} /> : <UserX size={14} />}
-                        </button>
-                        <button 
-                          className="admin-user-action-btn delete"
-                          onClick={() => handleDeleteUser(user.id)}
-                          title="Delete User"
-                        >
-                          <UserX size={14} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="au-table-scroll">
+              <table className="au-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>User</th>
+                    <th>Contact</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Join Date</th>
+                    <th>Orders</th>
+                    <th>Total Spent</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pageUsers.map((user, idx) => {
+                    const rc = roleColor(user.role);
+                    const ac = avatarColor(user.role);
+                    return (
+                      <tr key={user.id} className="au-tr">
+                        <td className="au-td au-td-num">{startIdx + idx + 1}</td>
+                        <td className="au-td">
+                          <div className="au-user-cell">
+                            <div className="au-avatar" style={{ background: ac }}>
+                              {user.name.trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="au-user-name">{user.name}</div>
+                              <div className="au-user-email">{user.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="au-td">
+                          <div className="au-user-phone">{user.phone || '—'}</div>
+                          {user.address && <div className="au-user-addr">{user.address}</div>}
+                        </td>
+                        <td className="au-td">
+                          <span className="au-role-badge" style={{ background: rc.bg, color: rc.color }}>
+                            {user.role
+                              ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()
+                              : '—'}
+                          </span>
+                        </td>
+                        <td className="au-td">
+                          <span className={`au-status-badge au-status-${user.status}`}>
+                            {user.status === 'active' ? '● Active' : user.status === 'suspended' ? '● Suspended' : '● Inactive'}
+                          </span>
+                        </td>
+                        <td className="au-td au-td-date">
+                          {user.joinDate ? new Date(user.joinDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="au-td au-td-center">{user.totalOrders}</td>
+                        <td className="au-td au-td-money">Rs {user.totalSpent.toFixed(2)}</td>
+                        <td className="au-td">
+                          <div className="au-actions">
+                            <button
+                              className={`au-act-btn ${user.status === 'suspended' ? 'au-act-activate' : 'au-act-suspend'}`}
+                              onClick={() => handleSuspendUser(user.id)}
+                              title={user.status === 'suspended' ? 'Activate' : 'Suspend'}
+                            >
+                              {user.status === 'suspended' ? <UserCheck size={14} /> : <UserX size={14} />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
 
-          {!loading && filteredUsers.length === 0 && (
-            <div className="empty-state">
-              <Eye size={48} />
-              <h3>No users found</h3>
-              <p>No users match your current search and filter criteria.</p>
+          {/* Pagination */}
+          {!loading && filtered.length > ITEMS_PER_PAGE && (
+            <div className="au-pagination">
+              <span className="au-page-info">
+                Page {safePage} of {totalPages}
+              </span>
+              <div className="au-page-btns">
+                <button
+                  className="au-page-btn au-page-nav"
+                  onClick={() => goTo(safePage - 1)}
+                  disabled={safePage === 1}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {pageNumbers().map((p, i) =>
+                  p === '...' ? (
+                    <span key={`dots-${i}`} className="au-page-dots">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      className={`au-page-btn ${p === safePage ? 'au-page-active' : ''}`}
+                      onClick={() => goTo(p)}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+
+                <button
+                  className="au-page-btn au-page-nav"
+                  onClick={() => goTo(safePage + 1)}
+                  disabled={safePage === totalPages}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           )}
         </div>

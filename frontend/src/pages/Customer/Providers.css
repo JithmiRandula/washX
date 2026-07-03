@@ -1705,3 +1705,448 @@
     display: none;
   }
 }
+
+/* ================================================================
+   CFP — Customer Find Providers (unique prefix: cfp-)
+   ================================================================ */
+.cfp-page {
+  min-height: 100vh;
+  background: #f1f5f9;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.cfp-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+}
+
+/* ── Header ── */
+.cfp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.cfp-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 5px;
+}
+
+.cfp-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.cfp-header-meta { align-self: center; }
+
+.cfp-count {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+}
+
+/* ── Controls ── */
+.cfp-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cfp-search {
+  flex: 1;
+  min-width: 220px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 14px;
+  transition: border-color 0.15s;
+}
+
+.cfp-search:focus-within {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(29,78,216,0.1);
+}
+
+.cfp-search-icon { color: #94a3b8; flex-shrink: 0; }
+
+.cfp-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #0f172a;
+  padding: 11px 10px;
+  background: transparent;
+  font-family: inherit;
+}
+
+.cfp-search-clear {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.cfp-sort-select {
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  color: #374151;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.cfp-sort-select:focus { border-color: #1d4ed8; }
+
+.cfp-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.cfp-filter-btn:hover  { border-color: #1d4ed8; color: #1d4ed8; }
+.cfp-filter-active     { background: #dbeafe; border-color: #1d4ed8; color: #1d4ed8; }
+
+/* ── Filter Panel ── */
+.cfp-filter-panel {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 22px 22px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  margin-bottom: 20px;
+  border: 1.5px solid #e2e8f0;
+}
+
+.cfp-fp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cfp-fp-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cfp-fp-clear {
+  background: none;
+  border: none;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.cfp-fp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.cfp-fp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cfp-fp-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.cfp-fp-select {
+  padding: 9px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13.5px;
+  color: #374151;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.cfp-fp-select:focus { border-color: #1d4ed8; }
+
+.cfp-fp-range {
+  width: 100%;
+  accent-color: #1d4ed8;
+  cursor: pointer;
+}
+
+/* ── Loading / Empty ── */
+.cfp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  gap: 16px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.cfp-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #1d4ed8;
+  border-radius: 50%;
+  animation: cfp-spin 0.7s linear infinite;
+}
+
+@keyframes cfp-spin { to { transform: rotate(360deg); } }
+
+.cfp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 24px;
+  gap: 10px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  text-align: center;
+  color: #94a3b8;
+}
+
+.cfp-empty h3 { font-size: 18px; color: #475569; margin: 0; }
+.cfp-empty p  { font-size: 14px; margin: 0; }
+
+.cfp-retry-btn {
+  margin-top: 8px;
+  padding: 9px 20px;
+  background: #1d4ed8;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cfp-retry-btn:hover { background: #1e40af; }
+
+/* ── Provider Grid ── */
+.cfp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* ── Provider Card ── */
+.cfp-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s;
+  display: flex;
+  flex-direction: column;
+}
+
+.cfp-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* Image */
+.cfp-card-img-wrap {
+  position: relative;
+  height: 195px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.cfp-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s;
+}
+
+.cfp-card:hover .cfp-card-img { transform: scale(1.04); }
+
+.cfp-avail-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 20px;
+  border: 1.5px solid #a7f3d0;
+}
+
+.cfp-unavail {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.cfp-top-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 20px;
+}
+
+/* Body */
+.cfp-card-body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.cfp-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.cfp-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cfp-rating-num {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-left: 5px;
+}
+
+.cfp-card-desc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Category chips */
+.cfp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cfp-chip {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cfp-chip-more {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+/* Meta row */
+.cfp-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.cfp-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.cfp-meta-item svg { color: #1d4ed8; }
+
+/* Book button */
+.cfp-book-btn {
+  margin-top: auto;
+  padding-top: 14px;
+  width: 100%;
+  background: #1d4ed8;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.cfp-book-btn:hover {
+  background: #1e40af;
+  transform: translateY(-1px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .cfp-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .cfp-content { padding: 16px 12px 40px; }
+  .cfp-header  { flex-direction: column; }
+  .cfp-grid    { grid-template-columns: 1fr; gap: 14px; }
+  .cfp-controls { flex-direction: column; }
+  .cfp-search  { min-width: unset; width: 100%; }
+  .cfp-fp-grid { grid-template-columns: 1fr; }
+}

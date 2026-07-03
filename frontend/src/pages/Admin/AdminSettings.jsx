@@ -1,234 +1,274 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import AdminNavbar from '../../components/AdminNavbar/AdminNavbar';
-import { Settings, User, Shield, Bell, Database, Mail, Globe, Lock } from 'lucide-react';
+import {
+  Settings, User, Shield, Bell, Database,
+  Mail, Globe, Lock, Save, CheckCircle
+} from 'lucide-react';
 import './AdminSettings.css';
 
 const AdminSettings = () => {
   const [settings, setSettings] = useState({
-    siteName: 'WashX',
-    siteDescription: 'Premium Laundry & Dry Cleaning Services',
-    contactEmail: 'admin@washx.com',
-    supportPhone: '+94-11-234-5678',
-    currency: 'LKR',
-    timezone: 'Asia/Colombo',
-    emailNotifications: true,
-    smsNotifications: false,
+    siteName:             'WashX',
+    siteDescription:      'Premium Laundry & Dry Cleaning Services',
+    contactEmail:         'admin@washx.com',
+    supportPhone:         '+94-11-234-5678',
+    currency:             'LKR',
+    timezone:             'Asia/Colombo',
+    emailNotifications:   true,
+    smsNotifications:     false,
     autoApproveProviders: false,
-    maintenanceMode: false,
-    maxOrdersPerDay: 100,
-    commissionRate: 15
+    maintenanceMode:      false,
+    maxOrdersPerDay:      100,
+    commissionRate:       15,
   });
 
-  const handleInputChange = (field, value) => {
+  const [saved, setSaved] = useState(false);
+
+  const set = (field, value) =>
     setSettings(prev => ({ ...prev, [field]: value }));
-  };
 
   const handleSave = () => {
     console.log('Settings saved:', settings);
-    alert('Settings saved successfully!');
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
-  const SettingSection = ({ title, icon: Icon, children }) => (
-    <div className="setting-section">
-      <div className="section-header">
-        <h3>
-          <Icon size={20} />
-          {title}
-        </h3>
-      </div>
-      <div className="section-content">
-        {children}
-      </div>
+  /* ── Sub-components ── */
+  const Field = ({ label, children }) => (
+    <div className="ast-field">
+      <label className="ast-label">{label}</label>
+      {children}
     </div>
   );
 
-  const InputField = ({ label, value, onChange, type = 'text', placeholder }) => (
-    <div className="input-field">
-      <label>{label}</label>
+  const Input = ({ label, value, onChange, type = 'text', placeholder }) => (
+    <Field label={label}>
       <input
+        className="ast-input"
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
       />
-    </div>
+    </Field>
   );
 
-  const SelectField = ({ label, value, onChange, options }) => (
-    <div className="input-field">
-      <label>{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
+  const Select = ({ label, value, onChange, options }) => (
+    <Field label={label}>
+      <select className="ast-select" value={value} onChange={e => onChange(e.target.value)}>
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 
-  const ToggleField = ({ label, value, onChange, description }) => (
-    <div className="toggle-field">
-      <div className="toggle-info">
-        <label>{label}</label>
-        {description && <span className="description">{description}</span>}
+  const Toggle = ({ label, description, value, onChange }) => (
+    <div className={`ast-toggle-row ${value ? 'ast-toggle-on' : ''}`}>
+      <div className="ast-toggle-text">
+        <span className="ast-toggle-label">{label}</span>
+        {description && <span className="ast-toggle-desc">{description}</span>}
       </div>
-      <label className="toggle-switch">
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span className="slider"></span>
+      <label className="ast-switch">
+        <input type="checkbox" checked={value} onChange={e => onChange(e.target.checked)} />
+        <span className="ast-thumb" />
       </label>
     </div>
   );
 
+  const Section = ({ title, icon: Icon, accent, children }) => (
+    <div className="ast-section" style={{ borderTopColor: accent }}>
+      <div className="ast-section-head">
+        <div className="ast-section-icon" style={{ background: `${accent}18`, color: accent }}>
+          <Icon size={18} />
+        </div>
+        <h3 className="ast-section-title">{title}</h3>
+      </div>
+      <div className="ast-section-body">{children}</div>
+    </div>
+  );
+
   return (
-    <div className="admin-settings">
+    <div className="ast-page">
       <AdminNavbar />
-      
-      <div className="admin-content">
-        <div className="page-header">
-          <h1>System Settings</h1>
-          <button className="save-btn" onClick={handleSave}>
-            Save Changes
+
+      <div className="ast-content">
+        {/* Header */}
+        <div className="ast-header">
+          <div>
+            <h1 className="ast-title">System Settings</h1>
+            <p className="ast-sub">Configure your WashX platform preferences</p>
+          </div>
+          <button className={`ast-save-btn ${saved ? 'ast-save-ok' : ''}`} onClick={handleSave}>
+            {saved ? <><CheckCircle size={16} /> Saved!</> : <><Save size={16} /> Save Changes</>}
           </button>
         </div>
 
-        <div className="settings-grid">
-          <SettingSection title="General Settings" icon={Settings}>
-            <InputField
+        {/* Toast */}
+        {saved && (
+          <div className="ast-toast">
+            <CheckCircle size={16} />
+            Settings saved successfully!
+          </div>
+        )}
+
+        <div className="ast-grid">
+
+          {/* General Settings */}
+          <Section title="General Settings" icon={Settings} accent="#1d4ed8">
+            <Input
               label="Site Name"
               value={settings.siteName}
-              onChange={(value) => handleInputChange('siteName', value)}
+              onChange={v => set('siteName', v)}
               placeholder="Enter site name"
             />
-            <InputField
+            <Input
               label="Site Description"
               value={settings.siteDescription}
-              onChange={(value) => handleInputChange('siteDescription', value)}
+              onChange={v => set('siteDescription', v)}
               placeholder="Enter site description"
             />
-            <SelectField
+            <Select
               label="Currency"
               value={settings.currency}
-              onChange={(value) => handleInputChange('currency', value)}
+              onChange={v => set('currency', v)}
               options={[
                 { value: 'LKR', label: 'Sri Lankan Rupee (LKR)' },
                 { value: 'USD', label: 'US Dollar (USD)' },
                 { value: 'EUR', label: 'Euro (EUR)' },
-                { value: 'GBP', label: 'British Pound (GBP)' }
+                { value: 'GBP', label: 'British Pound (GBP)' },
               ]}
             />
-            <SelectField
+            <Select
               label="Timezone"
               value={settings.timezone}
-              onChange={(value) => handleInputChange('timezone', value)}
+              onChange={v => set('timezone', v)}
               options={[
-                { value: 'Asia/Colombo', label: 'Sri Lanka Time' },
-                { value: 'America/New_York', label: 'Eastern Time' },
-                { value: 'America/Chicago', label: 'Central Time' },
-                { value: 'America/Los_Angeles', label: 'Pacific Time' },
-                { value: 'UTC', label: 'UTC' }
+                { value: 'Asia/Colombo',       label: 'Sri Lanka Time (UTC+5:30)' },
+                { value: 'America/New_York',   label: 'Eastern Time (UTC-5)' },
+                { value: 'America/Chicago',    label: 'Central Time (UTC-6)' },
+                { value: 'America/Los_Angeles',label: 'Pacific Time (UTC-8)' },
+                { value: 'UTC',                label: 'UTC' },
               ]}
             />
-          </SettingSection>
+          </Section>
 
-          <SettingSection title="Contact Information" icon={Mail}>
-            <InputField
+          {/* Contact Information */}
+          <Section title="Contact Information" icon={Mail} accent="#0284c7">
+            <Input
               label="Contact Email"
               value={settings.contactEmail}
-              onChange={(value) => handleInputChange('contactEmail', value)}
+              onChange={v => set('contactEmail', v)}
               type="email"
               placeholder="admin@example.com"
             />
-            <InputField
+            <Input
               label="Support Phone"
               value={settings.supportPhone}
-              onChange={(value) => handleInputChange('supportPhone', value)}
+              onChange={v => set('supportPhone', v)}
               type="tel"
-              placeholder="+1-800-000-0000"
+              placeholder="+94-11-234-5678"
             />
-          </SettingSection>
+            <div className="ast-info-box">
+              <Mail size={14} />
+              <span>These details appear on customer-facing pages and emails.</span>
+            </div>
+          </Section>
 
-          <SettingSection title="Business Settings" icon={Globe}>
-            <InputField
+          {/* Business Settings */}
+          <Section title="Business Settings" icon={Globe} accent="#0369a1">
+            <Input
               label="Commission Rate (%)"
               value={settings.commissionRate}
-              onChange={(value) => handleInputChange('commissionRate', parseInt(value))}
+              onChange={v => set('commissionRate', parseInt(v) || 0)}
               type="number"
               placeholder="15"
             />
-            <InputField
+            <Input
               label="Max Orders Per Day"
               value={settings.maxOrdersPerDay}
-              onChange={(value) => handleInputChange('maxOrdersPerDay', parseInt(value))}
+              onChange={v => set('maxOrdersPerDay', parseInt(v) || 0)}
               type="number"
               placeholder="100"
             />
-            <ToggleField
+            <Toggle
               label="Auto Approve Providers"
+              description="Automatically approve new provider applications without manual review"
               value={settings.autoApproveProviders}
-              onChange={(value) => handleInputChange('autoApproveProviders', value)}
-              description="Automatically approve new provider applications"
+              onChange={v => set('autoApproveProviders', v)}
             />
-          </SettingSection>
+          </Section>
 
-          <SettingSection title="Notifications" icon={Bell}>
-            <ToggleField
+          {/* Notifications */}
+          <Section title="Notifications" icon={Bell} accent="#d97706">
+            <Toggle
               label="Email Notifications"
+              description="Receive email alerts for new orders, registrations and issues"
               value={settings.emailNotifications}
-              onChange={(value) => handleInputChange('emailNotifications', value)}
-              description="Receive email notifications for important events"
+              onChange={v => set('emailNotifications', v)}
             />
-            <ToggleField
+            <Toggle
               label="SMS Notifications"
+              description="Receive SMS alerts for urgent platform events"
               value={settings.smsNotifications}
-              onChange={(value) => handleInputChange('smsNotifications', value)}
-              description="Receive SMS notifications for urgent matters"
+              onChange={v => set('smsNotifications', v)}
             />
-          </SettingSection>
+          </Section>
 
-          <SettingSection title="Security & Maintenance" icon={Lock}>
-            <ToggleField
+          {/* Security & Maintenance */}
+          <Section title="Security & Maintenance" icon={Lock} accent="#dc2626">
+            <Toggle
               label="Maintenance Mode"
+              description="Disable public access while you perform maintenance tasks"
               value={settings.maintenanceMode}
-              onChange={(value) => handleInputChange('maintenanceMode', value)}
-              description="Put the site in maintenance mode (users can't access)"
+              onChange={v => set('maintenanceMode', v)}
             />
-            <div className="security-actions">
-              <button className="security-btn">
-                <Database size={16} />
+            {settings.maintenanceMode && (
+              <div className="ast-warn-box">
+                <Shield size={14} />
+                <span>Maintenance mode is ON — the site is not accessible to regular users.</span>
+              </div>
+            )}
+            <div className="ast-action-row">
+              <button className="ast-action-btn">
+                <Database size={15} />
                 Backup Database
               </button>
-              <button className="security-btn">
-                <Shield size={16} />
-                View Security Logs
+              <button className="ast-action-btn">
+                <Shield size={15} />
+                Security Logs
               </button>
             </div>
-          </SettingSection>
+          </Section>
 
-          <SettingSection title="User Management" icon={User}>
-            <div className="user-stats">
-              <div className="stat-item">
-                <span className="stat-label">Total Users</span>
-                <span className="stat-value">1,234</span>
+          {/* User Management */}
+          <Section title="User Management" icon={User} accent="#059669">
+            <div className="ast-mini-stats">
+              <div className="ast-mini-stat ast-ms-blue">
+                <span className="ast-ms-num">19</span>
+                <span className="ast-ms-lbl">Total Users</span>
               </div>
-              <div className="stat-item">
-                <span className="stat-label">Active Providers</span>
-                <span className="stat-value">56</span>
+              <div className="ast-mini-stat ast-ms-sky">
+                <span className="ast-ms-num">6</span>
+                <span className="ast-ms-lbl">Providers</span>
               </div>
-              <div className="stat-item">
-                <span className="stat-label">Pending Approvals</span>
-                <span className="stat-value">8</span>
+              <div className="ast-mini-stat ast-ms-amber">
+                <span className="ast-ms-num">5</span>
+                <span className="ast-ms-lbl">Pending</span>
               </div>
             </div>
-            <div className="user-actions">
-              <button className="action-btn">Export User Data</button>
-              <button className="action-btn">Send Bulk Email</button>
+            <div className="ast-action-row">
+              <button className="ast-action-btn">
+                <Database size={15} />
+                Export User Data
+              </button>
+              <button className="ast-action-btn">
+                <Mail size={15} />
+                Send Bulk Email
+              </button>
             </div>
-          </SettingSection>
+          </Section>
+
         </div>
       </div>
     </div>

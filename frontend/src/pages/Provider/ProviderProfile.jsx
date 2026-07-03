@@ -1,382 +1,212 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { MapPin, Camera, Edit, Save, X, Clock, Phone, Mail, Star, Upload } from 'lucide-react';
+import {
+  MapPin, Camera, Edit2, Save, X, Clock, Phone, Mail,
+  Star, Building2, FileText, ShieldCheck, AlertCircle, RefreshCw
+} from 'lucide-react';
 import './ProviderProfile.css';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
+const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+const DAY_LABELS = {
+  monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday',
+  thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday'
+};
+
+const DEFAULT_HOURS = { open: '09:00', close: '18:00', closed: false };
+
 const ProviderProfile = () => {
   const { providerId } = useParams();
-  const { user } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [saveLoading, setSaveLoading] = useState(false);
-  const fileInputRef = useRef(null);
-  const [profile, setProfile] = useState(null);
+  const { user }       = useAuth();
+
+  const [profile,     setProfile]     = useState(null);
   const [tempProfile, setTempProfile] = useState(null);
+  const [isEditing,   setIsEditing]   = useState(false);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [uploading,   setUploading]   = useState(false);
+  const [toast,       setToast]       = useState(null);
+  const fileInputRef = useRef(null);
 
-  // Fetch provider profile on mount
-  useEffect(() => {
-    if (providerId) {
-      fetchProviderProfile();
-    }
-  }, [providerId]);
+  useEffect(() => { if (providerId) fetchProfile(); }, [providerId]);
 
-  const fetchProviderProfile = async () => {
-    if (!providerId) {
-      console.error('Provider ID is missing');
-      setError('Provider ID is missing. Please login again.');
-      setLoading(false);
-      return;
-    }
-    
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const fetchProfile = async () => {
+    if (!providerId) { setError('Provider ID missing.'); setLoading(false); return; }
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/providers/${providerId}`);
-      
-      if (response.data.success && response.data.data) {
-        const providerData = response.data.data;
-        
-        // Transform data to match our state structure
-        const formattedProfile = {
-          businessName: providerData.businessName || '',
-          ownerName: providerData.name || user?.name || '',
-          email: providerData.email || user?.email || '',
-          phone: providerData.phone || '',
-          address: providerData.businessAddress || '',
-          city: '',
-          zipCode: '',
-          state: '',
-          latitude: Number(providerData.latitude ?? 0),
-          longitude: Number(providerData.longitude ?? 0),
+      const res = await api.get(`/providers/${providerId}`);
+      if (res.data.success && res.data.data) {
+        const d = res.data.data;
+        const formatted = {
+          businessName:    d.businessName || '',
+          ownerName:       d.name || user?.name || '',
+          email:           d.email || user?.email || '',
+          phone:           d.phone || '',
+          address:         d.businessAddress || '',
+          city:            d.city || '',
+          zipCode:         d.zipCode || '',
+          state:           d.state || '',
+          latitude:        Number(d.latitude ?? 0),
+          longitude:       Number(d.longitude ?? 0),
+          description:     d.description || '',
+          businessLicense: d.businessLicense || '',
+          services:        d.services || [],
+          rating:          Number(d.rating ?? 0),
+          totalReviews:    d.totalReviews || 0,
+          logoUrl:         d.images?.length ? d.images[0] : null,
           businessHours: {
-            monday: {
-              open: '09:00',
-              close: '18:00',
-              closed: false
-            },
-            tuesday: {
-              open: '09:00',
-              close: '18:00',
-              closed: false
-            },
-            wednesday: {
-              open: '09:00',
-              close: '18:00',
-              closed: false
-            },
-            thursday: {
-              open: '09:00',
-              close: '18:00',
-              closed: false
-            },
-            friday: {
-              open: '09:00',
-              close: '18:00',
-              closed: false
-            },
-            saturday: {
-              open: '09:00',
-              close: '18:00',
-              closed: false
-            },
-            sunday: {
-              open: '',
-              close: '',
-              closed: true
-            }
+            monday:    { open: '09:00', close: '18:00', closed: false },
+            tuesday:   { open: '09:00', close: '18:00', closed: false },
+            wednesday: { open: '09:00', close: '18:00', closed: false },
+            thursday:  { open: '09:00', close: '18:00', closed: false },
+            friday:    { open: '09:00', close: '18:00', closed: false },
+            saturday:  { open: '09:00', close: '18:00', closed: false },
+            sunday:    { open: '',      close: '',       closed: true  },
           },
-          description: providerData.description || '',
-          businessLicense: providerData.businessLicense || '',
-          services: providerData.services || [], // Add services array
-          rating: Number(providerData.rating ?? 0),
-          totalReviews: 0,
-          logoUrl: providerData.images && providerData.images.length > 0 
-            ? providerData.images[0] // Cloudinary returns full URL
-            : null
         };
-        
-        setProfile(formattedProfile);
-        setTempProfile(formattedProfile);
+        setProfile(formatted);
+        setTempProfile(formatted);
       } else {
-        setError('Failed to load profile data');
+        setError('Failed to load profile data.');
       }
-    } catch (error) {
-      console.error('Error fetching provider profile:', error);
-      setError(error.response?.data?.message || 'Error loading profile data. Please try again.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error loading profile. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = () => {
-    setTempProfile(profile);
-    setIsEditing(true);
+  const handleEdit   = () => { setTempProfile(profile); setIsEditing(true); };
+  const handleCancel = () => { setTempProfile(profile); setIsEditing(false); };
+
+  const handleInputChange = (field, value) =>
+    setTempProfile(p => ({ ...p, [field]: value }));
+
+  const handleHoursChange = (day, field, value) => {
+    setTempProfile(p => {
+      const updated = { ...p.businessHours[day], [field]: value };
+      if (field === 'closed' && value)  { updated.open = ''; updated.close = ''; }
+      if (field === 'closed' && !value) {
+        if (!updated.open)  updated.open  = '09:00';
+        if (!updated.close) updated.close = '18:00';
+      }
+      return { ...p, businessHours: { ...p.businessHours, [day]: updated } };
+    });
   };
 
   const handleSave = async () => {
+    setSaveLoading(true);
     try {
-      setSaveLoading(true);
-      
-      // Validate required fields
-      const requiredFields = {
-        'Business Name': tempProfile.businessName,
-        'Description': tempProfile.description,
-        'Business License': tempProfile.businessLicense,
+      const required = {
+        'Business Name':  tempProfile.businessName,
+        'Description':    tempProfile.description,
         'Street Address': tempProfile.address,
-        'City': tempProfile.city,
-        'State': tempProfile.state,
-        'ZIP Code': tempProfile.zipCode,
-        'Phone': tempProfile.phone,
-        'Email': tempProfile.email
+        'Phone':          tempProfile.phone,
+        'Email':          tempProfile.email,
       };
-
-      const missingFields = Object.entries(requiredFields)
-        .filter(([_, value]) => !value || value.trim() === '')
-        .map(([field, _]) => field);
-
-      if (missingFields.length > 0) {
-        alert(`Please fill in the following required fields:\n- ${missingFields.join('\n- ')}`);
+      const missing = Object.entries(required)
+        .filter(([, v]) => !v?.trim())
+        .map(([k]) => k);
+      if (missing.length) {
+        showToast(`Please fill: ${missing.join(', ')}`, 'error');
         setSaveLoading(false);
         return;
       }
 
-      // Validate business hours for days that are not closed
-      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-      const invalidHours = [];
-      
-      days.forEach(day => {
-        const hours = tempProfile.businessHours[day];
-        if (!hours.closed) {
-          if (!hours.open || !hours.close) {
-            invalidHours.push(day.charAt(0).toUpperCase() + day.slice(1));
-          } else if (hours.open >= hours.close) {
-            invalidHours.push(`${day.charAt(0).toUpperCase() + day.slice(1)} (closing time must be after opening time)`);
-          }
-        }
-      });
-
-      if (invalidHours.length > 0) {
-        alert(`Please fix the following business hours:\n- ${invalidHours.join('\n- ')}`);
-        setSaveLoading(false);
-        return;
-      }
-      
-      // Transform data back to API format
-      const updateData = {
-        businessName: tempProfile.businessName,
-        description: tempProfile.description,
+      const payload = {
+        businessName:    tempProfile.businessName,
+        description:     tempProfile.description,
         businessLicense: tempProfile.businessLicense,
         address: {
-          street: tempProfile.address,
-          city: tempProfile.city,
-          state: tempProfile.state,
+          street:  tempProfile.address,
+          city:    tempProfile.city,
+          state:   tempProfile.state,
           zipCode: tempProfile.zipCode,
-          coordinates: {
-            lat: tempProfile.latitude,
-            lng: tempProfile.longitude
-          }
+          coordinates: { lat: tempProfile.latitude, lng: tempProfile.longitude },
         },
         phone: tempProfile.phone,
         email: tempProfile.email,
-        operatingHours: {
-          monday: { 
-            open: tempProfile.businessHours.monday.closed ? '' : tempProfile.businessHours.monday.open, 
-            close: tempProfile.businessHours.monday.closed ? '' : tempProfile.businessHours.monday.close, 
-            isClosed: tempProfile.businessHours.monday.closed 
-          },
-          tuesday: { 
-            open: tempProfile.businessHours.tuesday.closed ? '' : tempProfile.businessHours.tuesday.open, 
-            close: tempProfile.businessHours.tuesday.closed ? '' : tempProfile.businessHours.tuesday.close, 
-            isClosed: tempProfile.businessHours.tuesday.closed 
-          },
-          wednesday: { 
-            open: tempProfile.businessHours.wednesday.closed ? '' : tempProfile.businessHours.wednesday.open, 
-            close: tempProfile.businessHours.wednesday.closed ? '' : tempProfile.businessHours.wednesday.close, 
-            isClosed: tempProfile.businessHours.wednesday.closed 
-          },
-          thursday: { 
-            open: tempProfile.businessHours.thursday.closed ? '' : tempProfile.businessHours.thursday.open, 
-            close: tempProfile.businessHours.thursday.closed ? '' : tempProfile.businessHours.thursday.close, 
-            isClosed: tempProfile.businessHours.thursday.closed 
-          },
-          friday: { 
-            open: tempProfile.businessHours.friday.closed ? '' : tempProfile.businessHours.friday.open, 
-            close: tempProfile.businessHours.friday.closed ? '' : tempProfile.businessHours.friday.close, 
-            isClosed: tempProfile.businessHours.friday.closed 
-          },
-          saturday: { 
-            open: tempProfile.businessHours.saturday.closed ? '' : tempProfile.businessHours.saturday.open, 
-            close: tempProfile.businessHours.saturday.closed ? '' : tempProfile.businessHours.saturday.close, 
-            isClosed: tempProfile.businessHours.saturday.closed 
-          },
-          sunday: { 
-            open: tempProfile.businessHours.sunday.closed ? '' : tempProfile.businessHours.sunday.open, 
-            close: tempProfile.businessHours.sunday.closed ? '' : tempProfile.businessHours.sunday.close, 
-            isClosed: tempProfile.businessHours.sunday.closed 
-          }
-        }
+        operatingHours: Object.fromEntries(
+          DAYS.map(day => {
+            const h = tempProfile.businessHours[day];
+            return [day, { open: h.closed ? '' : h.open, close: h.closed ? '' : h.close, isClosed: h.closed }];
+          })
+        ),
       };
 
-      console.log('Sending update data:', updateData); // Debug log
-
-      const response = await api.put(`/providers/${providerId}/profile`, updateData);
-      
-      if (response.data.success) {
+      const res = await api.put(`/providers/${providerId}/profile`, payload);
+      if (res.data.success) {
         setProfile(tempProfile);
         setIsEditing(false);
-        alert('Profile updated successfully!');
-        
-        // Refresh the profile data from server to ensure sync
-        await fetchProviderProfile();
+        showToast('Profile saved successfully!');
+        await fetchProfile();
       }
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      console.error('Error details:', error.response?.data); // Debug log
-      alert(error.response?.data?.message || 'Error saving profile');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error saving profile.', 'error');
     } finally {
       setSaveLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    setTempProfile(profile);
-    setIsEditing(false);
-  };
-
-  const handleInputChange = (field, value) => {
-    setTempProfile({ ...tempProfile, [field]: value });
-  };
-
-  const handleHoursChange = (day, field, value) => {
-    const updatedDay = {
-      ...tempProfile.businessHours[day],
-      [field]: value
-    };
-
-    // If closing the business for the day, clear the open/close times
-    if (field === 'closed' && value === true) {
-      updatedDay.open = '';
-      updatedDay.close = '';
-    }
-    
-    // If opening the business for the day and times are empty, set default times
-    if (field === 'closed' && value === false) {
-      if (!updatedDay.open) updatedDay.open = '09:00';
-      if (!updatedDay.close) updatedDay.close = '18:00';
-    }
-
-    setTempProfile({
-      ...tempProfile,
-      businessHours: {
-        ...tempProfile.businessHours,
-        [day]: updatedDay
-      }
-    });
-  };
-
-  const handleLogoClick = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
-      return;
-    }
-
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size should be less than 5MB');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { showToast('Please select an image file.', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024)    { showToast('File must be under 5 MB.', 'error'); return; }
 
     setUploading(true);
-
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      console.log('💾 Uploading image to Cloudinary...');
-      const response = await api.post(`/providers/${providerId}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post(`/providers/${providerId}/upload`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-
-      if (response.data.success) {
-        const imageUrl = response.data.data; // Cloudinary returns full URL
-        console.log('✅ Image uploaded successfully:', imageUrl);
-        
-        setProfile({ ...profile, logoUrl: imageUrl });
-        setTempProfile({ ...tempProfile, logoUrl: imageUrl });
-        
-        alert('Logo uploaded successfully!');
-        
-        // Refresh provider data to ensure sync
-        await fetchProviderProfile();
+      if (res.data.success) {
+        const url = res.data.data;
+        setProfile(p  => ({ ...p,  logoUrl: url }));
+        setTempProfile(p => ({ ...p, logoUrl: url }));
+        showToast('Logo updated!');
+        await fetchProfile();
       }
-    } catch (error) {
-      console.error('❌ Upload error:', error);
-      alert(error.response?.data?.message || 'Error uploading image');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Upload failed.', 'error');
     } finally {
       setUploading(false);
     }
   };
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  
-  const dayLabels = {
-    monday: 'Monday',
-    tuesday: 'Tuesday',
-    wednesday: 'Wednesday',
-    thursday: 'Thursday',
-    friday: 'Friday',
-    saturday: 'Saturday',
-    sunday: 'Sunday'
-  };
-
+  /* ─── Loading / Error ─── */
   if (loading || !profile) {
     return (
-      <div className="provider-profile">
-        <div className="profile-container" style={{ textAlign: 'center', padding: '4rem' }}>
+      <div className="ppf-page">
+        <div className="ppf-content ppf-center">
           {loading ? (
             <>
-              <div className="spinner"></div>
-              <p>Loading profile...</p>
+              <div className="ppf-spinner" />
+              <p className="ppf-loading-text">Loading profile…</p>
             </>
           ) : error ? (
-            <>
-              <div style={{ color: '#dc2626', fontSize: '1.2rem', marginBottom: '1rem' }}>
-                ⚠️ Error Loading Profile
-              </div>
-              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>{error}</p>
-              <button 
-                className="btn-primary" 
-                onClick={() => fetchProviderProfile()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-              >
-                Try Again
+            <div className="ppf-error-box">
+              <AlertCircle size={40} style={{ color: '#dc2626' }} />
+              <h3>Could not load profile</h3>
+              <p>{error}</p>
+              <button className="ppf-btn-primary" onClick={fetchProfile}>
+                <RefreshCw size={16} /> Try Again
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <p style={{ color: '#6b7280' }}>No profile data available</p>
-              <button 
-                className="btn-primary" 
-                onClick={() => fetchProviderProfile()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}
-              >
-                Reload Profile
-              </button>
-            </>
+            <div className="ppf-error-box">
+              <p>No profile data found.</p>
+              <button className="ppf-btn-primary" onClick={fetchProfile}>Reload</button>
+            </div>
           )}
         </div>
       </div>
@@ -384,331 +214,331 @@ const ProviderProfile = () => {
   }
 
   return (
-    <div className="provider-profile">
-      <div className="profile-container">
-        <div className="profile-header">
-          <div className="profile-info">
-            <h1>Business Profile</h1>
-            <p>Manage your business information and location</p>
+    <div className="ppf-page">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`ppf-toast ppf-toast-${toast.type}`}>
+          {toast.type === 'success' ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
+          {toast.msg}
+        </div>
+      )}
+
+      <div className="ppf-content">
+
+        {/* ── Page Header ── */}
+        <div className="ppf-header">
+          <div className="ppf-header-left">
+            <h1 className="ppf-title">Business Profile</h1>
+            <p className="ppf-sub">Manage your business information and location</p>
           </div>
-          
-          {!isEditing ? (
-            <button className="btn-primary" onClick={handleEdit}>
-              <Edit size={20} />
-              Edit Profile
-            </button>
-          ) : (
-            <div className="edit-actions">
-              <button className="btn-secondary" onClick={handleCancel} disabled={saveLoading}>
-                <X size={20} />
-                Cancel
+          <div className="ppf-header-actions">
+            {isEditing ? (
+              <>
+                <button className="ppf-btn-ghost" onClick={handleCancel} disabled={saveLoading}>
+                  <X size={16} /> Cancel
+                </button>
+                <button className="ppf-btn-primary" onClick={handleSave} disabled={saveLoading}>
+                  <Save size={16} />
+                  {saveLoading ? 'Saving…' : 'Save Changes'}
+                </button>
+              </>
+            ) : (
+              <button className="ppf-btn-primary" onClick={handleEdit}>
+                <Edit2 size={16} /> Edit Profile
               </button>
-              <button className="btn-primary" onClick={handleSave} disabled={saveLoading}>
-                <Save size={20} />
-                {saveLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="profile-content">
-          {/* Business Information */}
-          <div className="profile-section">
-            <h2>Business Information</h2>
-            
-            <div className="business-header">
-              <div className="provider-logo-wrapper">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-                {uploading ? (
-                  <div className="provider-logo-placeholder">
-                    <div className="provider-logo-uploading">
-                      <div className="spinner"></div>
-                      <span>Uploading...</span>
-                    </div>
-                  </div>
-                ) : profile.logoUrl ? (
-                  <div className="provider-logo-image-wrapper" onClick={handleLogoClick}>
-                    <img src={profile.logoUrl} alt="Business Logo" className="provider-logo-img" />
-                    <div className="provider-logo-hover-overlay">
-                      <Camera size={24} />
-                      <span>Change Logo</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="provider-logo-placeholder" onClick={handleLogoClick}>
-                    <Camera size={32} />
-                    <span>Upload Logo</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="business-details">
-                {isEditing ? (
-                  <div className="form-group">
-                    <label>Business Name</label>
-                    <input
-                      type="text"
-                      value={tempProfile.businessName}
-                      onChange={(e) => handleInputChange('businessName', e.target.value)}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <h3>{profile.businessName}</h3>
-                    <div className="rating">
-                      <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                      <span>{profile.rating}</span>
-                      <span>({profile.totalReviews} reviews)</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+        {/* ── Business Info Card ── */}
+        <div className="ppf-card ppf-card-blue">
+          <div className="ppf-card-head">
+            <div className="ppf-card-head-icon" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+              <Building2 size={18} />
             </div>
-
-            <div className="provider-info-grid">
-              <div className="provider-info-item">
-                <label className="provider-info-label">OWNER NAME</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    className="provider-info-input"
-                    value={tempProfile.ownerName}
-                    onChange={(e) => handleInputChange('ownerName', e.target.value)}
-                  />
-                ) : (
-                  <div className="provider-info-value">{profile.ownerName}</div>
-                )}
-              </div>
-
-              <div className="provider-info-item">
-                <label className="provider-info-label">EMAIL</label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    className="provider-info-input"
-                    value={tempProfile.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                  />
-                ) : (
-                  <div className="provider-info-value provider-info-with-icon">
-                    <Mail size={18} />
-                    {profile.email}
-                  </div>
-                )}
-              </div>
-
-              <div className="provider-info-item">
-                <label className="provider-info-label">PHONE</label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    className="provider-info-input"
-                    value={tempProfile.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                  />
-                ) : (
-                  <div className="provider-info-value provider-info-with-icon">
-                    <Phone size={18} />
-                    {profile.phone}
-                  </div>
-                )}
-              </div>
-
-              <div className="provider-info-item">
-                <label className="provider-info-label">BUSINESS LICENSE NUMBER</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    className="provider-info-input"
-                    value={tempProfile.businessLicense}
-                    onChange={(e) => handleInputChange('businessLicense', e.target.value)}
-                    placeholder="Enter your business license number"
-                  />
-                ) : (
-                  <div className="provider-info-value provider-license-badge">{profile.businessLicense}</div>
-                )}
-              </div>
-
-              <div className="provider-info-item provider-info-full-width">
-                <label className="provider-info-label">BUSINESS DESCRIPTION</label>
-                {isEditing ? (
-                  <textarea
-                    className="provider-info-textarea"
-                    value={tempProfile.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    rows="3"
-                  />
-                ) : (
-                  <div className="provider-info-description">{profile.description}</div>
-                )}
-              </div>
-            </div>
+            <h2 className="ppf-section-title">Business Information</h2>
           </div>
 
-          {/* Location Information */}
-          <div className="profile-section">
-            <h2>Location & Address</h2>
-            
-            <div className="provider-location-grid">
-              <div className="provider-info-item provider-info-full-width">
-                <label className="provider-info-label">STREET ADDRESS</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    className="provider-info-input"
-                    value={tempProfile.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                  />
-                ) : (
-                  <div className="provider-info-value provider-info-with-icon">
-                    <MapPin size={18} />
-                    {profile.address}
+          {/* Logo + Business Name row */}
+          <div className="ppf-biz-top">
+            {/* Logo */}
+            <div className="ppf-logo-wrap">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              {uploading ? (
+                <div className="ppf-logo-box ppf-logo-uploading">
+                  <div className="ppf-spinner ppf-spinner-sm" />
+                  <span>Uploading…</span>
+                </div>
+              ) : profile.logoUrl ? (
+                <div className="ppf-logo-box ppf-logo-img-wrap" onClick={() => fileInputRef.current?.click()}>
+                  <img src={profile.logoUrl} alt="Business logo" className="ppf-logo-img" />
+                  <div className="ppf-logo-overlay">
+                    <Camera size={22} />
+                    <span>Change</span>
                   </div>
-                )}
-              </div>
-
-              <div className="provider-info-item">
-                <label className="provider-info-label">CITY</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    className="provider-info-input"
-                    value={tempProfile.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                  />
-                ) : (
-                  <div className="provider-info-value">{profile.city}</div>
-                )}
-              </div>
-
-              <div className="provider-info-item">
-                <label className="provider-info-label">STATE</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    className="provider-info-input"
-                    value={tempProfile.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                    placeholder="e.g., CA, NY, TX"
-                  />
-                ) : (
-                  <div className="provider-info-value">{profile.state}</div>
-                )}
-              </div>
-
-              <div className="provider-info-item">
-                <label className="provider-info-label">ZIP CODE</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    className="provider-info-input"
-                    value={tempProfile.zipCode}
-                    onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                  />
-                ) : (
-                  <div className="provider-info-value">{profile.zipCode}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Map */}
-            <div className="map-container">
-              <div className="map-placeholder">
-                <MapPin size={48} />
-                <h3>Business Location</h3>
-                <p>{profile.address}, {profile.city} {profile.zipCode}</p>
-                <button className="map-btn">
-                  <MapPin size={16} />
-                  View on Map
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Business Hours */}
-          <div className="profile-section">
-            <h2>Business Hours</h2>
-            
-            <div className="hours-grid">
-              {days.map((day) => {
-                const dayHours = profile.businessHours?.[day] || { open: '09:00', close: '18:00', closed: false };
-                const tempDayHours = tempProfile.businessHours?.[day] || { open: '09:00', close: '18:00', closed: false };
-                
-                return (
-                  <div key={day} className="hour-row">
-                    <div className="day-label">
-                      <Clock size={16} />
-                      <span>{dayLabels[day]}</span>
-                    </div>
-                    
-                    {isEditing ? (
-                      <div className="hour-inputs">
-                        <label className="closed-label">
-                          <input
-                            type="checkbox"
-                            checked={tempDayHours.closed}
-                            onChange={(e) => handleHoursChange(day, 'closed', e.target.checked)}
-                          />
-                          Closed
-                        </label>
-                        
-                        {!tempDayHours.closed && (
-                          <div className="time-inputs">
-                            <input
-                              type="time"
-                              value={tempDayHours.open}
-                              onChange={(e) => handleHoursChange(day, 'open', e.target.value)}
-                            />
-                            <span>to</span>
-                            <input
-                              type="time"
-                              value={tempDayHours.close}
-                              onChange={(e) => handleHoursChange(day, 'close', e.target.value)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="hour-display">
-                        {dayHours.closed ? (
-                          <span className="closed">Closed</span>
-                        ) : (
-                          <span>
-                            {dayHours.open} - {dayHours.close}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Services Offered */}
-          <div className="profile-section">
-            <h2>Services Offered</h2>
-            <div className="services-list">
-              {profile.services && profile.services.length > 0 ? (
-                profile.services.map((service, index) => (
-                  <span key={index} className="service-tag">
-                    {typeof service === 'string' ? service : service.name || 'Service'}
-                  </span>
-                ))
+                </div>
               ) : (
-                <p style={{ color: '#6b7280', fontStyle: 'italic' }}>
-                  No services added yet. Add services to display them here.
-                </p>
+                <div className="ppf-logo-box ppf-logo-empty" onClick={() => fileInputRef.current?.click()}>
+                  <Camera size={30} />
+                  <span>Upload Logo</span>
+                </div>
+              )}
+              <p className="ppf-logo-hint">JPG / PNG · max 5 MB</p>
+            </div>
+
+            {/* Business name + rating */}
+            <div className="ppf-biz-details">
+              {isEditing ? (
+                <div className="ppf-field">
+                  <label className="ppf-label">Business Name</label>
+                  <input
+                    className="ppf-input"
+                    type="text"
+                    value={tempProfile.businessName}
+                    onChange={e => handleInputChange('businessName', e.target.value)}
+                    placeholder="Your business name"
+                  />
+                </div>
+              ) : (
+                <>
+                  <h3 className="ppf-biz-name">{profile.businessName || '—'}</h3>
+                  <div className="ppf-rating">
+                    {[1,2,3,4,5].map(n => (
+                      <Star
+                        key={n}
+                        size={16}
+                        fill={n <= Math.round(profile.rating) ? '#f59e0b' : 'none'}
+                        color={n <= Math.round(profile.rating) ? '#f59e0b' : '#d1d5db'}
+                      />
+                    ))}
+                    <span className="ppf-rating-num">{Number(profile.rating).toFixed(1)}</span>
+                    <span className="ppf-rating-cnt">({profile.totalReviews} reviews)</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Info grid */}
+          <div className="ppf-info-grid">
+            {/* Owner Name */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">Owner Name</label>
+              {isEditing ? (
+                <input className="ppf-input" type="text" value={tempProfile.ownerName}
+                  onChange={e => handleInputChange('ownerName', e.target.value)} />
+              ) : (
+                <div className="ppf-info-val">{profile.ownerName || '—'}</div>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">Email</label>
+              {isEditing ? (
+                <input className="ppf-input" type="email" value={tempProfile.email}
+                  onChange={e => handleInputChange('email', e.target.value)} />
+              ) : (
+                <div className="ppf-info-val ppf-info-icon-val">
+                  <Mail size={15} className="ppf-field-icon" /> {profile.email || '—'}
+                </div>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">Phone</label>
+              {isEditing ? (
+                <input className="ppf-input" type="tel" value={tempProfile.phone}
+                  onChange={e => handleInputChange('phone', e.target.value)} />
+              ) : (
+                <div className="ppf-info-val ppf-info-icon-val">
+                  <Phone size={15} className="ppf-field-icon" /> {profile.phone || '—'}
+                </div>
+              )}
+            </div>
+
+            {/* Business License */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">Business License</label>
+              {isEditing ? (
+                <input className="ppf-input" type="text" value={tempProfile.businessLicense}
+                  onChange={e => handleInputChange('businessLicense', e.target.value)}
+                  placeholder="License number" />
+              ) : (
+                profile.businessLicense
+                  ? <span className="ppf-license-badge">{profile.businessLicense}</span>
+                  : <div className="ppf-info-val ppf-muted">Not provided</div>
+              )}
+            </div>
+
+            {/* Description — full width */}
+            <div className="ppf-info-item ppf-full">
+              <label className="ppf-info-label">Business Description</label>
+              {isEditing ? (
+                <textarea className="ppf-textarea" rows={3}
+                  value={tempProfile.description}
+                  onChange={e => handleInputChange('description', e.target.value)}
+                  placeholder="Describe your business…" />
+              ) : (
+                <div className="ppf-description">{profile.description || '—'}</div>
               )}
             </div>
           </div>
         </div>
+
+        {/* ── Location Card ── */}
+        <div className="ppf-card ppf-card-sky">
+          <div className="ppf-card-head">
+            <div className="ppf-card-head-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+              <MapPin size={18} />
+            </div>
+            <h2 className="ppf-section-title">Location & Address</h2>
+          </div>
+
+          <div className="ppf-info-grid">
+            {/* Street — full width */}
+            <div className="ppf-info-item ppf-full">
+              <label className="ppf-info-label">Street Address</label>
+              {isEditing ? (
+                <input className="ppf-input" type="text" value={tempProfile.address}
+                  onChange={e => handleInputChange('address', e.target.value)} />
+              ) : (
+                <div className="ppf-info-val ppf-info-icon-val">
+                  <MapPin size={15} className="ppf-field-icon" /> {profile.address || '—'}
+                </div>
+              )}
+            </div>
+
+            {/* City */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">City</label>
+              {isEditing ? (
+                <input className="ppf-input" type="text" value={tempProfile.city}
+                  onChange={e => handleInputChange('city', e.target.value)} />
+              ) : (
+                <div className="ppf-info-val">{profile.city || '—'}</div>
+              )}
+            </div>
+
+            {/* State */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">State / Province</label>
+              {isEditing ? (
+                <input className="ppf-input" type="text" value={tempProfile.state}
+                  onChange={e => handleInputChange('state', e.target.value)}
+                  placeholder="e.g. Western" />
+              ) : (
+                <div className="ppf-info-val">{profile.state || '—'}</div>
+              )}
+            </div>
+
+            {/* ZIP */}
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">ZIP / Postal Code</label>
+              {isEditing ? (
+                <input className="ppf-input" type="text" value={tempProfile.zipCode}
+                  onChange={e => handleInputChange('zipCode', e.target.value)} />
+              ) : (
+                <div className="ppf-info-val">{profile.zipCode || '—'}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Map placeholder */}
+          <div className="ppf-map">
+            <MapPin size={40} style={{ color: '#0284c7' }} />
+            <p className="ppf-map-addr">
+              {[profile.address, profile.city, profile.zipCode].filter(Boolean).join(', ') || 'No address set'}
+            </p>
+            <button className="ppf-map-btn">
+              <MapPin size={14} /> View on Map
+            </button>
+          </div>
+        </div>
+
+        {/* ── Business Hours Card ── */}
+        <div className="ppf-card ppf-card-indigo">
+          <div className="ppf-card-head">
+            <div className="ppf-card-head-icon" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+              <Clock size={18} />
+            </div>
+            <h2 className="ppf-section-title">Business Hours</h2>
+          </div>
+
+          <div className="ppf-hours-grid">
+            {DAYS.map(day => {
+              const h  = profile.businessHours?.[day]     || DEFAULT_HOURS;
+              const th = tempProfile.businessHours?.[day] || DEFAULT_HOURS;
+              return (
+                <div key={day} className={`ppf-hour-row${h.closed && !isEditing ? ' ppf-hr-closed' : ''}`}>
+                  <div className="ppf-day-label">
+                    <span className="ppf-day-name">{DAY_LABELS[day]}</span>
+                  </div>
+
+                  {isEditing ? (
+                    <div className="ppf-hour-edit">
+                      <label className="ppf-closed-toggle">
+                        <input
+                          type="checkbox"
+                          checked={th.closed}
+                          onChange={e => handleHoursChange(day, 'closed', e.target.checked)}
+                        />
+                        <span>Closed</span>
+                      </label>
+                      {!th.closed && (
+                        <div className="ppf-time-row">
+                          <input className="ppf-time-input" type="time" value={th.open}
+                            onChange={e => handleHoursChange(day, 'open', e.target.value)} />
+                          <span className="ppf-time-sep">to</span>
+                          <input className="ppf-time-input" type="time" value={th.close}
+                            onChange={e => handleHoursChange(day, 'close', e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="ppf-hour-display">
+                      {h.closed
+                        ? <span className="ppf-closed-tag">Closed</span>
+                        : <span className="ppf-open-time">{h.open} – {h.close}</span>
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Services Card ── */}
+        <div className="ppf-card ppf-card-green">
+          <div className="ppf-card-head">
+            <div className="ppf-card-head-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+              <FileText size={18} />
+            </div>
+            <h2 className="ppf-section-title">Services Offered</h2>
+          </div>
+
+          <div className="ppf-services">
+            {profile.services?.length ? (
+              profile.services.map((s, i) => (
+                <span key={i} className="ppf-service-chip">
+                  {typeof s === 'string' ? s : s.name || 'Service'}
+                </span>
+              ))
+            ) : (
+              <p className="ppf-muted ppf-italic">No services listed yet. Add services from the Services page.</p>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );

@@ -1,41 +1,46 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Eye, Check, X, Clock, MapPin, Phone, CreditCard, Banknote, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Search, Filter, Eye, Check, X, Clock,
+  MapPin, Phone, CreditCard, Banknote,
+  RefreshCw, Package, CheckCircle, XCircle, AlertCircle,
+  ChevronLeft, ChevronRight
+} from 'lucide-react';
 import { providerOrdersAPI } from '../../api/commerceApi';
 import './ProviderOrders.css';
 
-const STATUS_COLORS = {
-  pending:     '#f59e0b',
-  'in-progress': '#2563eb',
-  completed:   '#10b981',
-  cancelled:   '#dc2626'
+const ITEMS_PER_PAGE = 6;
+
+const STATUS_META = {
+  pending:       { bg: '#fffbeb', color: '#d97706', label: 'Pending',     dot: '#d97706' },
+  'in-progress': { bg: '#e0f2fe', color: '#0369a1', label: 'In Progress', dot: '#0284c7' },
+  completed:     { bg: '#ecfdf5', color: '#059669', label: 'Completed',   dot: '#059669' },
+  cancelled:     { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled',   dot: '#dc2626' },
 };
 
-const STATUS_LABELS = {
-  pending:     'Pending',
-  'in-progress': 'In Progress',
-  completed:   'Completed',
-  cancelled:   'Cancelled'
+const fmt = (d) =>
+  d ? new Date(d).toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }) : '—';
+
+const StatusBadge = ({ status }) => {
+  const m = STATUS_META[status] || { bg: '#f1f5f9', color: '#64748b', label: status };
+  return (
+    <span className="pvo-badge" style={{ background: m.bg, color: m.color }}>
+      ● {m.label}
+    </span>
+  );
 };
-
-const formatDate = (d) => d ? new Date(d).toLocaleString() : '—';
-
-const StatusBadge = ({ status }) => (
-  <span
-    className="provider-order-status"
-    style={{ background: `${STATUS_COLORS[status] ?? '#6b7280'}20`, color: STATUS_COLORS[status] ?? '#6b7280' }}
-  >
-    {STATUS_LABELS[status] ?? status}
-  </span>
-);
 
 const ProviderOrders = () => {
-  const [orders, setOrders]         = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [actionLoading, setAction]  = useState(null); // orderId being updated
-  const [filterStatus, setFilter]   = useState('all');
-  const [searchTerm, setSearch]     = useState('');
+  const [orders, setOrders]          = useState([]);
+  const [loading, setLoading]        = useState(true);
+  const [error, setError]            = useState(null);
+  const [actionLoading, setAction]   = useState(null);
+  const [filterStatus, setFilter]    = useState('all');
+  const [searchTerm, setSearch]      = useState('');
   const [selectedOrder, setSelected] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const load = useCallback(async () => {
     try {
@@ -43,7 +48,7 @@ const ProviderOrders = () => {
       setError(null);
       const res = await providerOrdersAPI.getMine();
       setOrders(res?.data ?? []);
-    } catch (err) {
+    } catch {
       setError('Failed to load orders. Please try again.');
     } finally {
       setLoading(false);
@@ -51,8 +56,8 @@ const ProviderOrders = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus]);
 
-  // Normalize an order so the rest of the component always uses camelCase
   const norm = (o) => ({
     orderId:         o.orderId         ?? o.OrderId,
     orderReference:  o.orderReference  ?? o.OrderReference  ?? '—',
@@ -68,14 +73,12 @@ const ProviderOrders = () => {
     notes:           o.notes           ?? o.Notes            ?? '',
     items: (o.items ?? o.Items ?? []).map(i => ({
       orderItemId: i.orderItemId ?? i.OrderItemId,
-      itemName:    i.itemName    ?? i.ItemName    ?? i.description ?? i.Description ?? '—',
+      itemName:    i.itemName    ?? i.ItemName    ?? '—',
       description: i.description ?? i.Description ?? '',
       quantity:    i.quantity    ?? i.Quantity    ?? 1,
       unitPrice:   i.unitPrice   ?? i.UnitPrice   ?? 0,
       price:       i.price       ?? i.Price       ?? 0,
-      status:      i.status      ?? i.Status      ?? 'pending',
-      imageUrl:    i.imageUrl    ?? i.ImageUrl    ?? null,
-    }))
+    })),
   });
 
   const updateStatus = async (orderId, status) => {
@@ -88,10 +91,11 @@ const ProviderOrders = () => {
           return id === orderId ? { ...o, providerStatus: status, ProviderStatus: status } : o;
         })
       );
-      if ((selectedOrder?.orderId ?? selectedOrder?.OrderId) === orderId)
+      if ((selectedOrder?.orderId ?? selectedOrder?.OrderId) === orderId) {
         setSelected(s => ({ ...s, providerStatus: status, ProviderStatus: status }));
+      }
     } catch {
-      alert('Failed to update order status. Please try again.');
+      alert('Failed to update order status.');
     } finally {
       setAction(null);
     }
@@ -101,66 +105,104 @@ const ProviderOrders = () => {
 
   const filtered = normalized.filter(o => {
     const matchStatus = filterStatus === 'all' || o.providerStatus === filterStatus;
-    const term = searchTerm.toLowerCase();
-    const matchSearch = !term
-      || o.customerName.toLowerCase().includes(term)
-      || o.orderReference.toLowerCase().includes(term);
+    const q = searchTerm.toLowerCase();
+    const matchSearch = !q
+      || o.customerName.toLowerCase().includes(q)
+      || o.orderReference.toLowerCase().includes(q);
     return matchStatus && matchSearch;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage   = Math.min(currentPage, totalPages);
+  const startIdx   = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageItems  = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+  const goTo = (p) => setCurrentPage(Math.max(1, Math.min(p, totalPages)));
+
+  const pageNums = () => {
+    const pages = [];
+    const delta = 1;
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= safePage - delta && i <= safePage + delta)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+    return pages;
+  };
 
   const stats = {
     pending:    normalized.filter(o => o.providerStatus === 'pending').length,
     inProgress: normalized.filter(o => o.providerStatus === 'in-progress').length,
     completed:  normalized.filter(o => o.providerStatus === 'completed').length,
-    cancelled:  normalized.filter(o => o.providerStatus === 'cancelled').length
+    cancelled:  normalized.filter(o => o.providerStatus === 'cancelled').length,
   };
 
   return (
-    <div className="provider-orders-page">
-      <div className="provider-orders-container">
-        {/* Header */}
-        <div className="provider-orders-header">
-          <div>
-            <h1>Orders Management</h1>
-            <p>Manage and track all customer orders</p>
+    <div className="pvo-page">
+      <div className="pvo-content">
+
+        {/* ── Header ── */}
+        <div className="pvo-header">
+          <div className="pvo-header-left">
+            <h1 className="pvo-title">Orders Management</h1>
+            <p className="pvo-sub">Manage and track all customer orders</p>
           </div>
-          <div className="provider-order-stats">
-            <div className="provider-stat-item">
-              <span className="provider-stat-value" style={{ color: '#f59e0b' }}>{stats.pending}</span>
-              <span className="provider-stat-label">Pending</span>
+          <div className="pvo-header-right">
+            <div className="pvo-stat-pill pvo-sp-amber">
+              <Clock size={14} />
+              <span className="pvo-sp-num">{stats.pending}</span>
+              <span className="pvo-sp-lbl">Pending</span>
             </div>
-            <div className="provider-stat-item">
-              <span className="provider-stat-value" style={{ color: '#2563eb' }}>{stats.inProgress}</span>
-              <span className="provider-stat-label">In Progress</span>
+            <div className="pvo-stat-pill pvo-sp-sky">
+              <AlertCircle size={14} />
+              <span className="pvo-sp-num">{stats.inProgress}</span>
+              <span className="pvo-sp-lbl">In Progress</span>
             </div>
-            <div className="provider-stat-item">
-              <span className="provider-stat-value" style={{ color: '#10b981' }}>{stats.completed}</span>
-              <span className="provider-stat-label">Completed</span>
+            <div className="pvo-stat-pill pvo-sp-green">
+              <CheckCircle size={14} />
+              <span className="pvo-sp-num">{stats.completed}</span>
+              <span className="pvo-sp-lbl">Completed</span>
             </div>
-            <div className="provider-stat-item">
-              <span className="provider-stat-value" style={{ color: '#dc2626' }}>{stats.cancelled}</span>
-              <span className="provider-stat-label">Cancelled</span>
+            <div className="pvo-stat-pill pvo-sp-red">
+              <XCircle size={14} />
+              <span className="pvo-sp-num">{stats.cancelled}</span>
+              <span className="pvo-sp-lbl">Cancelled</span>
             </div>
-            <button className="provider-refresh-btn" onClick={load} disabled={loading}>
-              <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+            <button
+              className={`pvo-refresh-btn${loading ? ' pvo-spinning' : ''}`}
+              onClick={load}
+              disabled={loading}
+              title="Refresh"
+            >
+              <RefreshCw size={16} />
             </button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="provider-orders-filters">
-          <div className="provider-search-box">
-            <Search size={20} />
+        {/* ── Controls ── */}
+        <div className="pvo-controls">
+          <div className="pvo-search">
+            <Search size={17} className="pvo-search-icon" />
             <input
               type="text"
-              placeholder="Search by customer name or order ID..."
+              placeholder="Search by customer name or order ID…"
               value={searchTerm}
               onChange={e => setSearch(e.target.value)}
+              className="pvo-search-input"
             />
+            {searchTerm && (
+              <button className="pvo-clear" onClick={() => setSearch('')}>×</button>
+            )}
           </div>
-          <div className="provider-filter-box">
-            <Filter size={20} />
-            <select value={filterStatus} onChange={e => setFilter(e.target.value)}>
+          <div className="pvo-filter-row">
+            <Filter size={15} className="pvo-filter-icon" />
+            <select
+              value={filterStatus}
+              onChange={e => setFilter(e.target.value)}
+              className="pvo-filter-select"
+            >
               <option value="all">All Orders</option>
               <option value="pending">Pending</option>
               <option value="in-progress">In Progress</option>
@@ -168,182 +210,286 @@ const ProviderOrders = () => {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+          <span className="pvo-result-count">
+            {!loading && filtered.length > 0
+              ? `Showing ${startIdx + 1}–${Math.min(startIdx + ITEMS_PER_PAGE, filtered.length)} of ${filtered.length} orders`
+              : ''}
+          </span>
         </div>
 
-        {/* Body */}
-        {loading ? (
-          <div className="provider-no-orders"><h3>Loading orders…</h3></div>
-        ) : error ? (
-          <div className="provider-no-orders" style={{ color: '#dc2626' }}>
-            <h3>{error}</h3>
-            <button className="provider-action-btn provider-accept-btn" onClick={load} style={{ marginTop: '1rem', flex: 'none' }}>
-              Retry
-            </button>
+        {/* ── Body ── */}
+        {loading && (
+          <div className="pvo-loading">
+            <div className="pvo-spinner" />
+            <p>Loading orders…</p>
           </div>
-        ) : (
-          <div className="provider-orders-grid">
-            {filtered.length > 0 ? filtered.map(o => {
-              const busy = actionLoading === o.orderId;
+        )}
+
+        {!loading && error && (
+          <div className="pvo-empty">
+            <XCircle size={48} style={{ color: '#dc2626' }} />
+            <h3>{error}</h3>
+            <button className="pvo-retry-btn" onClick={load}>Retry</button>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="pvo-empty">
+            <Package size={48} />
+            <h3>No orders found</h3>
+            <p>Try adjusting your search or filter.</p>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length > 0 && (
+          <div className="pvo-grid">
+            {pageItems.map(o => {
+              const busy     = actionLoading === o.orderId;
+              const sm       = STATUS_META[o.providerStatus] || STATUS_META.pending;
+              const isOnline = o.paymentProvider === 'PayHere';
               return (
-                <div key={o.orderId} className="provider-order-card">
-                  <div className="provider-order-header">
-                    <div className="provider-order-info">
-                      <h3>#{o.orderReference}</h3>
+                <div key={o.orderId} className="pvo-card" style={{ borderTopColor: sm.dot }}>
+
+                  {/* Card head */}
+                  <div className="pvo-card-head">
+                    <div className="pvo-card-ref">#{o.orderReference}</div>
+                    <div className="pvo-card-head-right">
                       <StatusBadge status={o.providerStatus} />
+                      <button className="pvo-eye-btn" onClick={() => setSelected(o)} title="View details">
+                        <Eye size={15} />
+                      </button>
                     </div>
-                    <button className="provider-view-btn" onClick={() => setSelected(o)}>
-                      <Eye size={16} />
-                    </button>
                   </div>
 
-                  <div className="provider-order-details">
-                    <div className="provider-customer-info">
-                      <h4>{o.customerName}</h4>
+                  {/* Customer */}
+                  <div className="pvo-card-customer">
+                    <div className="pvo-cust-avatar">
+                      {o.customerName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="pvo-cust-name">{o.customerName}</div>
                       {o.customerPhone && (
-                        <p className="provider-phone"><Phone size={14} />{o.customerPhone}</p>
+                        <div className="pvo-cust-meta">
+                          <Phone size={12} /> {o.customerPhone}
+                        </div>
                       )}
                       {o.customerAddress && (
-                        <p className="provider-address"><MapPin size={14} />{o.customerAddress}</p>
+                        <div className="pvo-cust-meta">
+                          <MapPin size={12} /> {o.customerAddress}
+                        </div>
                       )}
                     </div>
+                  </div>
 
-                    <div className="provider-service-info">
-                      {o.items[0]?.itemName && (
-                        <p className="provider-service">
-                          {o.items[0].itemName}{o.itemCount > 1 ? ` +${o.itemCount - 1} more` : ''}
-                        </p>
-                      )}
-                      <p className="provider-items">{o.itemCount} item(s) &bull; Rs {Number(o.totalAmount).toFixed(2)}</p>
-                      <p className="provider-date"><Clock size={14} />{formatDate(o.createdAt)}</p>
-                    </div>
+                  <div className="pvo-divider" />
 
-                    <div className="po-payment-method">
-                      <div className={`po-payment-badge ${o.paymentProvider === 'PayHere' ? 'po-online' : 'po-cod'}`}>
-                        {o.paymentProvider === 'PayHere'
-                          ? <><CreditCard size={14} /> Online Payment</>
-                          : <><Banknote size={14} /> Cash on Delivery</>}
+                  {/* Service */}
+                  <div className="pvo-card-service">
+                    {o.items[0]?.itemName && (
+                      <div className="pvo-service-name">
+                        {o.items[0].itemName}
+                        {o.itemCount > 1 && <span className="pvo-more"> +{o.itemCount - 1} more</span>}
                       </div>
+                    )}
+                    <div className="pvo-service-meta">
+                      <span>{o.itemCount} item{o.itemCount !== 1 ? 's' : ''}</span>
+                      <span className="pvo-dot-sep">·</span>
+                      <span className="pvo-amount">Rs {Number(o.totalAmount).toFixed(2)}</span>
                     </div>
+                    <div className="pvo-service-date">
+                      <Clock size={12} /> {fmt(o.createdAt)}
+                    </div>
+                  </div>
 
-                    <div className="provider-order-actions">
+                  {/* Payment */}
+                  <div className="pvo-card-payment">
+                    <span className={`pvo-payment-badge ${isOnline ? 'pvo-pay-online' : 'pvo-pay-cod'}`}>
+                      {isOnline ? <CreditCard size={12} /> : <Banknote size={12} />}
+                      {isOnline ? 'Online Payment' : 'Cash on Delivery'}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  {(o.providerStatus === 'pending' || o.providerStatus === 'in-progress') && (
+                    <div className="pvo-card-actions">
                       {o.providerStatus === 'pending' && (
                         <>
                           <button
-                            className="provider-action-btn provider-accept-btn"
+                            className="pvo-action-btn pvo-accept"
                             disabled={busy}
                             onClick={() => updateStatus(o.orderId, 'in-progress')}
                           >
-                            <Check size={16} />{busy ? 'Updating…' : 'Accept'}
+                            <Check size={14} /> {busy ? 'Updating…' : 'Accept'}
                           </button>
                           <button
-                            className="provider-action-btn provider-reject-btn"
+                            className="pvo-action-btn pvo-reject"
                             disabled={busy}
                             onClick={() => updateStatus(o.orderId, 'cancelled')}
                           >
-                            <X size={16} />Reject
+                            <X size={14} /> Reject
                           </button>
                         </>
                       )}
                       {o.providerStatus === 'in-progress' && (
                         <button
-                          className="provider-action-btn provider-complete-btn"
+                          className="pvo-action-btn pvo-complete"
                           disabled={busy}
                           onClick={() => updateStatus(o.orderId, 'completed')}
                         >
-                          <Check size={16} />{busy ? 'Updating…' : 'Complete'}
+                          <CheckCircle size={14} /> {busy ? 'Updating…' : 'Mark Complete'}
                         </button>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
               );
-            }) : (
-              <div className="provider-no-orders">
-                <h3>No orders found</h3>
-                <p>No orders match your current filters.</p>
-              </div>
-            )}
+            })}
           </div>
         )}
 
-        {/* Detail Modal */}
-        {selectedOrder && (() => {
-          const s = norm(selectedOrder);
-          return (
-            <div className="modal-overlay" onClick={() => setSelected(null)}>
-              <div className="modal" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                  <h2>Order #{s.orderReference}</h2>
-                  <button className="close-btn" onClick={() => setSelected(null)}>×</button>
-                </div>
-                <div className="modal-body">
-                  <div className="order-detail-section">
-                    <h3>Customer Information</h3>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <label>Name</label>
-                        <span>{s.customerName}</span>
-                      </div>
-                      <div className="detail-item">
-                        <label>Phone</label>
-                        <span>{s.customerPhone || '—'}</span>
-                      </div>
-                      <div className="detail-item full-width">
-                        <label>Address</label>
-                        <span>{s.customerAddress || '—'}</span>
-                      </div>
-                    </div>
-                  </div>
+        {/* ── Pagination ── */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="pvo-pagination">
+            <span className="pvo-page-info">Page {safePage} of {totalPages}</span>
+            <div className="pvo-page-btns">
+              <button
+                className="pvo-page-btn pvo-page-nav"
+                onClick={() => goTo(safePage - 1)}
+                disabled={safePage === 1}
+              >
+                <ChevronLeft size={16} />
+              </button>
 
-                  <div className="order-detail-section">
-                    <h3>Order Information</h3>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <label>Total Amount</label>
-                        <span>Rs {Number(s.totalAmount).toFixed(2)}</span>
-                      </div>
-                      <div className="detail-item">
-                        <label>Payment</label>
-                        <span className={`po-modal-payment-badge ${s.paymentProvider === 'PayHere' ? 'po-online' : 'po-cod'}`}>
-                          {s.paymentProvider === 'PayHere'
-                            ? <><CreditCard size={13} /> Online</>
-                            : <><Banknote size={13} /> Cash on Delivery</>}
-                        </span>
-                      </div>
-                      <div className="detail-item">
-                        <label>Status</label>
-                        <StatusBadge status={s.providerStatus} />
-                      </div>
-                      <div className="detail-item">
-                        <label>Placed</label>
-                        <span>{formatDate(s.createdAt)}</span>
-                      </div>
-                    </div>
-                  </div>
+              {pageNums().map((pg, i) =>
+                pg === '...' ? (
+                  <span key={`d-${i}`} className="pvo-page-dots">…</span>
+                ) : (
+                  <button
+                    key={pg}
+                    className={`pvo-page-btn${pg === safePage ? ' pvo-page-active' : ''}`}
+                    onClick={() => goTo(pg)}
+                  >
+                    {pg}
+                  </button>
+                )
+              )}
 
-                  {s.items.length > 0 && (
-                    <div className="order-detail-section">
-                      <h3>Items</h3>
-                      <div className="timeline">
-                        {s.items.map((item, idx) => (
-                          <div key={item.orderItemId ?? idx} className="timeline-item">
-                            <label>{item.itemName}</label>
-                            <span>
-                              {item.quantity} × Rs {Number(item.unitPrice).toFixed(2)} = Rs {Number(item.price).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="modal-footer">
-                  <button className="btn-secondary" onClick={() => setSelected(null)}>Close</button>
-                </div>
+              <button
+                className="pvo-page-btn pvo-page-nav"
+                onClick={() => goTo(safePage + 1)}
+                disabled={safePage === totalPages}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* ── Detail Modal ── */}
+      {selectedOrder && (
+        <DetailModal
+          order={norm(selectedOrder)}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+/* ── Detail Modal (extracted to avoid IIFE) ── */
+const DetailModal = ({ order: s, onClose }) => {
+  const sm       = STATUS_META[s.providerStatus] || STATUS_META.pending;
+  const isOnline = s.paymentProvider === 'PayHere';
+
+  return (
+    <div className="pvo-overlay" onClick={onClose}>
+      <div className="pvo-modal" onClick={e => e.stopPropagation()}>
+
+        <div className="pvo-modal-head">
+          <div>
+            <h2 className="pvo-modal-title">Order Details</h2>
+            <p className="pvo-modal-ref">#{s.orderReference}</p>
+          </div>
+          <button className="pvo-modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="pvo-modal-body">
+
+          {/* Customer */}
+          <div className="pvo-modal-block">
+            <h4 className="pvo-block-title">Customer</h4>
+            <div className="pvo-detail-grid">
+              <div className="pvo-detail-item">
+                <label>Name</label>
+                <span>{s.customerName}</span>
+              </div>
+              <div className="pvo-detail-item">
+                <label>Phone</label>
+                <span>{s.customerPhone || '—'}</span>
+              </div>
+              <div className="pvo-detail-item pvo-full">
+                <label>Address</label>
+                <span>{s.customerAddress || '—'}</span>
               </div>
             </div>
-          );
-        })()}
+          </div>
+
+          {/* Order Info */}
+          <div className="pvo-modal-block">
+            <h4 className="pvo-block-title">Order Info</h4>
+            <div className="pvo-detail-grid">
+              <div className="pvo-detail-item">
+                <label>Total Amount</label>
+                <span className="pvo-modal-amount">Rs {Number(s.totalAmount).toFixed(2)}</span>
+              </div>
+              <div className="pvo-detail-item">
+                <label>Status</label>
+                <span className="pvo-badge" style={{ background: sm.bg, color: sm.color }}>
+                  ● {sm.label}
+                </span>
+              </div>
+              <div className="pvo-detail-item">
+                <label>Payment</label>
+                <span className={`pvo-payment-badge ${isOnline ? 'pvo-pay-online' : 'pvo-pay-cod'}`}>
+                  {isOnline ? <CreditCard size={12} /> : <Banknote size={12} />}
+                  {isOnline ? 'Online' : 'Cash on Delivery'}
+                </span>
+              </div>
+              <div className="pvo-detail-item">
+                <label>Placed</label>
+                <span>{s.createdAt ? new Date(s.createdAt).toLocaleString('en-GB') : '—'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Items */}
+          {s.items.length > 0 && (
+            <div className="pvo-modal-block">
+              <h4 className="pvo-block-title">Items</h4>
+              <div className="pvo-items-list">
+                {s.items.map((item, idx) => (
+                  <div key={item.orderItemId ?? idx} className="pvo-item-row">
+                    <span className="pvo-item-name">{item.itemName}</span>
+                    <span className="pvo-item-calc">
+                      {item.quantity} × Rs {Number(item.unitPrice).toFixed(2)}
+                    </span>
+                    <span className="pvo-item-total">Rs {Number(item.price).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        <div className="pvo-modal-foot">
+          <button className="pvo-close-btn" onClick={onClose}>Close</button>
+        </div>
+
       </div>
     </div>
   );

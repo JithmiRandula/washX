@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Calendar, Clock, Package, ArrowLeft, CheckCircle,
-  XCircle, Loader, ShoppingBag, RefreshCw, Star
+  XCircle, Loader, ShoppingBag, RefreshCw, Star,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import { ordersAPI } from '../../api/commerceApi';
@@ -14,11 +15,11 @@ import './Bookings.css';
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_META = {
-  pending:     { label: 'Pending',     color: '#f59e0b', bg: '#fef3c7' },
-  confirmed:   { label: 'Confirmed',   color: '#2563eb', bg: '#dbeafe' },
-  'in-progress': { label: 'In Progress', color: '#7c3aed', bg: '#ede9fe' },
-  completed:   { label: 'Completed',   color: '#10b981', bg: '#d1fae5' },
-  cancelled:   { label: 'Cancelled',   color: '#ef4444', bg: '#fee2e2' },
+  pending:       { label: 'Pending',     color: '#d97706', bg: '#fef3c7' },
+  confirmed:     { label: 'Confirmed',   color: '#1d4ed8', bg: '#dbeafe' },
+  'in-progress': { label: 'In Progress', color: '#0284c7', bg: '#e0f2fe' },
+  completed:     { label: 'Completed',   color: '#059669', bg: '#ecfdf5' },
+  cancelled:     { label: 'Cancelled',   color: '#ef4444', bg: '#fee2e2' },
 };
 
 const statusMeta = (s) => STATUS_META[s] ?? STATUS_META.pending;
@@ -51,16 +52,10 @@ const deriveTabStatus = (overallStatus, paymentStatus) => {
 const StatusBadge = ({ status }) => {
   const meta = statusMeta(status);
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '0.25rem 0.75rem',
-      borderRadius: '999px',
-      fontSize: '0.75rem',
-      fontWeight: 700,
-      color: meta.color,
-      background: meta.bg,
-      letterSpacing: '0.03em'
-    }}>
+    <span
+      className="cmb-badge"
+      style={{ background: meta.bg, color: meta.color }}
+    >
       {meta.label}
     </span>
   );
@@ -71,7 +66,7 @@ const StatusBadge = ({ status }) => {
 const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
   const [detail,      setDetail]      = useState(null);
   const [loading,     setLoading]     = useState(true);
-  const [reviewModal, setReviewModal] = useState(null); // { orderId, providerId, providerName, orderRef }
+  const [reviewModal, setReviewModal] = useState(null);
 
   useEffect(() => {
     ordersAPI.getById(order.orderId ?? order.OrderId)
@@ -93,245 +88,189 @@ const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
   );
 
   return (
-    <div className="detail-page">
+    <div className="cmb-detail-page">
       <CustomerNavbar />
-      <div className="detail-container">
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1rem' }}>
-          {/* Back */}
-          <button
-            onClick={onBack}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#6b7280', fontWeight: 600, marginBottom: '1.5rem', fontSize: '0.95rem'
-            }}
-          >
-            <ArrowLeft size={18} /> Back to My Bookings
-          </button>
+      <div className="cmb-detail-wrap">
 
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6b7280' }}>
-              <Loader size={32} style={{ animation: 'spin 1s linear infinite' }} />
-              <p style={{ marginTop: '1rem' }}>Loading order details…</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Header card */}
-              <div style={{
-                background: 'white', borderRadius: '1rem',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                padding: '1.5rem 2rem'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div>
-                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
-                      Order Reference
-                    </p>
-                    <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#1f2937', margin: 0 }}>
-                      {displayOrder?.orderReference ?? displayOrder?.OrderReference ?? '—'}
-                    </h2>
-                    {(displayOrder?.providerNames ?? displayOrder?.ProviderNames) && (
-                      <p style={{ color: '#6b7280', marginTop: '0.4rem', fontSize: '0.9rem' }}>
-                        {displayOrder?.providerNames ?? displayOrder?.ProviderNames}
-                      </p>
-                    )}
-                  </div>
-                  <StatusBadge status={status} />
-                </div>
+        <button className="cmb-back-btn" onClick={onBack}>
+          <ArrowLeft size={18} /> Back to My Bookings
+        </button>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                  gap: '1.25rem',
-                  marginTop: '1.5rem',
-                  paddingTop: '1.5rem',
-                  borderTop: '1px solid #f3f4f6'
-                }}>
-                  <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Date Placed</p>
-                    <p style={{ fontWeight: 600, color: '#1f2937' }}>
-                      {fmt.date(displayOrder?.createdAt ?? displayOrder?.CreatedAt)}
+        {loading ? (
+          <div className="cmb-loading">
+            <Loader size={32} style={{ animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '1rem' }}>Loading order details…</p>
+          </div>
+        ) : (
+          <div className="cmb-detail-cards">
+
+            {/* Header card */}
+            <div className="cmb-detail-card">
+              <div className="cmb-detail-top">
+                <div>
+                  <p className="cmb-order-ref-lbl">Order Reference</p>
+                  <h2 className="cmb-order-ref">
+                    {displayOrder?.orderReference ?? displayOrder?.OrderReference ?? '—'}
+                  </h2>
+                  {(displayOrder?.providerNames ?? displayOrder?.ProviderNames) && (
+                    <p className="cmb-provider-sub">
+                      {displayOrder?.providerNames ?? displayOrder?.ProviderNames}
                     </p>
-                    <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                      {fmt.time(displayOrder?.createdAt ?? displayOrder?.CreatedAt)}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Total Amount</p>
-                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: '1.1rem' }}>
-                      {fmt.money(displayOrder?.totalAmount ?? displayOrder?.TotalAmount)}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Payment</p>
-                    <p style={{ fontWeight: 600, color: '#1f2937' }}>
-                      {displayOrder?.paymentProvider ?? displayOrder?.PaymentProvider ?? '—'}
-                    </p>
-                    <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                      {displayOrder?.paymentStatus ?? displayOrder?.PaymentStatus ?? '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.2rem' }}>Items</p>
-                    <p style={{ fontWeight: 600, color: '#1f2937' }}>{items.length} item{items.length !== 1 ? 's' : ''}</p>
-                  </div>
+                  )}
                 </div>
+                <StatusBadge status={status} />
               </div>
 
-              {/* Items list */}
-              <div style={{
-                background: 'white', borderRadius: '1rem',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                padding: '1.5rem 2rem'
-              }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1.25rem' }}>
-                  Order Items
-                </h3>
-
-                {items.length === 0 ? (
-                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '2rem 0' }}>No items found.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {items.map((item, idx) => {
-                      const name = item.itemName ?? item.ItemName ?? item.description ?? item.Description ?? 'Item';
-                      const kind = (item.kind ?? item.Kind ?? 'item').toLowerCase();
-                      const qty = item.quantity ?? item.Quantity ?? 1;
-                      const unitPrice = item.unitPrice ?? item.UnitPrice ?? 0;
-                      const linePrice = item.price ?? item.Price ?? 0;
-                      const provider = item.providerName ?? item.ProviderName ?? '';
-                      const imgUrl = item.imageUrl ?? item.ImageUrl ?? null;
-                      const itemStatus = item.status ?? item.Status ?? 'pending';
-
-                      return (
-                        <div key={item.orderItemId ?? item.OrderItemId ?? idx} style={{
-                          display: 'flex', alignItems: 'center', gap: '1rem',
-                          padding: '0.875rem 1rem',
-                          background: '#f9fafb',
-                          borderRadius: '0.75rem',
-                          border: '1px solid #e5e7eb'
-                        }}>
-                          {/* Image */}
-                          <div style={{
-                            width: 52, height: 52, borderRadius: '0.5rem',
-                            overflow: 'hidden', flexShrink: 0,
-                            background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                          }}>
-                            {imgUrl ? (
-                              <img src={imgUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <Package size={22} color="#9ca3af" />
-                            )}
-                          </div>
-
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontWeight: 600, color: '#1f2937', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {name}
-                            </p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
-                              <span style={{
-                                fontSize: '0.7rem', padding: '0.1rem 0.5rem',
-                                borderRadius: '999px', fontWeight: 600,
-                                background: kind === 'bulk' ? '#dbeafe' : '#f3f4f6',
-                                color: kind === 'bulk' ? '#1d4ed8' : '#6b7280'
-                              }}>
-                                {kind === 'bulk' ? 'Bulk Package' : 'Item'}
-                              </span>
-                              {provider && <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>{provider}</span>}
-                            </div>
-                          </div>
-
-                          {/* Qty & price */}
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <p style={{ fontWeight: 700, color: '#1f2937', margin: 0 }}>{fmt.money(linePrice)}</p>
-                            <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: 0 }}>
-                              {qty} × {fmt.money(unitPrice)}
-                            </p>
-                          </div>
-
-                          {/* Item status badge */}
-                          <StatusBadge status={itemStatus} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Total row */}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '2px solid #f3f4f6'
-                }}>
-                  <span style={{ fontWeight: 700, color: '#1f2937', fontSize: '1rem' }}>Total</span>
-                  <span style={{ fontWeight: 700, color: '#1f2937', fontSize: '1.25rem' }}>
+              <div className="cmb-detail-meta">
+                <div>
+                  <p className="cmb-detail-meta-lbl">Date Placed</p>
+                  <p className="cmb-detail-meta-val">
+                    {fmt.date(displayOrder?.createdAt ?? displayOrder?.CreatedAt)}
+                  </p>
+                  <p className="cmb-detail-meta-sub">
+                    {fmt.time(displayOrder?.createdAt ?? displayOrder?.CreatedAt)}
+                  </p>
+                </div>
+                <div>
+                  <p className="cmb-detail-meta-lbl">Total Amount</p>
+                  <p className="cmb-detail-meta-val" style={{ fontSize: '1.1rem', color: '#1d4ed8' }}>
                     {fmt.money(displayOrder?.totalAmount ?? displayOrder?.TotalAmount)}
-                  </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="cmb-detail-meta-lbl">Payment</p>
+                  <p className="cmb-detail-meta-val">
+                    {displayOrder?.paymentProvider ?? displayOrder?.PaymentProvider ?? '—'}
+                  </p>
+                  <p className="cmb-detail-meta-sub">
+                    {displayOrder?.paymentStatus ?? displayOrder?.PaymentStatus ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="cmb-detail-meta-lbl">Items</p>
+                  <p className="cmb-detail-meta-val">
+                    {items.length} item{items.length !== 1 ? 's' : ''}
+                  </p>
                 </div>
               </div>
-
-              {/* Notes */}
-              {(displayOrder?.notes ?? displayOrder?.Notes) && (
-                <div style={{
-                  background: 'white', borderRadius: '1rem',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                  padding: '1.25rem 2rem'
-                }}>
-                  <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.5rem' }}>Notes</h3>
-                  <p style={{ color: '#6b7280', margin: 0 }}>{displayOrder?.notes ?? displayOrder?.Notes}</p>
-                </div>
-              )}
-
-              {/* Write a Review — shown for each reviewable provider in this order */}
-              {reviewableForThis.length > 0 && (
-                <div style={{
-                  background: 'white', borderRadius: '1rem',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                  padding: '1.5rem 2rem'
-                }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Star size={18} fill="#fbbf24" color="#fbbf24" /> Rate Your Experience
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {reviewableForThis.map(r => {
-                      const pid   = r.providerId  ?? r.ProviderId;
-                      const pname = r.providerName ?? r.ProviderName ?? 'Provider';
-                      const oref  = displayOrder?.orderReference ?? displayOrder?.OrderReference ?? '';
-                      return (
-                        <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 500, color: '#374151' }}>{pname}</span>
-                          <button
-                            onClick={() => setReviewModal({ orderId: thisOrderId, providerId: pid, providerName: pname, orderRef: oref })}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '0.4rem',
-                              padding: '0.5rem 1.1rem',
-                              background: '#6366f1', color: 'white',
-                              border: 'none', borderRadius: '0.5rem',
-                              fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
-                            }}
-                          >
-                            <Star size={14} /> Write a Review
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
 
-          {/* Review modal */}
-          {reviewModal && (
-            <ReviewModal
-              {...reviewModal}
-              onClose={() => setReviewModal(null)}
-              onSuccess={() => { setReviewModal(null); onReviewSuccess?.(); }}
-            />
-          )}
-        </div>
+            {/* Items list */}
+            <div className="cmb-detail-card">
+              <h3 className="cmb-detail-card-title">Order Items</h3>
+
+              {items.length === 0 ? (
+                <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem 0' }}>No items found.</p>
+              ) : (
+                <div className="cmb-items-list">
+                  {items.map((item, idx) => {
+                    const name       = item.itemName    ?? item.ItemName    ?? item.description ?? item.Description ?? 'Item';
+                    const kind       = (item.kind       ?? item.Kind        ?? 'item').toLowerCase();
+                    const qty        = item.quantity    ?? item.Quantity    ?? 1;
+                    const unitPrice  = item.unitPrice   ?? item.UnitPrice   ?? 0;
+                    const linePrice  = item.price       ?? item.Price       ?? 0;
+                    const provider   = item.providerName ?? item.ProviderName ?? '';
+                    const imgUrl     = item.imageUrl    ?? item.ImageUrl    ?? null;
+                    const itemStatus = item.status      ?? item.Status      ?? 'pending';
+
+                    return (
+                      <div key={item.orderItemId ?? item.OrderItemId ?? idx} className="cmb-item-row">
+                        <div className="cmb-item-img">
+                          {imgUrl
+                            ? <img src={imgUrl} alt={name} />
+                            : <Package size={22} color="#94a3b8" />
+                          }
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p className="cmb-item-name">{name}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
+                            <span className={`cmb-item-kind ${kind === 'bulk' ? 'cmb-item-kind-bulk' : 'cmb-item-kind-item'}`}>
+                              {kind === 'bulk' ? 'Bulk Package' : 'Item'}
+                            </span>
+                            {provider && <span className="cmb-item-provider">{provider}</span>}
+                          </div>
+                        </div>
+
+                        <div className="cmb-item-price-col">
+                          <p className="cmb-item-total">{fmt.money(linePrice)}</p>
+                          <p className="cmb-item-unit">{qty} × {fmt.money(unitPrice)}</p>
+                        </div>
+
+                        <StatusBadge status={itemStatus} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="cmb-total-row">
+                <span className="cmb-total-row-lbl">Total</span>
+                <span className="cmb-total-row-amt">
+                  {fmt.money(displayOrder?.totalAmount ?? displayOrder?.TotalAmount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {(displayOrder?.notes ?? displayOrder?.Notes) && (
+              <div className="cmb-detail-card cmb-notes-card">
+                <h3 className="cmb-notes-title">Notes</h3>
+                <p className="cmb-notes-text">
+                  {displayOrder?.notes ?? displayOrder?.Notes}
+                </p>
+              </div>
+            )}
+
+            {/* Write a Review */}
+            {reviewableForThis.length > 0 && (
+              <div className="cmb-detail-card">
+                <h3 className="cmb-review-title">
+                  <Star size={18} fill="#fbbf24" color="#fbbf24" /> Rate Your Experience
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {reviewableForThis.map(r => {
+                    const pid   = r.providerId  ?? r.ProviderId;
+                    const pname = r.providerName ?? r.ProviderName ?? 'Provider';
+                    const oref  = displayOrder?.orderReference ?? displayOrder?.OrderReference ?? '';
+                    return (
+                      <div key={pid} className="cmb-review-row">
+                        <span className="cmb-review-provider">{pname}</span>
+                        <button
+                          className="cmb-write-review-btn"
+                          onClick={() => setReviewModal({ orderId: thisOrderId, providerId: pid, providerName: pname, orderRef: oref })}
+                        >
+                          <Star size={14} /> Write a Review
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {reviewModal && (
+          <ReviewModal
+            {...reviewModal}
+            onClose={() => setReviewModal(null)}
+            onSuccess={() => { setReviewModal(null); onReviewSuccess?.(); }}
+          />
+        )}
       </div>
     </div>
   );
+};
+
+const ITEMS_PER_PAGE = 6;
+
+const pageNums = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, '…', total];
+  if (current >= total - 3) return [1, '…', total - 4, total - 3, total - 2, total - 1, total];
+  return [1, '…', current - 1, current, current + 1, '…', total];
 };
 
 // ── Main Bookings page ────────────────────────────────────────────────────────
@@ -345,6 +284,7 @@ const Bookings = () => {
   const [error,            setError]            = useState(null);
   const [selectedOrder,    setSelectedOrder]    = useState(null);
   const [reviewableOrders, setReviewableOrders] = useState([]);
+  const [currentPage,      setCurrentPage]      = useState(1);
 
   const loadReviewable = useCallback(async () => {
     try {
@@ -368,6 +308,7 @@ const Bookings = () => {
   }, []);
 
   useEffect(() => { loadOrders(); loadReviewable(); }, [loadOrders, loadReviewable]);
+  useEffect(() => { setCurrentPage(1); }, [activeTab]);
 
   if (selectedOrder) {
     return (
@@ -395,189 +336,194 @@ const Bookings = () => {
   const count = (statuses) =>
     orders.filter((o) => statuses.includes(normalizeStatus(o))).length;
 
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE));
+  const safePage   = Math.min(currentPage, totalPages);
+  const startIdx   = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageItems  = filteredOrders.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+  const TABS = [
+    { key: 'all',         label: 'All Orders'  },
+    { key: 'pending',     label: 'Pending'     },
+    { key: 'in-progress', label: 'In Progress' },
+    { key: 'completed',   label: 'Completed'   },
+  ];
+
   return (
     <>
       <CustomerNavbar />
-      <div className="bookings-page">
-        <div className="bookings-main">
-          <div className="bookings-header">
-            <h1>My Bookings</h1>
-            <p>Track and manage your laundry orders</p>
+      <div className="cmb-page">
+        <div className="cmb-content">
+
+          {/* ── Header ── */}
+          <div className="cmb-header">
+            <h1 className="cmb-title">My Bookings</h1>
+            <p className="cmb-sub">Track and manage your laundry orders</p>
           </div>
 
-          <div className="bookings-container">
-            {/* Stats */}
-            <div className="stats-cards">
-              <div className="stat-card total">
-                <div className="stat-number">{orders.length}</div>
-                <div className="stat-label">Total Orders</div>
-              </div>
-              <div className="stat-card pending">
-                <div className="stat-number">{count(['pending'])}</div>
-                <div className="stat-label">Pending</div>
-              </div>
-              <div className="stat-card progress">
-                <div className="stat-number">{count(['in-progress', 'confirmed'])}</div>
-                <div className="stat-label">In Progress</div>
-              </div>
-              <div className="stat-card completed">
-                <div className="stat-number">{count(['completed'])}</div>
-                <div className="stat-label">Completed</div>
-              </div>
+          {/* ── Stat Cards ── */}
+          <div className="cmb-stats">
+            <div className="cmb-stat-card cmb-stat-total">
+              <span className="cmb-stat-num">{orders.length}</span>
+              <span className="cmb-stat-lbl">Total Orders</span>
             </div>
-
-            {/* Tabs */}
-            <div className="filter-tabs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {['all', 'pending', 'in-progress', 'completed'].map((tab) => (
-                  <button
-                    key={tab}
-                    className={`tab${activeTab === tab ? ' active' : ''}`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {tab === 'all' ? 'All Orders'
-                      : tab === 'in-progress' ? 'In Progress'
-                      : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={loadOrders}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  background: 'none', border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem', padding: '0.4rem 0.75rem',
-                  cursor: 'pointer', color: '#6b7280', fontSize: '0.85rem'
-                }}
-              >
-                <RefreshCw size={14} /> Refresh
-              </button>
+            <div className="cmb-stat-card cmb-stat-pending">
+              <span className="cmb-stat-num">{count(['pending'])}</span>
+              <span className="cmb-stat-lbl">Pending</span>
             </div>
+            <div className="cmb-stat-card cmb-stat-progress">
+              <span className="cmb-stat-num">{count(['in-progress', 'confirmed'])}</span>
+              <span className="cmb-stat-lbl">In Progress</span>
+            </div>
+            <div className="cmb-stat-card cmb-stat-completed">
+              <span className="cmb-stat-num">{count(['completed'])}</span>
+              <span className="cmb-stat-lbl">Completed</span>
+            </div>
+          </div>
 
-            {/* Content */}
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '4rem 0', color: '#6b7280' }}>
-                <Loader size={32} style={{ animation: 'spin 1s linear infinite' }} />
-                <p style={{ marginTop: '1rem' }}>Loading your orders…</p>
-              </div>
-            ) : error ? (
-              <div style={{ textAlign: 'center', padding: '4rem 0', color: '#ef4444' }}>
-                <XCircle size={40} />
-                <p style={{ marginTop: '1rem', fontWeight: 600 }}>{error}</p>
+          {/* ── Tabs ── */}
+          <div className="cmb-tabs">
+            <div className="cmb-tab-group">
+              {TABS.map(({ key, label }) => (
                 <button
-                  onClick={loadOrders}
-                  style={{
-                    marginTop: '1rem', padding: '0.6rem 1.5rem',
-                    background: '#2563eb', color: 'white', border: 'none',
-                    borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600
-                  }}
+                  key={key}
+                  className={`cmb-tab${activeTab === key ? ' cmb-tab-active' : ''}`}
+                  onClick={() => setActiveTab(key)}
                 >
-                  Try Again
+                  {label}
                 </button>
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="no-bookings">
-                <ShoppingBag size={48} />
-                <h3>No orders found</h3>
-                <p>
-                  {activeTab === 'all'
-                    ? "You haven't placed any orders yet."
-                    : `No ${activeTab === 'in-progress' ? 'in-progress' : activeTab} orders.`}
-                </p>
-                {activeTab === 'all' && (
-                  <button
-                    onClick={() => navigate(-1)}
-                    style={{
-                      marginTop: '1rem', padding: '0.6rem 1.5rem',
-                      background: '#2563eb', color: 'white', border: 'none',
-                      borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600
-                    }}
+              ))}
+            </div>
+            <button className="cmb-refresh-btn" onClick={loadOrders}>
+              <RefreshCw size={14} /> Refresh
+            </button>
+          </div>
+
+          {/* ── Content ── */}
+          {loading ? (
+            <div className="cmb-loading">
+              <Loader size={32} style={{ animation: 'spin 1s linear infinite' }} />
+              <p style={{ marginTop: '1rem' }}>Loading your orders…</p>
+            </div>
+          ) : error ? (
+            <div className="cmb-error">
+              <XCircle size={40} />
+              <p style={{ marginTop: '1rem', fontWeight: 600 }}>{error}</p>
+              <button className="cmb-try-btn" onClick={loadOrders}>Try Again</button>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="cmb-empty">
+              <ShoppingBag size={48} className="cmb-empty-icon" />
+              <h3>No orders found</h3>
+              <p>
+                {activeTab === 'all'
+                  ? "You haven't placed any orders yet."
+                  : `No ${activeTab === 'in-progress' ? 'in-progress' : activeTab} orders.`}
+              </p>
+              {activeTab === 'all' && (
+                <button className="cmb-find-btn" onClick={() => navigate(-1)}>
+                  Find Providers
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="cmb-list">
+              {pageItems.map((order) => {
+                const orderId       = order.orderId        ?? order.OrderId;
+                const ref           = order.orderReference ?? order.OrderReference ?? '—';
+                const providerNames = order.providerNames  ?? order.ProviderNames  ?? '';
+                const total         = order.totalAmount    ?? order.TotalAmount    ?? 0;
+                const itemCount     = order.itemCount      ?? order.ItemCount      ?? 0;
+                const createdAt     = order.createdAt      ?? order.CreatedAt;
+                const status        = normalizeStatus(order);
+
+                const hasReviewable = reviewableOrders.some(
+                  r => (r.orderId ?? r.OrderId) === orderId
+                );
+
+                return (
+                  <div
+                    key={orderId}
+                    className="cmb-card"
+                    onClick={() => setSelectedOrder(order)}
                   >
-                    Find Providers
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="bookings-list">
-                {filteredOrders.map((order) => {
-                  const orderId = order.orderId ?? order.OrderId;
-                  const ref = order.orderReference ?? order.OrderReference ?? '—';
-                  const providerNames = order.providerNames ?? order.ProviderNames ?? '';
-                  const total = order.totalAmount ?? order.TotalAmount ?? 0;
-                  const itemCount = order.itemCount ?? order.ItemCount ?? 0;
-                  const createdAt = order.createdAt ?? order.CreatedAt;
-                  const status = normalizeStatus(order);
-
-                  const hasReviewable = reviewableOrders.some(
-                    r => (r.orderId ?? r.OrderId) === orderId
-                  );
-
-                  return (
-                    <div
-                      key={orderId}
-                      className="booking-card"
-                      onClick={() => setSelectedOrder(order)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="booking-content" style={{ padding: '1.25rem 1.5rem' }}>
-                        <div className="left-content" style={{ flex: 1, minWidth: 0 }}>
-                          {/* Provider & ref */}
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div>
-                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1f2937' }}>
-                                {providerNames || 'Order'}
-                              </h3>
-                              <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#9ca3af' }}>
-                                Ref: {ref}
-                              </p>
-                            </div>
+                    <div className="cmb-card-body">
+                      <div className="cmb-card-left">
+                        <div className="cmb-card-top">
+                          <div>
+                            <h3 className="cmb-provider-name">
+                              {providerNames || 'Order'}
+                            </h3>
+                            <p className="cmb-ref">Ref: {ref}</p>
+                          </div>
+                          <div className="cmb-badge-row">
                             <StatusBadge status={status} />
                             {hasReviewable && (
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                                padding: '0.2rem 0.6rem',
-                                background: '#fef3c7', color: '#92400e',
-                                borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600
-                              }}>
+                              <span className="cmb-review-badge">
                                 <Star size={11} fill="#f59e0b" color="#f59e0b" /> Leave a Review
                               </span>
                             )}
                           </div>
-
-                          {/* Meta row */}
-                          <div style={{
-                            display: 'flex', flexWrap: 'wrap', gap: '1rem',
-                            marginTop: '1rem', color: '#6b7280', fontSize: '0.85rem'
-                          }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Calendar size={14} />
-                              {fmt.date(createdAt)}
-                            </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Clock size={14} />
-                              {fmt.time(createdAt)}
-                            </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Package size={14} />
-                              {itemCount} item{itemCount !== 1 ? 's' : ''}
-                            </span>
-                          </div>
                         </div>
 
-                        {/* Total */}
-                        <div style={{ textAlign: 'right', marginLeft: 'auto', paddingLeft: '1rem', flexShrink: 0 }}>
-                          <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: 0 }}>Total</p>
-                          <p style={{ fontWeight: 700, color: '#1f2937', fontSize: '1.1rem', margin: '0.2rem 0 0' }}>
-                            {fmt.money(total)}
-                          </p>
+                        <div className="cmb-card-meta">
+                          <span className="cmb-meta-item">
+                            <Calendar size={14} /> {fmt.date(createdAt)}
+                          </span>
+                          <span className="cmb-meta-item">
+                            <Clock size={14} /> {fmt.time(createdAt)}
+                          </span>
+                          <span className="cmb-meta-item">
+                            <Package size={14} /> {itemCount} item{itemCount !== 1 ? 's' : ''}
+                          </span>
                         </div>
                       </div>
+
+                      <div className="cmb-card-right">
+                        <p className="cmb-total-lbl">Total</p>
+                        <p className="cmb-total-amt">{fmt.money(total)}</p>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  </div>
+                );
+              })}
+
+              {totalPages > 1 && (
+                <div className="cmb-pagination">
+                  <span className="cmb-page-info">
+                    {startIdx + 1}–{Math.min(startIdx + ITEMS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length}
+                  </span>
+                  <div className="cmb-page-btns">
+                    <button
+                      className="cmb-page-btn cmb-page-nav"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={safePage === 1}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    {pageNums(safePage, totalPages).map((n, i) =>
+                      n === '…'
+                        ? <span key={`d${i}`} className="cmb-page-dots">…</span>
+                        : <button
+                            key={n}
+                            className={`cmb-page-btn${safePage === n ? ' cmb-page-active' : ''}`}
+                            onClick={() => setCurrentPage(n)}
+                          >
+                            {n}
+                          </button>
+                    )}
+                    <button
+                      className="cmb-page-btn cmb-page-nav"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={safePage === totalPages}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </>

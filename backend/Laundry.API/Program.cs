@@ -43,6 +43,7 @@ builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<ReviewService>();
+builder.Services.AddScoped<AdminRepository>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddSingleton(provider =>
