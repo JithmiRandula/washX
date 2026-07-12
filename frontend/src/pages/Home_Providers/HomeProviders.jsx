@@ -1,264 +1,249 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ProvidersPopup from '../../components/ProvidersPopup/ProvidersPopup';
-import { Search, Filter, MapPin, Star, Clock, Phone, Mail, Package, Calendar } from 'lucide-react';
+import Navbar from '../../components/Navbar/Navbar';
+import { Search, MapPin, Star, Package, Calendar, Navigation } from 'lucide-react';
+import api from '../../utils/api';
 import './HomeProviders.css';
+
+const GOOGLE_MAPS_KEY = 'AIzaSyCrL0PgpDatU3sg52bhdK_vSWcdD_IatiI';
+
+// Haversine formula — returns distance in km between two GPS points
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 const HomeProviders = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-  
-  const [filters, setFilters] = useState({
-    search: '',
-    distance: 10,
-    minRating: 0,
-    serviceType: 'all',
-    sortBy: 'distance'
-  });
+  const { isAuthenticated } = useAuth();
 
-  const [providers] = useState([
-    {
-      id: '1',
-      name: 'Clean & Fresh Laundry',
-      rating: 4.8,
-      reviews: 156,
-      distance: 2.5,
-      address: '123 Galle Road, Colombo 03',
-      phone: '+94 11 234 5678',
-      email: 'info@cleanfresh.com',
-      description: 'Professional laundry service with eco-friendly products and same-day delivery.',
-      services: ['Regular Wash', 'Dry Cleaning', 'Iron Service', 'Express Wash'],
-      pricing: { regular: 15, express: 25, dryClean: 35 },
-      hours: '8:00 AM - 8:00 PM',
-      image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=400',
-      features: ['Same Day Service', 'Eco-Friendly', 'Free Pickup & Delivery']
-    },
-    {
-      id: '2',
-      name: 'Quick Wash Express',
-      rating: 4.6,
-      reviews: 89,
-      distance: 1.8,
-      address: '456 Duplication Road, Colombo 04',
-      phone: '+94 11 456 7890',
-      email: 'service@quickwash.com',
-      description: 'Fast and reliable laundry service specializing in express cleaning.',
-      services: ['Express Wash', 'Regular Wash', 'Iron Service'],
-      pricing: { regular: 12, express: 20, dryClean: 30 },
-      hours: '7:00 AM - 10:00 PM',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
-      features: ['24/7 Service', 'Express Delivery', 'Mobile App']
-    },
-    {
-      id: '3',
-      name: 'Premium Dry Cleaners',
-      rating: 4.9,
-      reviews: 234,
-      distance: 3.2,
-      address: '789 Nawam Mawatha, Colombo 02',
-      phone: '+94 11 789 0123',
-      email: 'contact@premiumdry.com',
-      description: 'High-end dry cleaning service for delicate and luxury garments.',
-      services: ['Dry Cleaning', 'Regular Wash', 'Suit Care', 'Leather Cleaning'],
-      pricing: { regular: 18, express: 28, dryClean: 45 },
-      hours: '9:00 AM - 7:00 PM',
-      image: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=400',
-      features: ['Luxury Care', 'Expert Staff', 'Quality Guarantee']
-    },
-    {
-      id: '4',
-      name: 'EcoWash Green Cleaners',
-      rating: 4.7,
-      reviews: 145,
-      distance: 4.1,
-      address: '321 Peradeniya Road, Kandy',
-      phone: '+94 81 223 4567',
-      email: 'hello@ecowash.com',
-      description: '100% eco-friendly laundry service using organic detergents.',
-      services: ['Eco Wash', 'Regular Wash', 'Green Dry Clean'],
-      pricing: { regular: 16, express: 24, dryClean: 38 },
-      hours: '8:30 AM - 6:30 PM',
-      image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400',
-      features: ['100% Eco-Friendly', 'Organic Products', 'Carbon Neutral']
-    },
-    {
-      id: '5',
-      name: 'University Laundromat',
-      rating: 4.3,
-      reviews: 67,
-      distance: 6.8,
-      address: '555 Reid Avenue, Colombo 07',
-      phone: '+94 11 567 8901',
-      email: 'info@unilundry.com',
-      description: 'Student-friendly laundry service with affordable rates.',
-      services: ['Self Service', 'Full Service', 'Wash & Fold'],
-      pricing: { regular: 10, express: 18, dryClean: 25 },
-      hours: '6:00 AM - 11:00 PM',
-      image: 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400',
-      features: ['Student Discounts', 'Extended Hours', 'Study Area']
-    }
-  ]);
+  // Raw providers from API (with lat/lng intact)
+  const [rawProviders, setRawProviders] = useState([]);
+  // Providers shown in UI (with computed distances)
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [location, setLocation] = useState(null);
+  // Customer's GPS location (set after popup)
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationAddress, setLocationAddress] = useState('');
   const [showPopup, setShowPopup] = useState(true);
 
-  const filteredProviders = providers.filter(provider => {
-    const matchesSearch = provider.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         provider.address.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesDistance = provider.distance <= filters.distance;
-    const matchesRating = provider.rating >= filters.minRating;
-    const matchesService = filters.serviceType === 'all' || 
-                          provider.services.some(service => 
-                            service.toLowerCase().includes(filters.serviceType.toLowerCase())
-                          );
-    
-    return matchesSearch && matchesDistance && matchesRating && matchesService;
-  }).sort((a, b) => {
-    switch (filters.sortBy) {
-      case 'rating':
-        return b.rating - a.rating;
-      case 'distance':
-        return a.distance - b.distance;
-      case 'reviews':
-        return b.reviews - a.reviews;
-      default:
-        return 0;
-    }
+  const [filters, setFilters] = useState({
+    search: '',
+    distance: 50,
+    minRating: 0,
+    serviceType: 'all',
+    sortBy: 'rating', // switches to 'distance' once location is known
   });
 
-  const handleBookOrder = (providerId) => {
-    if (!isAuthenticated) {
-      // Redirect to register page if not authenticated
-      navigate('/register', { 
-        state: { 
-          message: 'Please register or login to book an order',
-          returnTo: `/providers/${providerId}` 
-        } 
-      });
-      return;
+  // ── 1. Fetch real providers from backend ──────────────────────────────────
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [providersRes, ratingsRes] = await Promise.all([
+          api.get('/providers/with-services'),
+          api.get('/reviews/all-ratings').catch(() => ({ data: { data: [] } })),
+        ]);
+
+        if (!providersRes.data?.success) {
+          setError('Failed to load providers.');
+          return;
+        }
+
+        // Build fast ratings lookup: { providerId -> { rating, reviews } }
+        const ratingsMap = {};
+        (ratingsRes.data?.data || []).forEach((r) => {
+          const pid = r.providerId ?? r.ProviderId;
+          ratingsMap[pid] = {
+            rating: Number(r.averageRating ?? r.AverageRating ?? 0),
+            reviews: Number(r.totalReviews ?? r.TotalReviews ?? 0),
+          };
+        });
+
+        const transformed = (providersRes.data.data || []).map((p) => {
+          const services = Array.isArray(p.services) ? p.services : [];
+          const serviceNames = services.map((s) => s?.serviceName).filter(Boolean);
+          const prices = services.map((s) => Number(s?.price)).filter(Number.isFinite);
+          const ratingData = ratingsMap[Number(p.providerId)] ?? { rating: 0, reviews: 0 };
+
+          return {
+            id: p.providerId,
+            name: p.businessName || 'Unnamed Provider',
+            rating: ratingData.rating,
+            reviews: ratingData.reviews,
+            address: p.businessAddress || '',
+            description: p.description || '',
+            lat: p.latitude != null ? Number(p.latitude) : null,
+            lng: p.longitude != null ? Number(p.longitude) : null,
+            distance: null,  // computed after GPS
+            services: serviceNames,
+            minPrice: prices.length ? Math.min(...prices) : null,
+            isVerified: Boolean(p.isVerified),
+          };
+        });
+
+        setRawProviders(transformed);
+        setProviders(transformed);
+      } catch (err) {
+        setError('Unable to load providers. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProviders();
+  }, []);
+
+  // ── 2. Recompute distances whenever location or raw list changes ──────────
+  const applyLocation = useCallback(
+    (loc) => {
+      const withDistance = rawProviders.map((p) => ({
+        ...p,
+        distance:
+          p.lat != null && p.lng != null
+            ? Math.round(haversineKm(loc.lat, loc.lng, p.lat, p.lng) * 10) / 10
+            : null,
+      }));
+      setProviders(withDistance);
+      setFilters((prev) => ({ ...prev, sortBy: 'distance' }));
+    },
+    [rawProviders]
+  );
+
+  useEffect(() => {
+    if (userLocation && rawProviders.length > 0) {
+      applyLocation(userLocation);
     }
-    
-    // If authenticated, proceed with booking
-    navigate(`/customer/book/${providerId}`);
-  };
+  }, [userLocation, rawProviders, applyLocation]);
 
-  const handleFilterChange = (key, value) => {
-    setFilters({ ...filters, [key]: value });
-  };
-
-  const handleUseCurrentLocation = () => {
-    return new Promise((resolve, reject) => {
+  // ── 3. GPS handler passed to ProvidersPopup ───────────────────────────────
+  const handleUseCurrentLocation = () =>
+    new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        alert('Geolocation is not supported by your browser.');
-        reject(new Error('Geolocation not supported'));
+        reject(new Error('Geolocation is not supported by this browser.'));
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
-          setLocation({ latitude, longitude, method: 'gps' });
+          const loc = { lat: latitude, lng: longitude };
+
+          // Reverse-geocode with Google Maps API
+          let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          try {
+            const res = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_KEY}`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              if (data.status === 'OK' && data.results?.[0]?.formatted_address) {
+                address = data.results[0].formatted_address;
+              }
+            }
+          } catch (_) {}
+
+          setUserLocation(loc);
+          setLocationAddress(address);
           setShowPopup(false);
-          console.log(`Location obtained: ${latitude}, ${longitude}`);
           resolve();
         },
-        (error) => {
-          console.error('Geolocation error:', error);
-          let errorMessage = 'Unable to get your location. ';
-          
-          switch(error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage += 'Location access was denied.';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage += 'Location information is unavailable.';
-              break;
-            case error.TIMEOUT:
-              errorMessage += 'Location request timed out.';
-              break;
-            default:
-              errorMessage += 'An unknown error occurred.';
-          }
-          
-          reject(new Error(errorMessage));
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
+        () => reject(new Error('Unable to get location. Please check your browser permissions.')),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
+    });
+
+  // ── 4. Filter + sort ──────────────────────────────────────────────────────
+  const filteredProviders = providers
+    .filter((p) => {
+      if (
+        filters.search &&
+        !p.name.toLowerCase().includes(filters.search.toLowerCase()) &&
+        !p.address.toLowerCase().includes(filters.search.toLowerCase())
+      )
+        return false;
+      if (filters.minRating && p.rating < filters.minRating) return false;
+      if (filters.distance < 50 && p.distance != null && p.distance > filters.distance)
+        return false;
+      if (
+        filters.serviceType !== 'all' &&
+        !p.services.some((s) => s.toLowerCase().includes(filters.serviceType.toLowerCase()))
+      )
+        return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (filters.sortBy === 'distance') {
+        if (a.distance == null && b.distance == null) return b.rating - a.rating;
+        if (a.distance == null) return 1;
+        if (b.distance == null) return -1;
+        return a.distance - b.distance;
+      }
+      if (filters.sortBy === 'rating') return b.rating - a.rating;
+      if (filters.sortBy === 'reviews') return b.reviews - a.reviews;
+      return 0;
+    });
+
+  const handleBookOrder = (providerId) => {
+    navigate('/register', {
+      state: {
+        message: 'Please register or login to book an order',
+        returnTo: `/providers/${providerId}`,
+      },
     });
   };
 
-  const handleEnterLocation = async (manualLocation) => {
-    console.log(`Manual location entered: ${manualLocation}`);
-    
-    try {
-      // Using Nominatim (OpenStreetMap) for geocoding
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(manualLocation)}&limit=1`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.length > 0) {
-          const { lat, lon } = data[0];
-          setLocation({ 
-            latitude: parseFloat(lat), 
-            longitude: parseFloat(lon),
-            address: manualLocation,
-            method: 'manual'
-          });
-          setShowPopup(false);
-          console.log(`Location geocoded: ${lat}, ${lon}`);
-        } else {
-          alert('Location not found. Please try a different location.');
-        }
-      } else {
-        // Fallback: just use the manual location text
-        setLocation({ 
-          latitude: 0, 
-          longitude: 0, 
-          address: manualLocation,
-          method: 'manual'
-        });
-        setShowPopup(false);
-      }
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      // Fallback: still accept the manual location
-      setLocation({ 
-        latitude: 0, 
-        longitude: 0, 
-        address: manualLocation,
-        method: 'manual'
-      });
-      setShowPopup(false);
-    }
-  };
+  const handleFilterChange = (key, value) =>
+    setFilters((prev) => ({ ...prev, [key]: value }));
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="home-providers-page">
+      <Navbar />
+
+      {/* Location popup — shown until GPS is granted */}
       {showPopup && (
         <ProvidersPopup
           onClose={setShowPopup}
           onUseCurrentLocation={handleUseCurrentLocation}
-          onEnterLocation={handleEnterLocation}
         />
       )}
 
+      <div className="home-providers-body">
       <div className="home-providers-container">
+
         {/* Header */}
         <div className="home-providers-header">
           <div className="home-header-content">
             <h1>Find Laundry Providers</h1>
-            <p>Discover reliable laundry services near you</p>
+            <p>
+              {userLocation
+                ? `Showing providers near: ${locationAddress}`
+                : 'Discover reliable laundry services near you'}
+            </p>
           </div>
-          
+
           <div className="home-results-info">
-            <span>{filteredProviders.length} providers found</span>
+            <span className="home-count-badge">
+              {loading ? '…' : `${filteredProviders.length} provider${filteredProviders.length !== 1 ? 's' : ''} found`}
+            </span>
+            {!userLocation && !showPopup && (
+              <button className="home-use-loc-btn" onClick={() => setShowPopup(true)}>
+                <Navigation size={14} /> Use My Location
+              </button>
+            )}
           </div>
         </div>
 
@@ -287,7 +272,8 @@ const HomeProviders = () => {
                 <option value={1}>Within 1 KM</option>
                 <option value={3}>Within 3 KM</option>
                 <option value={5}>Within 5 KM</option>
-                <option value={8}>Within 8 KM</option>
+                <option value={10}>Within 10 KM</option>
+                <option value={20}>Within 20 KM</option>
               </select>
             </div>
 
@@ -311,12 +297,11 @@ const HomeProviders = () => {
                 onChange={(e) => handleFilterChange('serviceType', e.target.value)}
               >
                 <option value="all">All Services</option>
-                <option value="wash">Wash & Fold</option>
+                <option value="wash">Wash &amp; Fold</option>
                 <option value="dry">Dry Cleaning</option>
                 <option value="iron">Ironing Service</option>
-                <option value="steam">Steam Press</option>
-                <option value="premium">Premium Care</option>
                 <option value="express">Express Service</option>
+                <option value="premium">Premium Care</option>
               </select>
             </div>
 
@@ -334,116 +319,128 @@ const HomeProviders = () => {
           </div>
         </div>
 
-        {/* Provider Cards */}
-        <div className="home-providers-grid">
-          {filteredProviders.map((provider) => (
-            <div key={provider.id} className="home-provider-card">
-              <div className="home-provider-image">
-                <img src={provider.image} alt={provider.name} />
-                <div className="home-distance-badge">
-                  <MapPin size={14} />
-                  {provider.distance} km
-                </div>
-              </div>
+        {/* Loading */}
+        {loading && (
+          <div className="home-loading">
+            <div className="home-spinner" />
+            <p>Loading providers…</p>
+          </div>
+        )}
 
-              <div className="home-provider-content">
-                <div className="home-provider-header">
-                  <h3>{provider.name}</h3>
-                  <div className="home-rating">
-                    <Star size={16} fill="#fbbf24" color="#fbbf24" />
-                    <span>{provider.rating}</span>
-                    <span className="home-reviews">({provider.reviews} reviews)</span>
-                  </div>
-                </div>
+        {/* Error */}
+        {error && !loading && (
+          <div className="home-error">
+            <p>{error}</p>
+            <button onClick={() => window.location.reload()}>Try Again</button>
+          </div>
+        )}
 
-                <div className="home-provider-details">
-                  <div className="home-address">
-                    <MapPin size={14} />
-                    <span>{provider.address}</span>
-                  </div>
-                  
-                  <div className="home-contact-info">
-                    <div className="home-contact-item">
-                      <Clock size={14} />
-                      <span>{provider.hours}</span>
+        {/* Provider grid */}
+        {!loading && !error && filteredProviders.length > 0 && (
+          <div className="home-providers-grid">
+            {filteredProviders.map((provider) => {
+              const isNear = provider.distance != null && provider.distance <= 5;
+              return (
+                <div key={provider.id} className="home-provider-card">
+
+                  {/* Image + badges */}
+                  <div className="home-provider-image">
+                    <img
+                      src="/wash1.jpg"
+                      alt={provider.name}
+                      onError={(e) => { e.target.src = '/wash1.jpg'; }}
+                    />
+                    <div className={`home-distance-badge${isNear ? ' home-distance-near' : ''}`}>
+                      <MapPin size={12} />
+                      {provider.distance != null ? `${provider.distance} km` : '— km'}
                     </div>
-                    <div className="home-contact-item">
-                      <Phone size={14} />
-                      <span>{provider.phone}</span>
-                    </div>
-                  </div>
-
-                  <p className="home-description">{provider.description}</p>
-
-                  <div className="home-services">
-                    {provider.services.slice(0, 3).map((service, index) => (
-                      <span key={index} className="home-service-tag">
-                        <Package size={12} />
-                        {service}
-                      </span>
-                    ))}
-                    {provider.services.length > 3 && (
-                      <span className="home-service-tag home-more">
-                        +{provider.services.length - 3} more
-                      </span>
+                    {isNear && (
+                      <div className="home-nearby-badge">Nearby</div>
+                    )}
+                    {provider.isVerified && (
+                      <div className="home-verified-badge">✓ Verified</div>
                     )}
                   </div>
 
-                  <div className="home-features">
-                    {provider.features.map((feature, index) => (
-                      <span key={index} className="home-feature-tag">{feature}</span>
-                    ))}
-                  </div>
+                  {/* Content */}
+                  <div className="home-provider-content">
+                    <div className="home-provider-header">
+                      <h3>{provider.name}</h3>
+                      <div className="home-rating">
+                        <Star size={14} fill="#f59e0b" color="#f59e0b" />
+                        <span>{provider.rating > 0 ? provider.rating.toFixed(1) : 'New'}</span>
+                        {provider.reviews > 0 && (
+                          <span className="home-reviews">({provider.reviews})</span>
+                        )}
+                      </div>
+                    </div>
 
-                  <div className="home-pricing">
-                    <div className="home-price-item">
-                      <span>Regular Wash</span>
-                      <span>Rs {provider.pricing.regular}</span>
-                    </div>
-                    <div className="home-price-item">
-                      <span>Express Wash</span>
-                      <span>Rs {provider.pricing.express}</span>
-                    </div>
-                    <div className="home-price-item">
-                      <span>Dry Cleaning</span>
-                      <span>Rs {provider.pricing.dryClean}</span>
-                    </div>
+                    {provider.address && (
+                      <div className="home-address">
+                        <MapPin size={13} />
+                        <span>{provider.address}</span>
+                      </div>
+                    )}
+
+                    {provider.description && (
+                      <p className="home-description">
+                        {provider.description.length > 100
+                          ? provider.description.slice(0, 100) + '…'
+                          : provider.description}
+                      </p>
+                    )}
+
+                    {provider.services.length > 0 && (
+                      <div className="home-services">
+                        {provider.services.slice(0, 3).map((s, i) => (
+                          <span key={i} className="home-service-tag">
+                            <Package size={11} /> {s}
+                          </span>
+                        ))}
+                        {provider.services.length > 3 && (
+                          <span className="home-service-tag home-more">
+                            +{provider.services.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {provider.minPrice != null && (
+                      <div className="home-pricing-row">
+                        <span>Starting from</span>
+                        <span className="home-price-val">Rs {Math.round(provider.minPrice)}</span>
+                      </div>
+                    )}
+
+                    <button
+                      className="home-book-order-btn"
+                      onClick={() => handleBookOrder(provider.id)}
+                    >
+                      <Calendar size={15} />
+                      Register to Book
+                    </button>
+
+                    {!isAuthenticated && (
+                      <p className="home-auth-notice">
+                        Register or login to place an order
+                      </p>
+                    )}
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <div className="home-provider-actions">
-                  <button 
-                    className="home-view-details-btn"
-                    onClick={() => navigate(`/provider-details/${provider.id}`)}
-                  >
-                    View Details
-                  </button>
-                  <button 
-                    className="home-book-order-btn"
-                    onClick={() => handleBookOrder(provider.id)}
-                  >
-                    <Calendar size={16} />
-                    Book Order
-                  </button>
-                </div>
-
-                {!isAuthenticated && (
-                  <div className="home-auth-notice">
-                    <p>⚠️ Please register or login to book orders</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredProviders.length === 0 && (
+        {/* Empty state */}
+        {!loading && !error && filteredProviders.length === 0 && (
           <div className="home-no-providers">
             <Package size={48} />
             <h3>No providers found</h3>
             <p>Try adjusting your search criteria or expanding the distance range.</p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

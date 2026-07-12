@@ -1,23 +1,22 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Package, 
-  MapPin, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Layers,
+  ClipboardList,
+  BarChart3,
   User,
   LogOut,
   Menu,
   X,
   Bell,
-  Settings
 } from 'lucide-react';
 import './ProviderNavbar.css';
 
 const ProviderNavbar = () => {
   const { user, logout } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -28,140 +27,104 @@ const ProviderNavbar = () => {
     navigate('/login');
   };
 
-  const navigationItems = [
-    { 
-      path: `/provider/${providerId}/dashboard`, 
-      label: 'Dashboard', 
-      icon: LayoutDashboard 
-    },
-    { 
-      path: `/provider/${providerId}/services`, 
-      label: 'Services', 
-      icon: Package 
-    },
-    { 
-      path: `/provider/${providerId}/orders`, 
-      label: 'Orders', 
-      icon: Package 
-    },
-    { 
-      path: `/provider/${providerId}/analytics`, 
-      label: 'Analytics', 
-      icon: BarChart3 
-    },
-    { 
-      path: `/provider/${providerId}/profile`, 
-      label: 'Profile', 
-      icon: User 
-    }
+  const NAV = [
+    { path: `/provider/${providerId}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { path: `/provider/${providerId}/services`,  label: 'Services',   icon: Layers         },
+    { path: `/provider/${providerId}/orders`,    label: 'Orders',     icon: ClipboardList  },
+    { path: `/provider/${providerId}/analytics`, label: 'Analytics',  icon: BarChart3      },
+    { path: `/provider/${providerId}/profile`,   label: 'Profile',    icon: User           },
   ];
 
-  return (
-    <nav className="provider-navbar">
-      <div className="navbar-container">
-        {/* Logo Section */}
-        <div className="navbar-brand">
-          <Link to={`/provider/${providerId}/dashboard`} className="brand-link">
-            <div className="brand-logo">
-              <span className="wash-text">Wash</span>
-              <span className="x-text">X</span>
-            </div>
-            <span className="provider-badge">Provider</span>
-          </Link>
-        </div>
+  // Initials for avatar fallback
+  const displayName = user?.name || user?.email || 'Provider';
+  const initials = displayName
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
-        {/* Desktop Navigation */}
-        <div className="navbar-nav">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
+  return (
+    <nav className="pvn-nav">
+      <div className="pvn-inner">
+
+        {/* ── Logo ── */}
+        <Link to={`/provider/${providerId}/dashboard`} className="pvn-logo">
+          <img src="/washx logo.png" alt="WashX" className="pvn-logo-img" />
+        </Link>
+
+        {/* ── Desktop nav links ── */}
+        <div className="pvn-links">
+          {NAV.map(({ path, label, icon: Icon }) => {
+            const active = location.pathname === path;
             return (
               <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive ? 'active' : ''}`}
+                key={path}
+                to={path}
+                className={`pvn-link${active ? ' pvn-link-active' : ''}`}
               >
-                <Icon size={20} />
-                <span>{item.label}</span>
+                <Icon size={17} />
+                <span>{label}</span>
               </Link>
             );
           })}
         </div>
 
-        {/* Right Section */}
-        <div className="navbar-right">
-          {/* Notifications */}
-          <button className="notification-btn">
-            <Bell size={20} />
-            <span className="notification-badge">2</span>
+        {/* ── Right side ── */}
+        <div className="pvn-right">
+
+          {/* Notification bell */}
+          <button className="pvn-bell" title="Notifications">
+            <Bell size={19} />
+            <span className="pvn-bell-dot">2</span>
           </button>
 
-          {/* User Menu */}
-          <div className="user-menu">
-            <div className="user-info">
-              <img 
-                src={user?.avatar || '/api/placeholder/32/32'} 
-                alt="User" 
-                className="user-avatar"
-              />
-              <div className="user-details">
-                <span className="user-name">
-                  {user?.firstName} {user?.lastName}
-                </span>
-                <span className="user-role">Service Provider</span>
-              </div>
+          {/* User pill */}
+          <div className="pvn-user">
+            <div className="pvn-avatar">{initials}</div>
+            <div className="pvn-user-info">
+              <span className="pvn-user-name">{displayName}</span>
+              <span className="pvn-user-role">Service Provider</span>
             </div>
-            <button 
-              onClick={handleLogout}
-              className="logout-btn"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            className="mobile-menu-toggle"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          {/* Logout */}
+          <button className="pvn-logout" onClick={handleLogout} title="Logout">
+            <LogOut size={18} />
+          </button>
+
+          {/* Mobile toggle */}
+          <button
+            className="pvn-mobile-toggle"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle menu"
           >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      {isMobileMenuOpen && (
-        <div className="mobile-nav">
-          <div className="mobile-nav-items">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`mobile-nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Icon size={20} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-          
-          <div className="mobile-nav-footer">
-            <button 
-              onClick={handleLogout}
-              className="mobile-logout-btn"
-            >
-              <LogOut size={20} />
-              <span>Logout</span>
-            </button>
-          </div>
+      {/* ── Mobile drawer ── */}
+      {mobileOpen && (
+        <div className="pvn-mobile-drawer">
+          {NAV.map(({ path, label, icon: Icon }) => {
+            const active = location.pathname === path;
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={`pvn-mobile-link${active ? ' pvn-mobile-link-active' : ''}`}
+                onClick={() => setMobileOpen(false)}
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+          <button className="pvn-mobile-logout" onClick={handleLogout}>
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
         </div>
       )}
     </nav>

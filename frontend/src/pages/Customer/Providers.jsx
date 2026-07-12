@@ -52,9 +52,22 @@ import { cartAPI, bulkItemsAPI } from '../../api/commerceApi';
 import { redirectToPayHereCheckout } from '../../utils/payhere';
 import './Providers.css';
 
+// Haversine distance between two GPS points (returns km)
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
 const Providers = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [customerLocation, setCustomerLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -200,7 +213,9 @@ const Providers = () => {
               address: provider.businessAddress || '',
               phone: '',
               email: '',
-              distance: 2.5,
+              lat: provider.latitude != null ? Number(provider.latitude) : null,
+              lng: provider.longitude != null ? Number(provider.longitude) : null,
+              distance: null,
               services: serviceNames,
               servicesDetailed,
               priceRange,
@@ -210,7 +225,43 @@ const Providers = () => {
             };
           });
 
-          setProviders(transformedProviders);
+          // Fetch customer's saved location and compute real distances
+          let custLoc = null;
+          if (user && String(user.role).toLowerCase() === 'customer') {
+            try {
+              const locRes = await api.get('/customers/location');
+              if (locRes.data?.success && locRes.data?.data?.latitude != null) {
+                custLoc = {
+                  lat: Number(locRes.data.data.latitude),
+                  lng: Number(locRes.data.data.longitude),
+                  address: locRes.data.data.address || ''
+                };
+                setCustomerLocation(custLoc);
+              }
+            } catch (_) {}
+          }
+
+          // Attach real distance (km, 1 decimal) to each provider
+          const withDistance = transformedProviders.map((p) => ({
+            ...p,
+            distance:
+              custLoc && p.lat != null && p.lng != null
+                ? Math.round(haversineKm(custLoc.lat, custLoc.lng, p.lat, p.lng) * 10) / 10
+                : null
+          }));
+
+          // Default sort: nearest first when location available, else by rating
+          if (custLoc) {
+            withDistance.sort((a, b) => {
+              if (a.distance == null && b.distance == null) return b.rating - a.rating;
+              if (a.distance == null) return 1;
+              if (b.distance == null) return -1;
+              return a.distance - b.distance;
+            });
+            setFilters((prev) => ({ ...prev, sortBy: 'distance' }));
+          }
+
+          setProviders(withDistance);
         }
       } catch (error) {
         console.error('❌ Error fetching providers:', error);
@@ -607,10 +658,11 @@ const Providers = () => {
     if (filters.minRating && provider.rating < filters.minRating) {
       return false;
     }
-    if (filters.maxDistance && provider.distance > filters.maxDistance) {
+    // Only apply distance cap when real distance is known
+    if (filters.maxDistance && provider.distance != null && provider.distance > filters.maxDistance) {
       return false;
     }
-    if (filters.serviceType !== 'all' && !provider.services.some(service => 
+    if (filters.serviceType !== 'all' && !provider.services.some(service =>
       service.toLowerCase().includes(filters.serviceType.toLowerCase())
     )) {
       return false;
@@ -619,6 +671,10 @@ const Providers = () => {
   }).sort((a, b) => {
     switch (filters.sortBy) {
       case 'distance':
+        // Providers without distance go to the bottom
+        if (a.distance == null && b.distance == null) return b.rating - a.rating;
+        if (a.distance == null) return 1;
+        if (b.distance == null) return -1;
         return a.distance - b.distance;
       case 'price':
         return parseInt(a.priceRange.split('-')[0]) - parseInt(b.priceRange.split('-')[0]);
@@ -1065,47 +1121,95 @@ const Providers = () => {
     return (
       <>
         <CustomerNavbar />
-        <div className="bulk-page" style={{ padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 style={{ margin: 0 }}>{bulkService.serviceName}</h2>
-            <div>
-              <button className="bulk-close-btn" onClick={closeBulkPackageModal} style={{ marginRight: 12 }}>
-                Close
+        <div className="bkp-page">
+
+          {/* Clean white header — distinct from service list gradient */}
+          <div className="bkp-header">
+            <div className="bkp-main">
+              <button
+                className="bkp-back-btn"
+                onClick={() => {
+                  setShowBulkModal(false);
+                  setShowServiceList(true);
+                }}
+              >
+                <ArrowLeft size={15} />
+                Back to services
               </button>
+              <div className="bkp-header-row">
+                <div>
+                  <h1 className="bkp-title">{bulkService.serviceName}</h1>
+                  <p className="bkp-subtitle">Choose a package size to add to your cart</p>
+                </div>
+                {pkgs.length > 0 && (
+                  <span className="bkp-count-badge">
+                    {pkgs.length} package{pkgs.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {pkgs.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
-              <Package size={48} />
-              <h3 style={{ marginTop: '1rem' }}>No packages available</h3>
-              <p>This provider has not defined any bulk packages for this service.</p>
-              <div style={{ marginTop: '1rem' }}>
-                <button className="bulk-close-btn" onClick={closeBulkPackageModal}>Close</button>
+          <div className="bkp-main bkp-content">
+            {bulkLoading ? (
+              <div className="bkp-loading">
+                <div className="home-spinner" />
+                <p>Loading packages…</p>
               </div>
-            </div>
-          ) : (
-            <div className="bulk-cards-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-              {pkgs.map((p) => (
-                <div key={p.id} className="bulk-card" style={{ padding: '1rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700 }}>{p.bags} BAG</div>
+            ) : pkgs.length === 0 ? (
+              <div className="no-bookings">
+                <Package size={48} />
+                <h3>No packages available</h3>
+                <p>This provider has not defined any bulk packages for this service.</p>
+              </div>
+            ) : (
+              <div className="bkp-grid">
+                {pkgs.map((p) => (
+                  <div key={p.id} className="bkp-card">
+
+                    {/* Image — left column */}
+                    <div className="bkp-image-wrap">
+                      <img
+                        src={p.imageUrl || bulkService.imageUrl || '/wash1.jpg'}
+                        alt={p.title || bulkService.serviceName}
+                        className="bkp-image"
+                        onError={(e) => { e.target.src = '/wash1.jpg'; }}
+                      />
+                      <span className="bkp-bag-badge">
+                        {p.bags} BAG{p.bags !== 1 ? 'S' : ''}
+                      </span>
+                    </div>
+
+                    {/* Content — right column */}
+                    <div className="bkp-body">
+                      <div className="bkp-price">Rs {Number(p.price).toFixed(2)}</div>
+
+                      <div className="bkp-details">
+                        <span className="bkp-detail-pill">
+                          {p.bags} bag{p.bags > 1 ? 's' : ''} included
+                        </span>
+                        {p.maxKg > 0 && (
+                          <span className="bkp-detail-pill">Up to {p.maxKg} Kg</span>
+                        )}
+                      </div>
+
+                      {p.description && (
+                        <p className="bkp-desc">{p.description}</p>
+                      )}
+
+                      <button
+                        className="bkp-add-btn"
+                        onClick={() => addBulkToCart(p)}
+                        disabled={cartSaving}
+                      >
+                        {cartSaving ? 'Adding…' : 'Add to Cart'}
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'center', marginTop: 12 }}>
-                    <img src={p.imageUrl || bulkService.imageUrl || '/wash1.jpg'} alt={p.title || bulkService.serviceName} style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 6 }} />
-                  </div>
-                  <div style={{ textAlign: 'center', marginTop: 12, fontSize: '1.4rem', fontWeight: 800 }}>Rs.{Number(p.price).toFixed(2)}</div>
-                  <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>{p.bags} bag{p.bags > 1 ? 's' : ''} included</div>
-                  <div style={{ textAlign: 'center', color: '#6b7280', marginTop: 4 }}>Up to {p.maxKg}Kg</div>
-                  <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
-                    <button className="bulk-add-btn" onClick={() => addBulkToCart(p)} style={{ padding: '0.6rem 1rem', borderRadius: 8, background: '#5964a4', color: '#fff', border: 'none' }}>
-                      Add
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <CartButton />
       </>
@@ -1247,7 +1351,7 @@ const Providers = () => {
   // Services List View (Item-based / Bulk)
   if (showServiceList && selectedProvider) {
     const services = getServicesForGroup(selectedProvider, serviceGroup);
-    const title = serviceGroup === 'bulk' ? 'Bulk (per kg) services' : 'Item-based services';
+    const title = serviceGroup === 'bulk' ? 'Bulk (per kg)' : 'Item-based';
 
     return (
       <>
@@ -1262,11 +1366,16 @@ const Providers = () => {
                   setShowServiceTypeModal(true);
                 }}
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={16} />
                 Back
               </button>
               <h1>{selectedProvider.name}</h1>
-              <p>Select one of the {title} below</p>
+              <p>Choose a {title} service to continue</p>
+              {services.length > 0 && (
+                <span className="sls-service-count">
+                  {services.length} service{services.length !== 1 ? 's' : ''} available
+                </span>
+              )}
             </div>
 
             <div className="service-list-container">
@@ -1295,7 +1404,7 @@ const Providers = () => {
 
                       <div className="service-select-bottom">
                         {Number.isFinite(s.minimumOrder) && s.minimumOrder > 0 && (
-                          <span className="service-pill">Min order: {s.minimumOrder}</span>
+                          <span className="service-pill">Min: {s.minimumOrder}</span>
                         )}
                         {s.turnaroundTime && <span className="service-pill">{s.turnaroundTime}</span>}
                       </div>
@@ -2003,6 +2112,9 @@ const Providers = () => {
                     <span className={`cfp-avail-badge${provider.available ? '' : ' cfp-unavail'}`}>
                       {provider.available ? 'Available' : 'Unavailable'}
                     </span>
+                    {provider.distance != null && provider.distance <= 5 && (
+                      <span className="cfp-nearby-badge"><MapPin size={10} /> Nearby</span>
+                    )}
                     {provider.rating >= 4.5 && (
                       <span className="cfp-top-badge">Top Rated</span>
                     )}
@@ -2046,7 +2158,10 @@ const Providers = () => {
                     )}
 
                     <div className="cfp-card-meta">
-                      <span className="cfp-meta-item"><MapPin size={12} /> {provider.distance} km</span>
+                      <span className={`cfp-meta-item${provider.distance != null && provider.distance <= 5 ? ' cfp-meta-near' : ''}`}>
+                        <MapPin size={12} />
+                        {provider.distance != null ? `${provider.distance} km away` : 'Distance unknown'}
+                      </span>
                       <span className="cfp-meta-item"><Package size={12} /> Rs {provider.priceRange}</span>
                     </div>
 

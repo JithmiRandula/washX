@@ -217,7 +217,9 @@ export const AuthProvider = ({ children }) => {
         password: userData.password,
         phone: userData.phone,
         role: userData.role || 'customer',
-        address: userData.address || ''
+        address: userData.address || '',
+        latitude: userData.latitude ?? null,
+        longitude: userData.longitude ?? null,
       };
 
       const response = await registerUser(registerData);

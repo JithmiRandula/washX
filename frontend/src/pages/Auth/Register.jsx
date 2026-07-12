@@ -5,6 +5,8 @@ import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Compass, CheckCircle, X }
 import './Login.css';
 import './Register.css';
 
+const GOOGLE_MAPS_KEY = 'AIzaSyCrL0PgpDatU3sg52bhdK_vSWcdD_IatiI';
+
 const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +24,7 @@ const Register = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [currentAddress, setCurrentAddress] = useState('');
   const [locationSuccess, setLocationSuccess] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,71 +109,102 @@ const Register = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // Step 1 — validate then show location modal
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
     }
+    setShowLocationModal(true);
+  };
 
+  // Step 2 — actual API registration (called after location choice)
+  const doRegister = async (addressOverride, latOverride, lngOverride) => {
+    setShowLocationModal(false);
     setLoading(true);
-
     try {
-      // Prepare registration data
       const registrationData = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
         role: formData.role,
-        address: formData.address
+        address: addressOverride ?? formData.address,
+        latitude: latOverride ?? formData.latitude ?? null,
+        longitude: lngOverride ?? formData.longitude ?? null,
       };
 
       await register(registrationData);
-
-      // Auto-login after successful register (ensures token + customerId/providerId exist)
       const loggedUser = await login(formData.email, formData.password);
       const role = (loggedUser.role || '').toString().toLowerCase();
 
-      console.log('SUCCESS (registered + logged in):', loggedUser);
       alert('Registered Successfully!');
 
       if (role === 'admin') {
         navigate('/admin/dashboard');
       } else if (role === 'provider') {
-        const providerId =
-          loggedUser.providerId || loggedUser.id || loggedUser._id || loggedUser.Id || loggedUser.userId || loggedUser.UserId;
-        if (providerId) {
-          navigate(`/provider/${providerId}/dashboard`);
-        } else {
-          navigate('/');
-        }
+        const providerId = loggedUser.providerId || loggedUser.id || loggedUser._id || loggedUser.Id || loggedUser.userId || loggedUser.UserId;
+        navigate(providerId ? `/provider/${providerId}/dashboard` : '/');
       } else if (role === 'customer') {
-        const customerId =
-          loggedUser.customerId || loggedUser.id || loggedUser._id || loggedUser.Id || loggedUser.userId || loggedUser.UserId;
-        if (customerId) {
-          navigate(`/customer/${customerId}/dashboard`);
-        } else {
-          navigate('/');
-        }
+        const customerId = loggedUser.customerId || loggedUser.id || loggedUser._id || loggedUser.Id || loggedUser.userId || loggedUser.UserId;
+        navigate(customerId ? `/customer/${customerId}/dashboard` : '/');
       } else {
         navigate('/');
       }
     } catch (err) {
-      console.log("ERROR:", err);
-      console.log("ERROR RESPONSE:", err.response?.data);
-
       setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');
-      alert("Registration Failed");    } finally {
+      alert('Registration Failed');
+    } finally {
       setLoading(false);
     }
+  };
+
+  // Location modal — GPS choice
+  const handleUseCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by this browser.');
+      setShowLocationModal(false);
+      return;
+    }
+    setLocationLoading(true);
+    try {
+      const position = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true, timeout: 10000, maximumAge: 0
+        })
+      );
+      const { latitude, longitude } = position.coords;
+      let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_KEY}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'OK' && data.results?.[0]?.formatted_address) {
+            address = data.results[0].formatted_address;
+          }
+        }
+      } catch (_) {}
+      setFormData(prev => ({ ...prev, latitude, longitude, address }));
+      await doRegister(address, latitude, longitude);
+    } catch {
+      setError('Unable to fetch location. Please check location permissions.');
+      setShowLocationModal(false);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  // Location modal — manual choice (proceed with typed address)
+  const handleEnterManually = () => {
+    doRegister();
   };
 
   return (
@@ -419,6 +453,35 @@ const Register = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Location Modal ── */}
+      {showLocationModal && (
+        <div className="rg-loc-overlay">
+          <div className="rg-loc-modal">
+            <div className="rg-loc-pin">
+              <MapPin size={36} />
+            </div>
+            <h2 className="rg-loc-title">Find laundries near you</h2>
+            <p className="rg-loc-desc">
+              To show laundry providers within your area and calculate distances accurately,
+              please allow location access or enter your location manually.
+            </p>
+            <div className="rg-loc-btns">
+              <button
+                className="rg-loc-btn rg-loc-btn-primary"
+                onClick={handleUseCurrentLocation}
+                disabled={locationLoading}
+              >
+                {locationLoading ? (
+                  <><span className="rg-loc-spinner" /> Getting location…</>
+                ) : (
+                  <><Compass size={18} /> Use My Current Location</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

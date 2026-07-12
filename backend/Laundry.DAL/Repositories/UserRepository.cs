@@ -135,7 +135,7 @@ public sealed class UserRepository(SqlHelper sql)
         return _sql.ExecuteSingleAsync(
             """
             SELECT u.UserId, u.Name, u.Email, u.Phone, u.PasswordHash,
-                   c.CustomerId, c.Address
+                   c.CustomerId, c.Address, c.Latitude, c.Longitude
             FROM Users u
             INNER JOIN Customers c ON c.UserId = u.UserId
             WHERE u.UserId = @UserId
@@ -151,6 +151,12 @@ public sealed class UserRepository(SqlHelper sql)
                 Address = reader.IsDBNull(reader.GetOrdinal("Address"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("Address")),
+                Latitude = reader.IsDBNull(reader.GetOrdinal("Latitude"))
+                    ? null
+                    : reader.GetDecimal(reader.GetOrdinal("Latitude")),
+                Longitude = reader.IsDBNull(reader.GetOrdinal("Longitude"))
+                    ? null
+                    : reader.GetDecimal(reader.GetOrdinal("Longitude")),
                 HasPassword = !reader.IsDBNull(reader.GetOrdinal("PasswordHash"))
                     && !string.IsNullOrWhiteSpace(reader.GetString(reader.GetOrdinal("PasswordHash")))
             });

@@ -1,45 +1,20 @@
 import React, { useState } from 'react';
-import { MapPin, Navigation, Loader } from 'lucide-react';
+import { MapPin, Loader } from 'lucide-react';
 import './ProvidersPopup.css';
 
-const ProvidersPopup = ({ onClose, onUseCurrentLocation, onEnterLocation }) => {
-  const [manualLocation, setManualLocation] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
+const ProvidersPopup = ({ onClose, onUseCurrentLocation }) => {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [error, setError] = useState('');
 
   const handleUseCurrentLocation = async () => {
     setIsLoadingLocation(true);
     setError('');
-    
     try {
       await onUseCurrentLocation();
     } catch (err) {
-      setError('Unable to get location. Please try manual entry.');
-      setShowManualInput(true);
+      setError('Unable to get location. Please ensure location access is enabled.');
     } finally {
       setIsLoadingLocation(false);
-    }
-  };
-
-  const handleManualLocationSubmit = () => {
-    setError('');
-    if (manualLocation.trim()) {
-      onEnterLocation(manualLocation);
-      setManualLocation('');
-    } else {
-      setError('Please enter a valid location.');
-    }
-  };
-
-  const handleEnterManually = () => {
-    setShowManualInput(true);
-    setError('');
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleManualLocationSubmit();
     }
   };
 
@@ -50,62 +25,28 @@ const ProvidersPopup = ({ onClose, onUseCurrentLocation, onEnterLocation }) => {
           <MapPin size={28} style={{ color: '#ef4444' }} /> Find laundries near you
         </h2>
         <p className="providers-popup-message">
-          To show laundry providers within your area and calculate distances accurately, please allow
-          location access or enter your location manually.
+          To show laundry providers within your area and calculate distances accurately,
+          please allow location access.
         </p>
-        
+
         {error && <div className="providers-popup-error">{error}</div>}
-        
-        {!showManualInput ? (
-          <div className="providers-popup-actions">
-            <button 
-              className="providers-popup-button" 
-              onClick={handleUseCurrentLocation}
-              disabled={isLoadingLocation}
-            >
-              {isLoadingLocation ? (
-                <>
-                  <Loader size={18} className="providers-popup-spinner" />
-                  Getting Location...
-                </>
-              ) : (
-                <>
-                  Use My Current Location
-                </>
-              )}
-            </button>
-            <button className="providers-popup-button" onClick={handleEnterManually}>
-              Enter Location Manually
-            </button>
-          </div>
-        ) : (
-          <div className="providers-popup-manual-location">
-            <input
-              type="text"
-              placeholder="Enter your city, area, or postal code"
-              value={manualLocation}
-              onChange={(e) => setManualLocation(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="providers-popup-input"
-              autoFocus
-            />
-            <div className="providers-popup-manual-actions">
-              <button 
-                className="providers-popup-submit" 
-                onClick={handleManualLocationSubmit}
-                disabled={!manualLocation.trim()}
-              >
-                Submit
-              </button>
-              <button 
-                className="providers-popup-back" 
-                onClick={() => setShowManualInput(false)}
-              >
-                Back
-              </button>
-            </div>
-          </div>
-        )}
+
+        <div className="providers-popup-actions">
+          <button
+            className="providers-popup-button"
+            onClick={handleUseCurrentLocation}
+            disabled={isLoadingLocation}
+          >
+            {isLoadingLocation ? (
+              <>
+                <Loader size={18} className="providers-popup-spinner" />
+                Getting Location...
+              </>
+            ) : (
+              'Use My Current Location'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

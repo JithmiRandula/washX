@@ -1,6 +1,9 @@
+/* ── Provider Analytics Page ── */
+
 .provider-analytics {
   min-height: 100vh;
   background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .analytics-container {
@@ -9,6 +12,295 @@
   margin: 0 auto;
 }
 
+/* ── New header ── */
+.pa-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 1.5rem 2rem;
+  border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(15,23,42,0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.pa-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.7rem;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.pa-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.pa-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pa-refresh-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pa-refresh-btn:hover {
+  background: #eff6ff;
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+}
+
+/* ── Loading / error ── */
+.pa-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 80px 0;
+  color: #64748b;
+}
+
+.pa-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #1d4ed8;
+  border-radius: 50%;
+  animation: pa-spin 0.8s linear infinite;
+}
+
+@keyframes pa-spin { to { transform: rotate(360deg); } }
+
+.pa-error {
+  text-align: center;
+  padding: 60px 0;
+  color: #ef4444;
+}
+
+.pa-error button {
+  margin-top: 12px;
+  background: #1d4ed8;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ── Metric change colours ── */
+.pa-positive { color: #059669 !important; }
+.pa-negative { color: #ef4444 !important; }
+.pa-neutral  { color: #94a3b8 !important; }
+
+/* ── Bar chart ── */
+.pa-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 260px;
+  padding-top: 12px;
+}
+
+.pa-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 5px;
+  height: 100%;
+}
+
+.pa-bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: #f1f5f9;
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+}
+
+.pa-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #1d4ed8, #0284c7);
+  border-radius: 5px 5px 0 0;
+  transition: height 0.6s cubic-bezier(.4,0,.2,1);
+  min-height: 4px;
+}
+
+.pa-bar-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.pa-bar-val {
+  font-size: 0.7rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+/* ── Donut chart ── */
+.pa-donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding-top: 8px;
+}
+
+.pa-donut-svg {
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.06));
+}
+
+.pa-pie-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.pa-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.pa-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.pa-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pa-legend-label {
+  flex: 1;
+  color: #374151;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.pa-legend-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── Top Services card ── */
+.pa-services-card {
+  margin-bottom: 2rem;
+}
+
+/* ── Recent orders extras ── */
+.pa-order-count {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.pa-empty-orders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  color: #94a3b8;
+}
+
+/* ── Pagination ── */
+.pa-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1rem 0.25rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pa-page-info {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pa-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pa-page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pa-page-btn:hover:not(:disabled) {
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.pa-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pa-page-btn.pa-page-active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.pa-page-ellipsis {
+  padding: 0 4px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 34px;
+}
+
+/* keep old analytics-header stub so nothing breaks if referenced */
 .analytics-header {
   display: flex;
   justify-content: space-between;

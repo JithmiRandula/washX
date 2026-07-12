@@ -507,26 +507,43 @@
 }
 
 .cta-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 4rem 2rem;
+  background: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 5rem 2rem;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 60% 50%, rgba(255,255,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .cta-container {
-  max-width: 800px;
+  max-width: 700px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .cta-container h2 {
-  font-size: 2.5rem;
+  font-size: 2.6rem;
+  font-weight: 800;
   margin-bottom: 1rem;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .cta-container p {
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.6;
 }
 
 .cta-buttons {
@@ -549,23 +566,24 @@
 }
 
 .btn-cta-signup {
-  background: #1a202c;
-  color: #ffffff;
+  background: #ffffff;
+  color: #1d4ed8;
   border: none;
-  padding: 1rem 2rem;
+  padding: 1rem 2.5rem;
   border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 1.125rem;
+  font-weight: 700;
+  font-size: 1.1rem;
   text-decoration: none;
-  transition: all 0.3s;
+  transition: all 0.25s;
   display: inline-block;
-  box-shadow: 0 4px 14px rgba(26, 32, 44, 0.4);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.2px;
 }
 
 .btn-cta-signup:hover {
-  transform: translateY(-2px);
-  background: #2d3748;
-  box-shadow: 0 8px 20px rgba(45, 55, 72, 0.5);
+  transform: translateY(-3px);
+  background: #f0f9ff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .btn-cta {
