@@ -1,4 +1,5 @@
 using Laundry.BLL.Services.Commerce;
+using Laundry.DAL.Repositories;
 using Laundry.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -12,14 +13,18 @@ namespace Laundry.API.Controllers;
 [Authorize]
 public sealed class OrdersController : ControllerBase
 {
-    private readonly OrderService _orderService;
+    private readonly OrderService            _orderService;
+    private readonly CartService             _cartService;
+    private readonly NotificationRepository  _notifications;
 
-    private readonly CartService _cartService;
-
-    public OrdersController(OrderService orderService, CartService cartService)
+    public OrdersController(
+        OrderService           orderService,
+        CartService            cartService,
+        NotificationRepository notifications)
     {
-        _orderService = orderService;
-        _cartService = cartService;
+        _orderService   = orderService;
+        _cartService    = cartService;
+        _notifications  = notifications;
     }
 
     [Authorize(Roles = "customer")]
@@ -37,6 +42,23 @@ public sealed class OrdersController : ControllerBase
             order.CustomerId = customerId;
 
             var id = await _orderService.CreateOrder(order);
+
+            // Fire a notification for each distinct provider in this order (non-fatal)
+            try
+            {
+                var providerIds = (order.Items ?? [])
+                    .Select(i => i.ProviderId)
+                    .Where(pid => pid > 0)
+                    .Distinct();
+
+                foreach (var pid in providerIds)
+                    await _notifications.AddOrderNotification(
+                        pid, id,
+                        order.OrderReference ?? string.Empty,
+                        customerName: null,
+                        order.TotalAmount);
+            }
+            catch { /* notification failure must never break order creation */ }
 
             // Clear cart non-fatally — order is already saved
             try { await _cartService.ClearCartAsync(userId.Value); } catch { /* ignore */ }

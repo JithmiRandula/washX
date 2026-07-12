@@ -10,8 +10,8 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
 } from 'lucide-react';
+import NotificationDropdown from '../NotificationDropdown/NotificationDropdown';
 import './ProviderNavbar.css';
 
 const ProviderNavbar = () => {
@@ -73,11 +73,8 @@ const ProviderNavbar = () => {
         {/* ── Right side ── */}
         <div className="pvn-right">
 
-          {/* Notification bell */}
-          <button className="pvn-bell" title="Notifications">
-            <Bell size={19} />
-            <span className="pvn-bell-dot">2</span>
-          </button>
+          {/* Real notification bell with dropdown */}
+          <NotificationDropdown />
 
           {/* User pill */}
           <div className="pvn-user">
