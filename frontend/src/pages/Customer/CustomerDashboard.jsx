@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   ShoppingBag, Clock, CheckCircle, Package,
   Star, Search, MapPin, ArrowRight,
   Droplets, Shirt, Zap, Sparkles, Wind, Crown,
-  TrendingUp, XCircle
+  TrendingUp, Loader
 } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
+import { ordersAPI } from '../../api/commerceApi';
 import './CustomerDashboard.css';
 
 const SERVICES = [
@@ -25,10 +27,18 @@ const STATUS_META = {
   cancelled:     { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled'   },
 };
 
-const ORDERS = [
-  { id: '1', providerName: 'CleanWash Express',    status: 'in-progress', items: 3, amount: 45,  pickupDate: '2025-12-08' },
-  { id: '2', providerName: 'Premium Laundry Care', status: 'completed',   items: 5, amount: 75,  pickupDate: '2025-12-05' },
-];
+// Mirrors the status logic on the My Bookings page so the two stay consistent —
+// overallStatus reflects PROVIDER confirmation, not payment status.
+const deriveStatus = (overallStatus, paymentStatus) => {
+  if (overallStatus) return overallStatus;
+  if (paymentStatus === 'Failed' || paymentStatus === 'Cancelled') return 'cancelled';
+  return 'pending';
+};
+
+const fmtDate = (d) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-LK', { year: 'numeric', month: 'short', day: 'numeric' });
+};
 
 const ACTIVITY = [
   { id: 1, title: 'Order #1234 completed',   desc: 'CleanWash Express completed your dry cleaning order', time: '2 hours ago', Icon: CheckCircle, color: '#059669', iconBg: '#ecfdf5' },
@@ -39,11 +49,25 @@ const ACTIVITY = [
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [serviceIdx, setServiceIdx] = useState(0);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  const customerId = user?.customerId;
 
   useEffect(() => {
     const t = setInterval(() => setServiceIdx(i => (i + 1) % SERVICES.length), 3500);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    ordersAPI.getMine()
+      .then((res) => { if (active) setOrders(res?.data ?? []); })
+      .catch(() => { if (active) setOrders([]); })
+      .finally(() => { if (active) setOrdersLoading(false); });
+    return () => { active = false; };
   }, []);
 
   const svc = SERVICES[serviceIdx];
@@ -51,12 +75,22 @@ const CustomerDashboard = () => {
 
   const customerName = user?.name ?? user?.firstName ?? user?.email?.split('@')[0] ?? 'Customer';
 
+  const normalizeStatus = (o) =>
+    deriveStatus(o?.overallStatus ?? o?.OverallStatus, o?.paymentStatus ?? o?.PaymentStatus);
+
+  const countByStatus = (statuses) =>
+    orders.filter((o) => statuses.includes(normalizeStatus(o))).length;
+
   const stats = [
-    { Icon: ShoppingBag, label: 'Total Orders', value: '12', accent: '#1d4ed8', iconBg: '#dbeafe', iconColor: '#1d4ed8' },
-    { Icon: Clock,       label: 'Pending',      value: '1',  accent: '#d97706', iconBg: '#fef3c7', iconColor: '#d97706' },
-    { Icon: CheckCircle, label: 'Completed',    value: '11', accent: '#059669', iconBg: '#ecfdf5', iconColor: '#059669' },
-    { Icon: XCircle,     label: 'Cancelled',    value: '0',  accent: '#dc2626', iconBg: '#fef2f2', iconColor: '#dc2626' },
+    { Icon: ShoppingBag, label: 'Total Orders', value: orders.length, accent: '#1d4ed8', iconBg: '#dbeafe', iconColor: '#1d4ed8' },
+    { Icon: Clock,       label: 'Pending',      value: countByStatus(['pending']), accent: '#d97706', iconBg: '#fef3c7', iconColor: '#d97706' },
+    { Icon: Package,     label: 'In Progress',  value: countByStatus(['in-progress', 'confirmed']), accent: '#0284c7', iconBg: '#e0f2fe', iconColor: '#0284c7' },
+    { Icon: CheckCircle, label: 'Completed',    value: countByStatus(['completed']), accent: '#059669', iconBg: '#ecfdf5', iconColor: '#059669' },
   ];
+
+  const recentOrders = [...orders]
+    .sort((a, b) => new Date(b.createdAt ?? b.CreatedAt) - new Date(a.createdAt ?? a.CreatedAt))
+    .slice(0, 3);
 
   return (
     <>
@@ -70,7 +104,7 @@ const CustomerDashboard = () => {
               <h1 className="cdb-title">Welcome back, {customerName}!</h1>
               <p className="cdb-sub">Here's what's happening with your laundry orders</p>
             </div>
-            <button className="cdb-find-btn" onClick={() => window.location.href = '/providers'}>
+            <button className="cdb-find-btn" onClick={() => navigate(`/customer/${customerId}/findproviders`)}>
               <Search size={16} /> Find Providers
             </button>
           </div>
@@ -87,7 +121,7 @@ const CustomerDashboard = () => {
             <button
               className="cdb-banner-btn"
               style={{ background: svc.accent }}
-              onClick={() => window.location.href = '/providers'}
+              onClick={() => navigate(`/customer/${customerId}/findproviders`)}
             >
               Explore Services <ArrowRight size={15} />
             </button>
@@ -128,32 +162,57 @@ const CustomerDashboard = () => {
                 <div className="cdb-section-title">
                   <ShoppingBag size={17} /> Recent Orders
                 </div>
-                <a href="/customer/orders" className="cdb-view-all">
+                <a
+                  href={`/customer/${customerId}/mybooking`}
+                  className="cdb-view-all"
+                  onClick={(e) => { e.preventDefault(); navigate(`/customer/${customerId}/mybooking`); }}
+                >
                   View All <ArrowRight size={13} />
                 </a>
               </div>
               <div className="cdb-orders">
-                {ORDERS.map(o => {
-                  const sm = STATUS_META[o.status] || STATUS_META.pending;
-                  return (
-                    <div key={o.id} className="cdb-order-card">
-                      <div className="cdb-order-top">
-                        <div>
-                          <div className="cdb-order-provider">{o.providerName}</div>
-                          <div className="cdb-order-id">Order #{o.id}</div>
+                {ordersLoading ? (
+                  <div className="cdb-orders-state">
+                    <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
+                  </div>
+                ) : recentOrders.length === 0 ? (
+                  <div className="cdb-orders-state">
+                    <p>No orders yet</p>
+                  </div>
+                ) : (
+                  recentOrders.map((o) => {
+                    const orderId       = o.orderId        ?? o.OrderId;
+                    const ref           = o.orderReference  ?? o.OrderReference  ?? '—';
+                    const providerNames = o.providerNames   ?? o.ProviderNames   ?? 'Order';
+                    const total         = o.totalAmount     ?? o.TotalAmount     ?? 0;
+                    const itemCount     = o.itemCount       ?? o.ItemCount       ?? 0;
+                    const createdAt     = o.createdAt       ?? o.CreatedAt;
+                    const status        = normalizeStatus(o);
+                    const sm            = STATUS_META[status] || STATUS_META.pending;
+                    return (
+                      <div
+                        key={orderId}
+                        className="cdb-order-card"
+                        onClick={() => navigate(`/customer/${customerId}/mybooking`)}
+                      >
+                        <div className="cdb-order-top">
+                          <div>
+                            <div className="cdb-order-provider">{providerNames}</div>
+                            <div className="cdb-order-id">Ref: {ref}</div>
+                          </div>
+                          <span className="cdb-status-badge" style={{ background: sm.bg, color: sm.color }}>
+                            ● {sm.label}
+                          </span>
                         </div>
-                        <span className="cdb-status-badge" style={{ background: sm.bg, color: sm.color }}>
-                          ● {sm.label}
-                        </span>
+                        <div className="cdb-order-meta">
+                          <span className="cdb-meta-item"><Package size={13} /> {itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                          <span className="cdb-meta-item"><Clock size={13} /> {fmtDate(createdAt)}</span>
+                          <span className="cdb-order-amt">Rs {Number(total).toFixed(2)}</span>
+                        </div>
                       </div>
-                      <div className="cdb-order-meta">
-                        <span className="cdb-meta-item"><Package size={13} /> {o.items} items</span>
-                        <span className="cdb-meta-item"><Clock size={13} /> {o.pickupDate}</span>
-                        <span className="cdb-order-amt">Rs {o.amount}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -191,28 +250,44 @@ const CustomerDashboard = () => {
                   </div>
                 </div>
                 <div className="cdb-quick-actions">
-                  <a href="/providers" className="cdb-qa-btn">
+                  <a
+                    href={`/customer/${customerId}/findproviders`}
+                    className="cdb-qa-btn"
+                    onClick={(e) => { e.preventDefault(); navigate(`/customer/${customerId}/findproviders`); }}
+                  >
                     <div className="cdb-qa-icon" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
                       <Search size={18} />
                     </div>
                     <span>Find Providers</span>
                     <ArrowRight size={14} className="cdb-qa-arrow" />
                   </a>
-                  <a href="/customer/orders" className="cdb-qa-btn">
+                  <a
+                    href={`/customer/${customerId}/mybooking`}
+                    className="cdb-qa-btn"
+                    onClick={(e) => { e.preventDefault(); navigate(`/customer/${customerId}/mybooking`); }}
+                  >
                     <div className="cdb-qa-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
                       <ShoppingBag size={18} />
                     </div>
                     <span>My Bookings</span>
                     <ArrowRight size={14} className="cdb-qa-arrow" />
                   </a>
-                  <a href="/customer/profile" className="cdb-qa-btn">
+                  <a
+                    href={`/customer/${customerId}/profile`}
+                    className="cdb-qa-btn"
+                    onClick={(e) => { e.preventDefault(); navigate(`/customer/${customerId}/profile`); }}
+                  >
                     <div className="cdb-qa-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
                       <Star size={18} />
                     </div>
                     <span>My Profile</span>
                     <ArrowRight size={14} className="cdb-qa-arrow" />
                   </a>
-                  <a href="/providers?near=me" className="cdb-qa-btn">
+                  <a
+                    href={`/customer/${customerId}/findproviders`}
+                    className="cdb-qa-btn"
+                    onClick={(e) => { e.preventDefault(); navigate(`/customer/${customerId}/findproviders`); }}
+                  >
                     <div className="cdb-qa-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
                       <MapPin size={18} />
                     </div>

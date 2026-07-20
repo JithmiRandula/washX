@@ -275,7 +275,18 @@
 }
 
 .cdb-order-card:last-child { border-bottom: none; }
-.cdb-order-card:hover { background: #f8faff; }
+.cdb-order-card:hover { background: #f8faff; cursor: pointer; }
+
+.cdb-orders-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 13.5px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .cdb-order-top {
   display: flex;

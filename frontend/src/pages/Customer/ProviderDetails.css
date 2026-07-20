@@ -105,6 +105,27 @@
   color: #2563eb;
 }
 
+.btn-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding: 0.6rem 1.1rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-message:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
 .promotions-section {
   padding: 1.5rem;
   background: #fef3c7;

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, Eye, Check, X, Clock,
-  MapPin, Phone, CreditCard, Banknote,
+  MapPin, Phone, CreditCard, Banknote, MessageCircle,
   RefreshCw, Package, CheckCircle, XCircle, AlertCircle,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { providerOrdersAPI } from '../../api/commerceApi';
 import './ProviderOrders.css';
 
@@ -33,6 +35,8 @@ const StatusBadge = ({ status }) => {
 };
 
 const ProviderOrders = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders]          = useState([]);
   const [loading, setLoading]        = useState(true);
   const [error, setError]            = useState(null);
@@ -60,6 +64,7 @@ const ProviderOrders = () => {
 
   const norm = (o) => ({
     orderId:         o.orderId         ?? o.OrderId,
+    customerId:      o.customerId      ?? o.CustomerId,
     orderReference:  o.orderReference  ?? o.OrderReference  ?? '—',
     totalAmount:     o.totalAmount     ?? o.TotalAmount      ?? 0,
     paymentProvider: o.paymentProvider ?? o.PaymentProvider  ?? '',
@@ -255,6 +260,17 @@ const ProviderOrders = () => {
                     <div className="pvo-card-ref">#{o.orderReference}</div>
                     <div className="pvo-card-head-right">
                       <StatusBadge status={o.providerStatus} />
+                      {o.customerId && (
+                        <button
+                          className="pvo-eye-btn"
+                          title="Message customer"
+                          onClick={() => navigate(`/provider/${user?.providerId}/messages`, {
+                            state: { startWith: { customerId: o.customerId, name: o.customerName } }
+                          })}
+                        >
+                          <MessageCircle size={15} />
+                        </button>
+                      )}
                       <button className="pvo-eye-btn" onClick={() => setSelected(o)} title="View details">
                         <Eye size={15} />
                       </button>

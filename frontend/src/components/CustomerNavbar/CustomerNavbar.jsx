@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Search, Package, User, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Search, Package, MessageCircle, User, LogOut, Menu, X } from 'lucide-react';
 import './CustomerNavbar.css';
 
 const CustomerNavbar = () => {
@@ -16,6 +16,7 @@ const CustomerNavbar = () => {
     { path: `/customer/${customerId}/dashboard`, label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: `/customer/${customerId}/findproviders`, label: 'Find Providers', icon: <Search size={20} /> },
     { path: `/customer/${customerId}/mybooking`, label: 'My Booking', icon: <Package size={20} /> },
+    { path: `/customer/${customerId}/messages`, label: 'Messages', icon: <MessageCircle size={20} /> },
     { path: `/customer/${customerId}/profile`, label: 'Profile', icon: <User size={20} /> }
   ];
 

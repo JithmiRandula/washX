@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   Layers,
   ClipboardList,
+  MessageCircle,
   BarChart3,
   User,
   LogOut,
@@ -12,15 +13,31 @@ import {
   X,
 } from 'lucide-react';
 import NotificationDropdown from '../NotificationDropdown/NotificationDropdown';
+import chatApi from '../../api/chatApi';
 import './ProviderNavbar.css';
+
+const CHAT_BADGE_POLL_INTERVAL = 30_000;
 
 const ProviderNavbar = () => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadChats, setUnreadChats] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
 
   const providerId = user?.providerId;
+
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const res = await chatApi.getUnreadCount();
+        setUnreadChats(res?.data?.count ?? 0);
+      } catch { /* ignore */ }
+    };
+    refresh();
+    const timer = setInterval(refresh, CHAT_BADGE_POLL_INTERVAL);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -31,6 +48,7 @@ const ProviderNavbar = () => {
     { path: `/provider/${providerId}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
     { path: `/provider/${providerId}/services`,  label: 'Services',   icon: Layers         },
     { path: `/provider/${providerId}/orders`,    label: 'Orders',     icon: ClipboardList  },
+    { path: `/provider/${providerId}/messages`,  label: 'Messages',   icon: MessageCircle, badge: unreadChats },
     { path: `/provider/${providerId}/analytics`, label: 'Analytics',  icon: BarChart3      },
     { path: `/provider/${providerId}/profile`,   label: 'Profile',    icon: User           },
   ];
@@ -55,7 +73,7 @@ const ProviderNavbar = () => {
 
         {/* ── Desktop nav links ── */}
         <div className="pvn-links">
-          {NAV.map(({ path, label, icon: Icon }) => {
+          {NAV.map(({ path, label, icon: Icon, badge }) => {
             const active = location.pathname === path;
             return (
               <Link
@@ -65,6 +83,7 @@ const ProviderNavbar = () => {
               >
                 <Icon size={17} />
                 <span>{label}</span>
+                {badge > 0 && <span className="pvn-link-badge">{badge > 99 ? '99+' : badge}</span>}
               </Link>
             );
           })}
@@ -104,7 +123,7 @@ const ProviderNavbar = () => {
       {/* ── Mobile drawer ── */}
       {mobileOpen && (
         <div className="pvn-mobile-drawer">
-          {NAV.map(({ path, label, icon: Icon }) => {
+          {NAV.map(({ path, label, icon: Icon, badge }) => {
             const active = location.pathname === path;
             return (
               <Link
@@ -115,6 +134,7 @@ const ProviderNavbar = () => {
               >
                 <Icon size={18} />
                 <span>{label}</span>
+                {badge > 0 && <span className="pvn-link-badge">{badge > 99 ? '99+' : badge}</span>}
               </Link>
             );
           })}

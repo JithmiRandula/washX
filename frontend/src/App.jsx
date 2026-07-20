@@ -19,6 +19,7 @@ import ProviderDetails from './pages/Customer/ProviderDetails';
 import CustomerDashboard from './pages/Customer/CustomerDashboard';
 import Bookings from './pages/Customer/Bookings';
 import CustomerProfile from './pages/Customer/CustomerProfile';
+import Messages from './pages/Customer/Messages';
 import PaymentResult from './pages/Customer/PaymentResult';
 import ProviderDashboard from './pages/Provider/ProviderDashboard';
 import ProviderServices from './pages/Provider/ProviderServices';
@@ -26,6 +27,7 @@ import ProviderOrders from './pages/Provider/ProviderOrders';
 import ProviderAnalytics from './pages/Provider/ProviderAnalytics';
 import ProviderProfile from './pages/Provider/ProviderProfile';
 import ProviderItems from './pages/Provider/ProviderItems';
+import ProviderMessages from './pages/Provider/ProviderMessages';
 import ProviderBulkItems from './pages/Provider/ProviderBulkItems';
 import ProviderLayout from './layouts/ProviderLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -102,15 +104,23 @@ function AppContent() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/customer/:customerId/profile" 
+          <Route
+            path="/customer/:customerId/profile"
             element={
               <ProtectedRoute allowedRoles={['customer']}>
                 <CustomerProfile />
               </ProtectedRoute>
-            } 
+            }
           />
-          
+          <Route
+            path="/customer/:customerId/messages"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <Messages />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Provider Routes — single ProviderNavbar via layout */}
           <Route
             path="/provider/:providerId"
@@ -125,6 +135,7 @@ function AppContent() {
             <Route path="items/:serviceId" element={<ProviderItems />} />
             <Route path="bulk-items/:serviceId" element={<ProviderBulkItems />} />
             <Route path="orders" element={<ProviderOrders />} />
+            <Route path="messages" element={<ProviderMessages />} />
             <Route path="analytics" element={<ProviderAnalytics />} />
             <Route path="profile" element={<ProviderProfile />} />
           </Route>

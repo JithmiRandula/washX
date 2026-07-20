@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, MapPin, Clock, Phone, Mail, CheckCircle } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Mail, CheckCircle, MessageCircle } from 'lucide-react';
 import { getProviderById } from '../../utils/api';
 import { reviewsApi } from '../../api/reviewsApi';
 import { useBooking } from '../../context/BookingContext';
@@ -184,6 +184,13 @@ const ProviderDetails = () => {
       return sum + (svc?.price ?? 0) * (quantities[sid] || 1);
     }, 0);
 
+  const handleMessageProvider = () => {
+    if (!user) { navigate('/login'); return; }
+    navigate(`/customer/${user.customerId}/messages`, {
+      state: { startWith: { providerId: provider.id, name: provider.name } }
+    });
+  };
+
   const handleBookNow = () => {
     if (!user) { navigate('/login'); return; }
     setCurrentBooking({
@@ -248,6 +255,9 @@ const ProviderDetails = () => {
                 <Mail size={18} />
                 <span>contact@{provider.name.toLowerCase().replace(/\s+/g, '')}.com</span>
               </div>
+              <button className="btn-message" onClick={handleMessageProvider}>
+                <MessageCircle size={18} /> Message Provider
+              </button>
             </div>
 
             {provider.promotions?.length > 0 && (
