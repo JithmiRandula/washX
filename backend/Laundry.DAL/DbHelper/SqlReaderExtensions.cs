@@ -15,7 +15,7 @@ internal static class SqlReaderExtensions
             }
             catch (IndexOutOfRangeException)
             {
-                // try next alias
+               
             }
         }
 
