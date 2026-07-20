@@ -187,6 +187,35 @@
 .ppf-card-sky    { border-top-color: #0284c7; }
 .ppf-card-indigo { border-top-color: #4f46e5; }
 .ppf-card-green  { border-top-color: #059669; }
+.ppf-card-amber  { border-top-color: #d97706; }
+
+.ppf-delivery-hint {
+  margin: 14px 24px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.ppf-delivery-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.ppf-delivery-toggle input { width: 16px; height: 16px; cursor: pointer; }
+
+.ppf-delivery-on { color: #059669 !important; font-weight: 600; }
+
+.ppf-delivery-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 24px 20px;
+}
 
 .ppf-card-head {
   display: flex;

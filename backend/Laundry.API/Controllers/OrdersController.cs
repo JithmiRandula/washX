@@ -150,7 +150,44 @@ public sealed class OrdersController : ControllerBase
         var ok = await _orderService.UpdateOrderStatusByProvider(orderId, providerId.Value, req.Status);
         if (!ok) return NotFound(new { success = false, message = "No matching order items found" });
 
+        // Let the customer know their laundry is done (non-fatal — must never break the status update)
+        if (req.Status == "completed")
+        {
+            try
+            {
+                var info = await _orderService.GetOrderBasicInfo(orderId);
+                if (info is { } order)
+                {
+                    await _notifications.AddCustomerNotification(
+                        order.CustomerId, providerId.Value, orderId, order.OrderReference,
+                        "Order Completed",
+                        $"Your order #{order.OrderReference} has been completed and is ready for pickup/delivery.");
+                }
+            }
+            catch { /* ignore */ }
+        }
+
         return Ok(new { success = true, message = $"Order status updated to {req.Status}" });
+    }
+
+    private static readonly string[] AllowedDeliveryStatuses = ["pending", "picked_up", "on_the_way", "delivered"];
+
+    // Live delivery-leg status (Pending -> Picked Up -> On the Way -> Delivered),
+    // separate from the order fulfillment status above.
+    [Authorize(Roles = "provider")]
+    [HttpPatch("{orderId:int}/delivery-status")]
+    public async Task<IActionResult> UpdateDeliveryStatus(int orderId, [FromBody] UpdateStatusRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req?.Status) || !AllowedDeliveryStatuses.Contains(req.Status))
+            return BadRequest(new { success = false, message = "A valid delivery status is required" });
+
+        var providerId = await ResolveProviderIdFromClaimsAsync();
+        if (!providerId.HasValue) return BadRequest(new { success = false, message = "Provider account not found" });
+
+        var ok = await _orderService.UpdateDeliveryStatus(orderId, providerId.Value, req.Status);
+        if (!ok) return NotFound(new { success = false, message = "No matching delivery found for this order" });
+
+        return Ok(new { success = true, message = $"Delivery status updated to {req.Status}" });
     }
 
     private int? GetUserId()

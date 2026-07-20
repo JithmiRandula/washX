@@ -17,5 +17,9 @@ public sealed class ProviderProfile
     public string? Description { get; set; }
     public decimal Rating { get; set; }
     public bool IsVerified { get; set; }
+
+    public bool OffersDelivery { get; set; }
+    public decimal DeliveryFee { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

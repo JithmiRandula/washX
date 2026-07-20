@@ -1,6 +1,8 @@
 ﻿using Laundry.BLL.Services.Auth;
+using Laundry.DAL.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Laundry.API.Controllers.Auth;
 
@@ -9,10 +11,12 @@ namespace Laundry.API.Controllers.Auth;
 public class ProvidersController : ControllerBase
 {
     private readonly ProviderService _providerService;
+    private readonly UserRepository  _users;
 
-    public ProvidersController(ProviderService providerService)
+    public ProvidersController(ProviderService providerService, UserRepository users)
     {
         _providerService = providerService;
+        _users = users;
     }
 
     // GET: /api/providers/{providerId}
@@ -60,5 +64,42 @@ public class ProvidersController : ControllerBase
         }
 
         return Ok(new { success = true, data = provider });
+    }
+
+    public sealed class UpdateDeliverySettingsRequest
+    {
+        public bool OffersDelivery { get; set; }
+        public decimal DeliveryFee { get; set; }
+    }
+
+    // PUT: /api/providers/{providerId}/delivery-settings
+    [Authorize(Roles = "provider")]
+    [HttpPut("{providerId:int}/delivery-settings")]
+    public async Task<IActionResult> UpdateDeliverySettings(
+        [FromRoute] int providerId, [FromBody] UpdateDeliverySettingsRequest req)
+    {
+        if (providerId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Invalid provider id" });
+        }
+        if (req.DeliveryFee < 0)
+        {
+            return BadRequest(new { success = false, message = "Delivery fee cannot be negative" });
+        }
+
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(claim, out var userId))
+        {
+            return Unauthorized(new { success = false });
+        }
+
+        var ownProviderId = await _users.GetProviderIdByUserId(userId);
+        if (ownProviderId != providerId)
+        {
+            return Forbid();
+        }
+
+        await _providerService.UpdateDeliverySettings(providerId, req.OffersDelivery, req.DeliveryFee);
+        return Ok(new { success = true });
     }
 }

@@ -24,6 +24,17 @@ const STATUS_META = {
 
 const statusMeta = (s) => STATUS_META[s] ?? STATUS_META.pending;
 
+const DELIVERY_STEPS = ['pending', 'picked_up', 'on_the_way', 'delivered'];
+const DELIVERY_STATUS_META = {
+  pending:    { label: 'Pending Pickup', color: '#d97706' },
+  picked_up:  { label: 'Picked Up',      color: '#0369a1' },
+  on_the_way: { label: 'On the Way',     color: '#4f46e5' },
+  delivered:  { label: 'Delivered',      color: '#059669' },
+};
+
+// How often the delivery status is re-polled while an order's detail view is open.
+const DELIVERY_POLL_INTERVAL = 15_000;
+
 const fmt = {
   date: (d) => {
     if (!d) return '—';
@@ -70,14 +81,26 @@ const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
   const [reviewModal, setReviewModal] = useState(null);
 
   useEffect(() => {
-    ordersAPI.getById(order.orderId ?? order.OrderId)
-      .then((res) => setDetail(res?.data ?? res))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const orderId = order.orderId ?? order.OrderId;
+    let active = true;
+
+    const load = (opts = {}) => {
+      if (!opts.silent) setLoading(true);
+      ordersAPI.getById(orderId)
+        .then((res) => { if (active) setDetail(res?.data ?? res); })
+        .catch(console.error)
+        .finally(() => { if (active && !opts.silent) setLoading(false); });
+    };
+
+    load();
+    // Live delivery-status updates while the customer has this order open.
+    const timer = setInterval(() => load({ silent: true }), DELIVERY_POLL_INTERVAL);
+    return () => { active = false; clearInterval(timer); };
   }, [order.orderId, order.OrderId]);
 
   const displayOrder = detail ?? order;
   const items = displayOrder?.items ?? displayOrder?.Items ?? [];
+  const deliveries = displayOrder?.deliveries ?? displayOrder?.Deliveries ?? [];
   const status = deriveTabStatus(
     displayOrder?.overallStatus ?? displayOrder?.OverallStatus,
     displayOrder?.paymentStatus ?? displayOrder?.PaymentStatus
@@ -212,6 +235,51 @@ const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
                 </span>
               </div>
             </div>
+
+            {/* Delivery */}
+            {deliveries.length > 0 && (
+              <div className="cmb-detail-card">
+                <h3 className="cmb-detail-card-title">Delivery</h3>
+                <div className="cmb-delivery-list">
+                  {deliveries.map((d, i) => {
+                    const option = d.deliveryOption ?? d.DeliveryOption ?? 'self';
+                    const providerName = d.providerName ?? d.ProviderName ?? 'Provider';
+
+                    if (option !== 'provider') {
+                      return (
+                        <div key={i} className="cmb-delivery-row">
+                          <span className="cmb-delivery-provider">{providerName}</span>
+                          <span className="cmb-delivery-self">Self drop-off / collection</span>
+                        </div>
+                      );
+                    }
+
+                    const dStatus = d.deliveryStatus ?? d.DeliveryStatus ?? 'pending';
+                    const stepIdx = Math.max(0, DELIVERY_STEPS.indexOf(dStatus));
+
+                    return (
+                      <div key={i} className="cmb-delivery-row">
+                        <span className="cmb-delivery-provider">{providerName}</span>
+                        <div className="cmb-delivery-track">
+                          {DELIVERY_STEPS.map((step, si) => (
+                            <div
+                              key={step}
+                              className={`cmb-delivery-step${si <= stepIdx ? ' cmb-delivery-step-done' : ''}`}
+                            >
+                              <span
+                                className="cmb-delivery-dot"
+                                style={si <= stepIdx ? { background: DELIVERY_STATUS_META[step].color } : {}}
+                              />
+                              <span className="cmb-delivery-step-label">{DELIVERY_STATUS_META[step].label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             {(displayOrder?.notes ?? displayOrder?.Notes) && (

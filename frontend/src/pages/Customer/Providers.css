@@ -1560,12 +1560,85 @@
 }
 
 .cart-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 0.75rem 0.25rem;
   border-top: 1px solid #e5e7eb;
   margin-top: 1rem;
+}
+
+.cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.cart-total-grand {
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e5e7eb;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cart-delivery-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cart-delivery-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cart-delivery-title svg { color: #0284c7; }
+
+.cart-delivery-row {
+  margin-bottom: 0.75rem;
+}
+
+.cart-delivery-provider {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.35rem;
+}
+
+.cart-delivery-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cart-delivery-opt {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cart-delivery-opt:hover { border-color: #93c5fd; }
+
+.cart-delivery-opt-active {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
 }
 
 /* Cart sidebar */
@@ -2443,6 +2516,28 @@
   font-weight: 600;
 }
 
+.cfp-delivery-badge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: #0284c7;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cfp-meta-delivery {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.cfp-meta-delivery svg { color: #0284c7 !important; }
+
 /* Body */
 .cfp-card-body {
   padding: 16px 18px 18px;
@@ -2505,7 +2600,8 @@
 .cfp-card-meta {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
   margin-top: 2px;
 }
 

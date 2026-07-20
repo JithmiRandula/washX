@@ -20,6 +20,8 @@ public sealed class ProviderRepository(SqlHelper sql)
         public string? ProviderDescription { get; init; }
         public decimal Rating { get; init; }
         public bool IsVerified { get; init; }
+        public bool OffersDelivery { get; init; }
+        public decimal DeliveryFee { get; init; }
         public DateTime ProviderCreatedAt { get; init; }
 
         public int? ServiceId { get; init; }
@@ -35,14 +37,14 @@ public sealed class ProviderRepository(SqlHelper sql)
         public DateTime? ServiceCreatedAt { get; init; }
     }
 
-    public Task<ProviderProfile?> GetProviderProfile(int providerId)
+    public async Task<ProviderProfile?> GetProviderProfile(int providerId)
     {
         SqlParameter[] parameters =
         [
             new("@ProviderId", providerId)
         ];
 
-        return _sql.ExecuteSingleAsync(
+        var profile = await _sql.ExecuteSingleAsync(
             "sp_GetProviderProfile",
             parameters,
             map: reader => new ProviderProfile
@@ -70,6 +72,43 @@ public sealed class ProviderRepository(SqlHelper sql)
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
             },
             commandType: CommandType.StoredProcedure);
+
+        // sp_GetProviderProfile predates the delivery columns — merge them in separately
+        // rather than touching the (un-source-controlled) stored procedure.
+        if (profile is not null)
+        {
+            var (offersDelivery, deliveryFee) = await GetDeliverySettings(providerId);
+            profile.OffersDelivery = offersDelivery;
+            profile.DeliveryFee = deliveryFee;
+        }
+
+        return profile;
+    }
+
+    public async Task<(bool OffersDelivery, decimal DeliveryFee)> GetDeliverySettings(int providerId)
+    {
+        SqlParameter[] p = [new("@ProviderId", providerId)];
+        var row = await _sql.ExecuteSingleAsync(
+            "SELECT OffersDelivery, DeliveryFee FROM dbo.Providers WHERE ProviderId = @ProviderId",
+            p,
+            reader => (
+                reader.GetBoolean(reader.GetOrdinal("OffersDelivery")),
+                reader.GetDecimal(reader.GetOrdinal("DeliveryFee"))
+            ));
+        return row;
+    }
+
+    public Task UpdateDeliverySettings(int providerId, bool offersDelivery, decimal deliveryFee)
+    {
+        SqlParameter[] p =
+        [
+            new("@ProviderId", providerId),
+            new("@OffersDelivery", offersDelivery),
+            new("@DeliveryFee", deliveryFee)
+        ];
+        return _sql.ExecuteNonQueryAsync(
+            "UPDATE dbo.Providers SET OffersDelivery = @OffersDelivery, DeliveryFee = @DeliveryFee WHERE ProviderId = @ProviderId",
+            p);
     }
 
     private const string ProvidersWithServicesSql = """
@@ -83,6 +122,8 @@ public sealed class ProviderRepository(SqlHelper sql)
             p.Description AS ProviderDescription,
             p.Rating,
             p.IsVerified,
+            p.OffersDelivery,
+            p.DeliveryFee,
             p.CreatedAt AS ProviderCreatedAt,
             s.ServiceId,
             s.ServiceName,
@@ -125,6 +166,8 @@ public sealed class ProviderRepository(SqlHelper sql)
                     : reader.GetString(reader.GetOrdinal("ProviderDescription")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
                 IsVerified = reader.GetBoolean(reader.GetOrdinal("IsVerified")),
+                OffersDelivery = reader.GetBoolean(reader.GetOrdinal("OffersDelivery")),
+                DeliveryFee = reader.GetDecimal(reader.GetOrdinal("DeliveryFee")),
                 ProviderCreatedAt = reader.GetDateTime(reader.GetOrdinal("ProviderCreatedAt")),
 
                 ServiceId = reader.IsDBNull(reader.GetOrdinal("ServiceId"))
@@ -178,6 +221,8 @@ public sealed class ProviderRepository(SqlHelper sql)
                     Description = row.ProviderDescription,
                     Rating = row.Rating,
                     IsVerified = row.IsVerified,
+                    OffersDelivery = row.OffersDelivery,
+                    DeliveryFee = row.DeliveryFee,
                     ProviderCreatedAt = row.ProviderCreatedAt,
                     Services = new List<Service>()
                 };
@@ -247,6 +292,8 @@ public sealed class ProviderRepository(SqlHelper sql)
     p.Description AS ProviderDescription,
     p.Rating,
     p.IsVerified,
+    p.OffersDelivery,
+    p.DeliveryFee,
     p.CreatedAt AS ProviderCreatedAt,
 
     s.ServiceId,
@@ -284,6 +331,8 @@ ORDER BY s.ServiceId DESC",
                     : reader.GetString(reader.GetOrdinal("ProviderDescription")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
                 IsVerified = reader.GetBoolean(reader.GetOrdinal("IsVerified")),
+                OffersDelivery = reader.GetBoolean(reader.GetOrdinal("OffersDelivery")),
+                DeliveryFee = reader.GetDecimal(reader.GetOrdinal("DeliveryFee")),
                 ProviderCreatedAt = reader.GetDateTime(reader.GetOrdinal("ProviderCreatedAt")),
 
                 ServiceId = reader.IsDBNull(reader.GetOrdinal("ServiceId"))
@@ -337,6 +386,8 @@ ORDER BY s.ServiceId DESC",
             Description = first.ProviderDescription,
             Rating = first.Rating,
             IsVerified = first.IsVerified,
+            OffersDelivery = first.OffersDelivery,
+            DeliveryFee = first.DeliveryFee,
             ProviderCreatedAt = first.ProviderCreatedAt,
             Services = new List<Service>()
         };

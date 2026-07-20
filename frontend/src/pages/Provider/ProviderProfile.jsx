@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   MapPin, Camera, Edit2, Save, X, Clock, Phone, Mail,
-  Star, Building2, FileText, ShieldCheck, AlertCircle, RefreshCw
+  Star, Building2, FileText, ShieldCheck, AlertCircle, RefreshCw, Truck
 } from 'lucide-react';
 import './ProviderProfile.css';
 import api from '../../utils/api';
@@ -29,6 +29,11 @@ const ProviderProfile = () => {
   const [uploading,   setUploading]   = useState(false);
   const [toast,       setToast]       = useState(null);
   const fileInputRef = useRef(null);
+
+  const [delivery,        setDelivery]        = useState({ offersDelivery: false, deliveryFee: 0 });
+  const [deliveryDraft,   setDeliveryDraft]   = useState({ offersDelivery: false, deliveryFee: 0 });
+  const [deliveryEditing, setDeliveryEditing] = useState(false);
+  const [deliverySaving,  setDeliverySaving]  = useState(false);
 
   useEffect(() => { if (providerId) fetchProfile(); }, [providerId]);
 
@@ -74,6 +79,13 @@ const ProviderProfile = () => {
         };
         setProfile(formatted);
         setTempProfile(formatted);
+
+        const deliveryInfo = {
+          offersDelivery: Boolean(d.offersDelivery),
+          deliveryFee: Number(d.deliveryFee ?? 0)
+        };
+        setDelivery(deliveryInfo);
+        setDeliveryDraft(deliveryInfo);
       } else {
         setError('Failed to load profile data.');
       }
@@ -153,6 +165,30 @@ const ProviderProfile = () => {
       showToast(err.response?.data?.message || 'Error saving profile.', 'error');
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const handleDeliveryEdit   = () => { setDeliveryDraft(delivery); setDeliveryEditing(true); };
+  const handleDeliveryCancel = () => { setDeliveryDraft(delivery); setDeliveryEditing(false); };
+
+  const handleDeliverySave = async () => {
+    setDeliverySaving(true);
+    try {
+      const payload = {
+        offersDelivery: Boolean(deliveryDraft.offersDelivery),
+        deliveryFee: Number(deliveryDraft.deliveryFee) || 0
+      };
+      const res = await api.put(`/providers/${providerId}/delivery-settings`, payload);
+      if (res.data.success) {
+        setDelivery(payload);
+        setDeliveryDraft(payload);
+        setDeliveryEditing(false);
+        showToast('Delivery settings saved!');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error saving delivery settings.', 'error');
+    } finally {
+      setDeliverySaving(false);
     }
   };
 
@@ -515,6 +551,75 @@ const ProviderProfile = () => {
               );
             })}
           </div>
+        </div>
+
+        {/* ── Delivery Settings Card ── */}
+        <div className="ppf-card ppf-card-amber">
+          <div className="ppf-card-head">
+            <div className="ppf-card-head-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+              <Truck size={18} />
+            </div>
+            <h2 className="ppf-section-title" style={{ flex: 1 }}>Delivery Settings</h2>
+            {!deliveryEditing && (
+              <button className="ppf-btn-ghost" onClick={handleDeliveryEdit}>
+                <Edit2 size={14} /> Edit
+              </button>
+            )}
+          </div>
+
+          <p className="ppf-delivery-hint">
+            Offer your own pickup &amp; delivery so customers don't have to drop off or collect their laundry themselves.
+          </p>
+
+          <div className="ppf-info-grid">
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">Pickup &amp; Delivery</label>
+              {deliveryEditing ? (
+                <label className="ppf-delivery-toggle">
+                  <input
+                    type="checkbox"
+                    checked={deliveryDraft.offersDelivery}
+                    onChange={e => setDeliveryDraft(d => ({ ...d, offersDelivery: e.target.checked }))}
+                  />
+                  <span>{deliveryDraft.offersDelivery ? 'Offered' : 'Not offered'}</span>
+                </label>
+              ) : (
+                <div className={`ppf-info-val${delivery.offersDelivery ? ' ppf-delivery-on' : ' ppf-muted'}`}>
+                  {delivery.offersDelivery ? 'Offered to customers' : 'Not offered'}
+                </div>
+              )}
+            </div>
+
+            <div className="ppf-info-item">
+              <label className="ppf-info-label">Delivery Fee (Rs)</label>
+              {deliveryEditing ? (
+                <input
+                  className="ppf-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  disabled={!deliveryDraft.offersDelivery}
+                  value={deliveryDraft.deliveryFee}
+                  onChange={e => setDeliveryDraft(d => ({ ...d, deliveryFee: e.target.value }))}
+                />
+              ) : (
+                <div className="ppf-info-val">
+                  {delivery.offersDelivery ? `Rs ${Number(delivery.deliveryFee).toFixed(2)}` : '—'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {deliveryEditing && (
+            <div className="ppf-delivery-actions">
+              <button className="ppf-btn-ghost" onClick={handleDeliveryCancel} disabled={deliverySaving}>
+                <X size={16} /> Cancel
+              </button>
+              <button className="ppf-btn-primary" onClick={handleDeliverySave} disabled={deliverySaving}>
+                <Save size={16} /> {deliverySaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Services Card ── */}

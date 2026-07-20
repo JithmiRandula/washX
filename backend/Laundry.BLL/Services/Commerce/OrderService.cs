@@ -21,6 +21,14 @@ public sealed class OrderService(OrderRepository repository)
             }
         }
 
+        if (order.Deliveries is { Count: > 0 })
+        {
+            foreach (var delivery in order.Deliveries)
+            {
+                await _repo.AddOrderDelivery(orderId, delivery.ProviderId, delivery.DeliveryOption, delivery.DeliveryFee);
+            }
+        }
+
         return orderId;
     }
 
@@ -44,6 +52,15 @@ public sealed class OrderService(OrderRepository repository)
     public async Task<bool> UpdateOrderStatusByProvider(int orderId, int providerId, string status)
     {
         var affected = await _repo.UpdateOrderStatusByProvider(orderId, providerId, status);
+        return affected > 0;
+    }
+
+    public Task<(int CustomerId, string OrderReference)?> GetOrderBasicInfo(int orderId) =>
+        _repo.GetOrderBasicInfo(orderId);
+
+    public async Task<bool> UpdateDeliveryStatus(int orderId, int providerId, string status)
+    {
+        var affected = await _repo.UpdateDeliveryStatus(orderId, providerId, status);
         return affected > 0;
     }
 }

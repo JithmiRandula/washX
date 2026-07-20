@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, Eye, Check, X, Clock,
-  MapPin, Phone, CreditCard, Banknote, MessageCircle,
+  MapPin, Phone, CreditCard, Banknote, MessageCircle, Truck,
   RefreshCw, Package, CheckCircle, XCircle, AlertCircle,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -18,6 +18,16 @@ const STATUS_META = {
   completed:     { bg: '#ecfdf5', color: '#059669', label: 'Completed',   dot: '#059669' },
   cancelled:     { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled',   dot: '#dc2626' },
 };
+
+const DELIVERY_STATUS_META = {
+  pending:    { bg: '#fffbeb', color: '#d97706', label: 'Pending Pickup' },
+  picked_up:  { bg: '#e0f2fe', color: '#0369a1', label: 'Picked Up'      },
+  on_the_way: { bg: '#eef2ff', color: '#4f46e5', label: 'On the Way'     },
+  delivered:  { bg: '#ecfdf5', color: '#059669', label: 'Delivered'      },
+};
+
+const NEXT_DELIVERY_STATUS = { pending: 'picked_up', picked_up: 'on_the_way', on_the_way: 'delivered' };
+const NEXT_DELIVERY_LABEL  = { pending: 'Mark Picked Up', picked_up: 'Mark On the Way', on_the_way: 'Mark Delivered' };
 
 const fmt = (d) =>
   d ? new Date(d).toLocaleString('en-GB', {
@@ -84,6 +94,16 @@ const ProviderOrders = () => {
       unitPrice:   i.unitPrice   ?? i.UnitPrice   ?? 0,
       price:       i.price       ?? i.Price       ?? 0,
     })),
+    delivery: (() => {
+      const d = (o.deliveries ?? o.Deliveries ?? [])[0];
+      if (!d) return null;
+      const option = d.deliveryOption ?? d.DeliveryOption ?? 'self';
+      if (option !== 'provider') return null;
+      return {
+        status: d.deliveryStatus ?? d.DeliveryStatus ?? 'pending',
+        fee:    d.deliveryFee    ?? d.DeliveryFee    ?? 0,
+      };
+    })(),
   });
 
   const updateStatus = async (orderId, status) => {
@@ -101,6 +121,27 @@ const ProviderOrders = () => {
       }
     } catch {
       alert('Failed to update order status.');
+    } finally {
+      setAction(null);
+    }
+  };
+
+  const updateDelivery = async (orderId, status) => {
+    setAction(orderId);
+    try {
+      await providerOrdersAPI.updateDeliveryStatus(orderId, status);
+      setOrders(prev =>
+        prev.map(o => {
+          const id = o.orderId ?? o.OrderId;
+          if (id !== orderId) return o;
+          const deliveries = (o.deliveries ?? o.Deliveries ?? []).map((d, i) =>
+            i === 0 ? { ...d, deliveryStatus: status, DeliveryStatus: status } : d
+          );
+          return { ...o, deliveries, Deliveries: deliveries };
+        })
+      );
+    } catch {
+      alert('Failed to update delivery status.');
     } finally {
       setAction(null);
     }
@@ -324,6 +365,30 @@ const ProviderOrders = () => {
                       {isOnline ? 'Online Payment' : 'Cash on Delivery'}
                     </span>
                   </div>
+
+                  {/* Delivery */}
+                  {o.delivery && (
+                    <div className="pvo-delivery-row">
+                      <span
+                        className="pvo-delivery-badge"
+                        style={{
+                          background: (DELIVERY_STATUS_META[o.delivery.status] || DELIVERY_STATUS_META.pending).bg,
+                          color: (DELIVERY_STATUS_META[o.delivery.status] || DELIVERY_STATUS_META.pending).color
+                        }}
+                      >
+                        <Truck size={12} /> {(DELIVERY_STATUS_META[o.delivery.status] || DELIVERY_STATUS_META.pending).label}
+                      </span>
+                      {NEXT_DELIVERY_STATUS[o.delivery.status] && (
+                        <button
+                          className="pvo-delivery-next-btn"
+                          disabled={busy}
+                          onClick={() => updateDelivery(o.orderId, NEXT_DELIVERY_STATUS[o.delivery.status])}
+                        >
+                          {busy ? 'Updating…' : NEXT_DELIVERY_LABEL[o.delivery.status]}
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Actions */}
                   {(o.providerStatus === 'pending' || o.providerStatus === 'in-progress') && (

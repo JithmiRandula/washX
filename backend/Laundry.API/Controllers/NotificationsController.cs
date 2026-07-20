@@ -7,7 +7,7 @@ namespace Laundry.API.Controllers;
 
 [ApiController]
 [Route("api/notifications")]
-[Authorize(Roles = "provider")]
+[Authorize(Roles = "customer,provider")]
 public sealed class NotificationsController : ControllerBase
 {
     private readonly NotificationRepository _repo;
@@ -23,10 +23,13 @@ public sealed class NotificationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var pid = await GetProviderId();
-        if (pid is null) return Unauthorized(new { success = false });
+        var identity = await ResolveIdentity();
+        if (identity is null) return Unauthorized(new { success = false });
 
-        var list = await _repo.GetByProvider(pid.Value);
+        var list = identity.Value.Role == "provider"
+            ? await _repo.GetByProvider(identity.Value.Id)
+            : await _repo.GetByCustomer(identity.Value.Id);
+
         return Ok(new { success = true, data = list });
     }
 
@@ -34,10 +37,13 @@ public sealed class NotificationsController : ControllerBase
     [HttpGet("unread-count")]
     public async Task<IActionResult> UnreadCount()
     {
-        var pid = await GetProviderId();
-        if (pid is null) return Unauthorized(new { success = false });
+        var identity = await ResolveIdentity();
+        if (identity is null) return Unauthorized(new { success = false });
 
-        var count = await _repo.GetUnreadCount(pid.Value);
+        var count = identity.Value.Role == "provider"
+            ? await _repo.GetUnreadCountForProvider(identity.Value.Id)
+            : await _repo.GetUnreadCountForCustomer(identity.Value.Id);
+
         return Ok(new { success = true, count });
     }
 
@@ -45,10 +51,10 @@ public sealed class NotificationsController : ControllerBase
     [HttpPatch("{id:int}/read")]
     public async Task<IActionResult> MarkRead(int id)
     {
-        var pid = await GetProviderId();
-        if (pid is null) return Unauthorized(new { success = false });
+        var identity = await ResolveIdentity();
+        if (identity is null) return Unauthorized(new { success = false });
 
-        await _repo.MarkRead(id, pid.Value);
+        await _repo.MarkRead(id, identity.Value.Role, identity.Value.Id);
         return Ok(new { success = true });
     }
 
@@ -56,10 +62,10 @@ public sealed class NotificationsController : ControllerBase
     [HttpPatch("read-all")]
     public async Task<IActionResult> MarkAllRead()
     {
-        var pid = await GetProviderId();
-        if (pid is null) return Unauthorized(new { success = false });
+        var identity = await ResolveIdentity();
+        if (identity is null) return Unauthorized(new { success = false });
 
-        await _repo.MarkAllRead(pid.Value);
+        await _repo.MarkAllRead(identity.Value.Role, identity.Value.Id);
         return Ok(new { success = true });
     }
 
@@ -67,18 +73,31 @@ public sealed class NotificationsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var pid = await GetProviderId();
-        if (pid is null) return Unauthorized(new { success = false });
+        var identity = await ResolveIdentity();
+        if (identity is null) return Unauthorized(new { success = false });
 
-        await _repo.Delete(id, pid.Value);
+        await _repo.Delete(id, identity.Value.Role, identity.Value.Id);
         return Ok(new { success = true });
     }
 
     // ── helper ───────────────────────────────────────────────────────────
-    private async Task<int?> GetProviderId()
+    private async Task<(string Role, int Id)?> ResolveIdentity()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(claim, out var userId)) return null;
-        return await _users.GetProviderIdByUserId(userId);
+
+        var role = User.FindFirstValue(ClaimTypes.Role)?.ToLowerInvariant();
+
+        if (role == "provider")
+        {
+            var pid = await _users.GetProviderIdByUserId(userId);
+            return pid is int p ? ("provider", p) : null;
+        }
+        if (role == "customer")
+        {
+            var cid = await _users.GetCustomerIdByUserId(userId);
+            return cid is int c ? ("customer", c) : null;
+        }
+        return null;
     }
 }

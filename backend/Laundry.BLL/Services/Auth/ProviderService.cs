@@ -21,4 +21,9 @@ public sealed class ProviderService(ProviderRepository repository)
     {
         return _repository.GetProviderWithServices(providerId);
     }
+
+    public Task UpdateDeliverySettings(int providerId, bool offersDelivery, decimal deliveryFee)
+    {
+        return _repository.UpdateDeliverySettings(providerId, offersDelivery, deliveryFee);
+    }
 }

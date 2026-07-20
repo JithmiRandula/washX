@@ -204,6 +204,11 @@ export const providerOrdersAPI = {
   updateStatus: async (orderId, status) => {
     const response = await api.patch(`/orders/${orderId}/provider-status`, { Status: status });
     return response.data;
+  },
+  // status: 'pending' | 'picked_up' | 'on_the_way' | 'delivered'
+  updateDeliveryStatus: async (orderId, status) => {
+    const response = await api.patch(`/orders/${orderId}/delivery-status`, { Status: status });
+    return response.data;
   }
 };
 

@@ -11,6 +11,7 @@ public sealed class Order
     public string? Notes { get; set; }
     public DateTime? CreatedAt { get; set; }
     public List<OrderItem>? Items { get; set; }
+    public List<OrderProviderDelivery>? Deliveries { get; set; }
 
     // Populated by aggregate queries (null on simple GetById)
     public int? ItemCount { get; set; }

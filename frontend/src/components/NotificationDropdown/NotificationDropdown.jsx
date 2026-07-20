@@ -27,9 +27,13 @@ const NotificationDropdown = () => {
 
   const dropRef = useRef(null);
 
+  const role = String(user?.role).toLowerCase();
+  const isProvider = role === 'provider';
+  const isCustomer = role === 'customer';
+
   // ── Poll unread count ────────────────────────────────────────────────
   const refreshCount = async () => {
-    if (String(user?.role).toLowerCase() !== 'provider') return;
+    if (!isProvider && !isCustomer) return;
     try {
       const res = await notificationsApi.getUnreadCount();
       setUnread(res?.data?.count ?? 0);
@@ -92,12 +96,16 @@ const NotificationDropdown = () => {
     setUnread(0);
   };
 
+  const ordersPath = isProvider
+    ? `/provider/${user?.providerId}/orders`
+    : `/customer/${user?.customerId}/mybooking`;
+
   // Clicking a notification: mark read in DB, hide from list, navigate to orders
   const handleClick = async (n) => {
     await dismissItem(n.notificationId, !n.isRead);
     setOpen(false);
     if (n.orderId) {
-      navigate(`/provider/${user?.providerId}/orders`);
+      navigate(ordersPath);
     }
   };
 
@@ -107,8 +115,8 @@ const NotificationDropdown = () => {
     await deleteItem(n.notificationId, !n.isRead);
   };
 
-  // Don't render for non-providers
-  if (String(user?.role).toLowerCase() !== 'provider') return null;
+  // Don't render for signed-out users or other roles (e.g. admin)
+  if (!isProvider && !isCustomer) return null;
 
   return (
     <div className="nd-wrap" ref={dropRef}>
@@ -160,7 +168,7 @@ const NotificationDropdown = () => {
               <div className="nd-state">
                 <Bell size={36} strokeWidth={1.2} />
                 <p>No notifications yet</p>
-                <span>Orders placed by customers will appear here</span>
+                <span>{isProvider ? 'Orders placed by customers will appear here' : 'Updates about your orders will appear here'}</span>
               </div>
             ) : (
               items.map((n) => (
@@ -197,9 +205,9 @@ const NotificationDropdown = () => {
             <div className="nd-footer">
               <button
                 className="nd-view-orders-btn"
-                onClick={() => { setOpen(false); navigate(`/provider/${user?.providerId}/orders`); }}
+                onClick={() => { setOpen(false); navigate(ordersPath); }}
               >
-                View all orders
+                {isProvider ? 'View all orders' : 'View my bookings'}
               </button>
             </div>
           )}

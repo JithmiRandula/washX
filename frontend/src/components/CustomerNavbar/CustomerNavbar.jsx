@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LayoutDashboard, Search, Package, MessageCircle, User, LogOut, Menu, X } from 'lucide-react';
+import NotificationDropdown from '../NotificationDropdown/NotificationDropdown';
 import './CustomerNavbar.css';
 
 const CustomerNavbar = () => {
@@ -83,7 +84,9 @@ const CustomerNavbar = () => {
           </button>
         </div>
 
-        <button 
+        <NotificationDropdown />
+
+        <button
           className="customer-navbar-toggle"
           onClick={() => setIsOpen(!isOpen)}
         >

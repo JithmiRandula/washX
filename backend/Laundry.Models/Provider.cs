@@ -24,6 +24,10 @@ namespace Laundry.Models
 
         public bool IsVerified { get; set; }
 
+        public bool OffersDelivery { get; set; }
+
+        public decimal DeliveryFee { get; set; }
+
         public DateTime CreatedAt { get; set; }
     }
 }

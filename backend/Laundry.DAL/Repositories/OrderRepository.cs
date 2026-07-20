@@ -69,6 +69,30 @@ public sealed class OrderRepository(SqlHelper sql)
         return await _sql.ExecuteScalarAsync<int>(sql, parameters, CommandType.Text);
     }
 
+    public Task AddOrderDelivery(int orderId, int providerId, string deliveryOption, decimal deliveryFee)
+    {
+        var option = deliveryOption == "provider" ? "provider" : "self";
+        var fee = option == "provider" ? deliveryFee : 0m;
+
+        SqlParameter[] parameters =
+        [
+            new("@OrderId",        orderId),
+            new("@ProviderId",     providerId),
+            new("@DeliveryOption", option),
+            new("@DeliveryFee",    fee),
+            new("@DeliveryStatus", option == "provider" ? "pending" : DBNull.Value)
+        ];
+
+        const string sql = """
+            INSERT INTO dbo.OrderProviderDeliveries
+                (OrderId, ProviderId, DeliveryOption, DeliveryFee, DeliveryStatus, UpdatedAt)
+            VALUES
+                (@OrderId, @ProviderId, @DeliveryOption, @DeliveryFee, @DeliveryStatus, GETDATE())
+            """;
+
+        return _sql.ExecuteNonQueryAsync(sql, parameters, CommandType.Text);
+    }
+
     public Task AddOrderItem(int orderId, OrderItem item)
     {
         const string sql = @"
@@ -176,8 +200,51 @@ public sealed class OrderRepository(SqlHelper sql)
             ORDER BY oi.OrderItemId";
 
         order.Items = await _sql.ExecuteListAsync(itemsSql, parameters, MapOrderItemDetailed);
+        order.Deliveries = await GetDeliveriesByOrder(orderId);
         return order;
     }
+
+    // ── Delivery read & write operations ─────────────────────────────────────
+
+    public Task<List<OrderProviderDelivery>> GetDeliveriesByOrder(int orderId)
+    {
+        SqlParameter[] p = [new("@OrderId", orderId)];
+        const string sql = """
+            SELECT d.OrderId, d.ProviderId, d.DeliveryOption, d.DeliveryFee, d.DeliveryStatus, d.UpdatedAt,
+                   p.BusinessName AS ProviderName
+            FROM dbo.OrderProviderDeliveries d
+            INNER JOIN dbo.Providers p ON p.ProviderId = d.ProviderId
+            WHERE d.OrderId = @OrderId
+            """;
+        return _sql.ExecuteListAsync(sql, p, MapDelivery);
+    }
+
+    public Task<int> UpdateDeliveryStatus(int orderId, int providerId, string status)
+    {
+        SqlParameter[] p =
+        [
+            new("@OrderId", orderId),
+            new("@ProviderId", providerId),
+            new("@Status", status)
+        ];
+        const string sql = """
+            UPDATE dbo.OrderProviderDeliveries
+            SET DeliveryStatus = @Status, UpdatedAt = GETDATE()
+            WHERE OrderId = @OrderId AND ProviderId = @ProviderId AND DeliveryOption = 'provider'
+            """;
+        return _sql.ExecuteNonQueryAsync(sql, p, CommandType.Text);
+    }
+
+    private static OrderProviderDelivery MapDelivery(SqlDataReader r) => new()
+    {
+        OrderId        = r.GetInt32(r.GetOrdinal("OrderId")),
+        ProviderId     = r.GetInt32(r.GetOrdinal("ProviderId")),
+        DeliveryOption = r.GetString(r.GetOrdinal("DeliveryOption")),
+        DeliveryFee    = r.GetDecimal(r.GetOrdinal("DeliveryFee")),
+        DeliveryStatus = r.IsDBNull(r.GetOrdinal("DeliveryStatus")) ? null : r.GetString(r.GetOrdinal("DeliveryStatus")),
+        UpdatedAt      = r.IsDBNull(r.GetOrdinal("UpdatedAt"))      ? null : r.GetDateTime(r.GetOrdinal("UpdatedAt")),
+        ProviderName   = r.IsDBNull(r.GetOrdinal("ProviderName"))   ? null : r.GetString(r.GetOrdinal("ProviderName")),
+    };
 
     // ── Provider read & write operations ────────────────────────────────────
 
@@ -190,6 +257,16 @@ public sealed class OrderRepository(SqlHelper sql)
         {
             SqlParameter[] p2 = [new("@OrderId", order.OrderId), new("@ProviderId", providerId)];
             order.Items = await _sql.ExecuteListAsync("SP_GetProviderOrderItems", p2, MapOrderItemDetailed, CommandType.StoredProcedure);
+
+            SqlParameter[] p3 = [new("@OrderId", order.OrderId), new("@ProviderId", providerId)];
+            var delivery = await _sql.ExecuteSingleAsync(
+                """
+                SELECT OrderId, ProviderId, DeliveryOption, DeliveryFee, DeliveryStatus, UpdatedAt, NULL AS ProviderName
+                FROM dbo.OrderProviderDeliveries
+                WHERE OrderId = @OrderId AND ProviderId = @ProviderId
+                """,
+                p3, MapDelivery);
+            if (delivery is not null) order.Deliveries = [delivery];
         }
         return orders;
     }
@@ -204,6 +281,17 @@ public sealed class OrderRepository(SqlHelper sql)
             new("@Status",     status)
         ];
         return _sql.ExecuteNonQueryAsync("SP_UpdateOrderStatusByProvider", p, CommandType.StoredProcedure);
+    }
+
+    // Lean lookup used to address a notification back to the customer who placed an order.
+    public Task<(int CustomerId, string OrderReference)?> GetOrderBasicInfo(int orderId)
+    {
+        SqlParameter[] p = [new("@OrderId", orderId)];
+        return _sql.ExecuteSingleAsync<(int, string)?>(
+            "SELECT CustomerId, OrderReference FROM dbo.Orders WHERE OrderId = @OrderId",
+            p,
+            r => (r.GetInt32(r.GetOrdinal("CustomerId")), r.GetString(r.GetOrdinal("OrderReference"))),
+            CommandType.Text);
     }
 
     public async Task<int?> GetOrderItemProviderId(int orderItemId)

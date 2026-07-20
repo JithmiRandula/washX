@@ -23,6 +23,10 @@ public sealed class ProviderWithServices
 
     public bool IsVerified { get; set; }
 
+    public bool OffersDelivery { get; set; }
+
+    public decimal DeliveryFee { get; set; }
+
     public DateTime ProviderCreatedAt { get; set; }
 
     public List<Service> Services { get; set; } = new();

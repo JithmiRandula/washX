@@ -27,7 +27,9 @@ const PaymentResult = ({ status }) => {
       const orderRef =
         searchParams.get('order_id') || sessionStorage.getItem('washx_payhere_order');
       const cartJson = sessionStorage.getItem('washx_checkout_cart');
+      const deliveryJson = sessionStorage.getItem('washx_checkout_delivery');
       sessionStorage.removeItem('washx_checkout_cart');
+      sessionStorage.removeItem('washx_checkout_delivery');
       sessionStorage.removeItem('washx_payhere_order');
 
       if (!orderRef || !cartJson) return;
@@ -45,7 +47,19 @@ const PaymentResult = ({ status }) => {
           Description: c.description || c.title || c.itemName || ''
         }));
 
-        const total = items.reduce((s, it) => s + (Number(it.Price) || 0), 0);
+        let deliveries = [];
+        try { deliveries = deliveryJson ? JSON.parse(deliveryJson) : []; } catch { deliveries = []; }
+        const deliveryPayload = (deliveries || []).map((d) => ({
+          ProviderId:     d.providerId || 0,
+          DeliveryOption: d.deliveryOption === 'provider' ? 'provider' : 'self',
+          DeliveryFee:    Number(d.deliveryFee || 0)
+        }));
+
+        const itemsTotal = items.reduce((s, it) => s + (Number(it.Price) || 0), 0);
+        const deliveryTotal = deliveryPayload.reduce(
+          (s, d) => s + (d.DeliveryOption === 'provider' ? d.DeliveryFee : 0), 0
+        );
+        const total = itemsTotal + deliveryTotal;
 
         const { ordersAPI } = await import('../../api/commerceApi');
         await ordersAPI.create({
@@ -55,7 +69,8 @@ const PaymentResult = ({ status }) => {
           PaymentProvider: 'PayHere',
           PaymentStatus:   'Paid',
           Notes: null,
-          Items: items
+          Items: items,
+          Deliveries: deliveryPayload
         });
 
         try { await cartAPI.clear(); } catch { /* non-fatal */ }

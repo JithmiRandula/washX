@@ -43,7 +43,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag, Truck } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import ItemBasedSelector from './ItemBasedSelector';
@@ -93,6 +93,8 @@ const Providers = () => {
   const [cartLoading, setCartLoading] = useState(false);
   const [cartSaving, setCartSaving] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  // { [providerId]: 'self' | 'provider' } — only set for providers in the cart that offer delivery
+  const [deliveryChoices, setDeliveryChoices] = useState({});
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     expiryDate: '',
@@ -221,7 +223,9 @@ const Providers = () => {
               priceRange,
               description: provider.description || 'No description available',
               available: true,
-              specialties
+              specialties,
+              offersDelivery: Boolean(provider.offersDelivery),
+              deliveryFee: Number(provider.deliveryFee ?? 0)
             };
           });
 
@@ -499,6 +503,30 @@ const Providers = () => {
     }
   };
 
+  // Distinct providers in the cart that actually offer delivery — the only ones
+  // the customer needs to make a choice for. Everyone else is implicitly 'self'.
+  const deliverableCartProviders = Array.from(new Set(cartItems.map((it) => it.providerId)))
+    .map((pid) => providers.find((p) => p.id === pid))
+    .filter((p) => p && p.offersDelivery);
+
+  useEffect(() => {
+    if (deliverableCartProviders.length === 0) return;
+    setDeliveryChoices((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const p of deliverableCartProviders) {
+        if (!(p.id in next)) { next[p.id] = 'self'; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems, providers]);
+
+  const deliveryFeeTotal = deliverableCartProviders.reduce(
+    (sum, p) => sum + (deliveryChoices[p.id] === 'provider' ? Number(p.deliveryFee || 0) : 0),
+    0
+  );
+
   const buildCartItemsDescription = () => {
     return cartItems
       .map((it) => {
@@ -521,11 +549,18 @@ const Providers = () => {
       return;
     }
 
-    const total = cartItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    const itemsTotal = cartItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    const total = itemsTotal + deliveryFeeTotal;
     if (total <= 0) {
       alert('Cart total must be greater than zero');
       return;
     }
+
+    const deliveries = deliverableCartProviders.map((p) => ({
+      providerId: p.id,
+      deliveryOption: deliveryChoices[p.id] === 'provider' ? 'provider' : 'self',
+      deliveryFee: Number(p.deliveryFee || 0)
+    }));
 
     const nameParts = String(user?.name || user?.Name || 'Customer').trim().split(/\s+/);
     const firstName = nameParts[0] || 'Customer';
@@ -553,6 +588,7 @@ const Providers = () => {
 
       sessionStorage.setItem('washx_payhere_order', payment.order_id);
       sessionStorage.setItem('washx_checkout_cart', JSON.stringify(cartItems));
+      sessionStorage.setItem('washx_checkout_delivery', JSON.stringify(deliveries));
 
       setShowCartModal(false);
       redirectToPayHereCheckout(payment);
@@ -1218,7 +1254,8 @@ const Providers = () => {
 
   // Cart Sidebar
   if (showCartModal) {
-    const total = cartItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    const itemsTotal = cartItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    const grandTotal = itemsTotal + deliveryFeeTotal;
 
     return (
       <>
@@ -1264,9 +1301,51 @@ const Providers = () => {
                   </div>
                 ))}
 
+                {deliverableCartProviders.length > 0 && (
+                  <div className="cart-delivery-section">
+                    <p className="cart-delivery-title"><Truck size={14} /> Delivery Options</p>
+                    {deliverableCartProviders.map((p) => {
+                      const choice = deliveryChoices[p.id] || 'self';
+                      return (
+                        <div key={p.id} className="cart-delivery-row">
+                          <span className="cart-delivery-provider">{p.name}</span>
+                          <div className="cart-delivery-toggle">
+                            <button
+                              type="button"
+                              className={`cart-delivery-opt${choice === 'self' ? ' cart-delivery-opt-active' : ''}`}
+                              onClick={() => setDeliveryChoices((prev) => ({ ...prev, [p.id]: 'self' }))}
+                            >
+                              I'll drop off / collect
+                            </button>
+                            <button
+                              type="button"
+                              className={`cart-delivery-opt${choice === 'provider' ? ' cart-delivery-opt-active' : ''}`}
+                              onClick={() => setDeliveryChoices((prev) => ({ ...prev, [p.id]: 'provider' }))}
+                            >
+                              Pickup &amp; delivery (+Rs {Number(p.deliveryFee || 0).toFixed(2)})
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div className="cart-total">
-                  <span>Total</span>
-                  <strong>Rs {total.toFixed(2)}</strong>
+                  <div className="cart-total-row">
+                    <span>Subtotal</span>
+                    <span>Rs {itemsTotal.toFixed(2)}</span>
+                  </div>
+                  {deliveryFeeTotal > 0 && (
+                    <div className="cart-total-row">
+                      <span>Delivery</span>
+                      <span>Rs {deliveryFeeTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="cart-total-row cart-total-grand">
+                    <span>Total</span>
+                    <strong>Rs {grandTotal.toFixed(2)}</strong>
+                  </div>
                 </div>
               </div>
             )}
@@ -2118,6 +2197,9 @@ const Providers = () => {
                     {provider.rating >= 4.5 && (
                       <span className="cfp-top-badge">Top Rated</span>
                     )}
+                    {provider.offersDelivery && (
+                      <span className="cfp-delivery-badge"><Truck size={10} /> Pickup &amp; Delivery</span>
+                    )}
                   </div>
 
                   {/* Body */}
@@ -2163,6 +2245,11 @@ const Providers = () => {
                         {provider.distance != null ? `${provider.distance} km away` : 'Distance unknown'}
                       </span>
                       <span className="cfp-meta-item"><Package size={12} /> Rs {provider.priceRange}</span>
+                      {provider.offersDelivery && (
+                        <span className="cfp-meta-item cfp-meta-delivery">
+                          <Truck size={12} /> Delivery +Rs {provider.deliveryFee.toFixed(0)}
+                        </span>
+                      )}
                     </div>
 
                     <button className="cfp-book-btn">
