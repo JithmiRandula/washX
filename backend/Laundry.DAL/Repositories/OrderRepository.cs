@@ -29,6 +29,8 @@ public sealed class OrderRepository(SqlHelper sql)
         "(SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId)";
 
     // Derived overall status — uses correlated subqueries, no GROUP BY / STRING_AGG.
+    // Reflects PROVIDER confirmation only (via OrderItems.Status), not payment status —
+    // an order stays 'pending' until a provider accepts it, regardless of PaymentStatus.
     private const string OverallStatusExpr = @"
         CASE
             WHEN (SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId) = 0
@@ -38,8 +40,9 @@ public sealed class OrderRepository(SqlHelper sql)
                 THEN 'completed'
             WHEN EXISTS (SELECT 1 FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId AND oi.Status = 'in-progress')
                 THEN 'in-progress'
-            WHEN o.PaymentStatus = 'Paid'
-                THEN 'confirmed'
+            WHEN (SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId AND oi.Status = 'cancelled')
+               = (SELECT COUNT(*) FROM dbo.OrderItems oi WHERE oi.OrderId = o.OrderId)
+                THEN 'cancelled'
             ELSE 'pending'
         END ";
 

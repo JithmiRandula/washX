@@ -40,9 +40,10 @@ const fmt = {
   money: (n) => `Rs ${Number(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
 };
 
+// overallStatus (from the backend) reflects PROVIDER confirmation, not payment —
+// an order stays 'pending' here until a provider accepts it, even if already paid.
 const deriveTabStatus = (overallStatus, paymentStatus) => {
   if (overallStatus) return overallStatus;
-  if (paymentStatus === 'Paid') return 'confirmed';
   if (paymentStatus === 'Failed' || paymentStatus === 'Cancelled') return 'cancelled';
   return 'pending';
 };
