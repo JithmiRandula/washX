@@ -122,31 +122,52 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
         };
     }
 
-    public async Task<User> HandleGoogleLogin(string? name, string? email)
+    public async Task<(User User, bool IsNewUser, int? ProviderId, int? CustomerId)> HandleGoogleLogin(string? name, string? email)
     {
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required", nameof(email));
 
         name ??= string.Empty;
 
-        // check if user already exists
-        var user = await _repo.GetByEmail(email);
+        // Existing account — just report back who they are and where they belong.
+        var existing = await _repo.GetByEmail(email);
+        if (existing is not null)
+        {
+            int? existingProviderId = existing.Role.Equals("provider", StringComparison.OrdinalIgnoreCase)
+                ? await _repo.GetProviderIdByUserId(existing.UserId)
+                : null;
+            int? existingCustomerId = existing.Role.Equals("customer", StringComparison.OrdinalIgnoreCase)
+                ? await _repo.GetCustomerIdByUserId(existing.UserId)
+                : null;
 
-        if (user != null)
-            return user;
+            return (existing, false, existingProviderId, existingCustomerId);
+        }
 
-        // create new Google user
-        user = new User
+        // First time signing in with this Google account — create a customer account
+        // (mirrors the normal Register() flow: a Users row plus its Customers profile row).
+        var newUser = new User
         {
             Name = name,
             Email = email,
-            Role = "customer", // default role
-            PasswordHash = ""  // no password for Google users
+            Phone = string.Empty,
+            Role = "customer",
+            PasswordHash = string.Empty // no password until they set one via /auth/updatepassword
         };
 
-        await _repo.Add(user);
+        newUser.UserId = await _repo.RegisterUser(newUser);
+        await _repo.CreateCustomerProfile(newUser.UserId, address: null, latitude: null, longitude: null);
+        var newCustomerId = await _repo.GetCustomerIdByUserId(newUser.UserId);
 
-        return user;
+        return (newUser, true, null, newCustomerId);
+    }
+
+    public async Task UpdatePassword(int userId, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            throw new ArgumentException("Password must be at least 6 characters", nameof(newPassword));
+
+        var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        await _repo.UpdatePasswordHash(userId, hash);
     }
 
     public async Task<object?> GetCustomerProfile(int userId)

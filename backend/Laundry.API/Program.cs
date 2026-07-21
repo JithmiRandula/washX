@@ -7,10 +7,13 @@ using Laundry.BLL.Services.Commerce;
 using Laundry.BLL.Services.Chat;
 using CloudinaryDotNet;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,6 +70,9 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    // The Google handler needs somewhere to persist the external identity between
+    // the OAuth redirect and our callback action — that's this temporary cookie.
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
@@ -93,7 +99,48 @@ builder.Services.AddAuthentication(options =>
         ?? throw new InvalidOperationException("Google ClientId is missing (Google:ClientId)");
     options.ClientSecret = builder.Configuration["Google:ClientSecret"]
         ?? throw new InvalidOperationException("Google ClientSecret is missing (Google:ClientSecret)");
+    // Must match the "Authorized redirect URI" registered in Google Cloud Console exactly —
+    // do not change this without also updating it there.
     options.CallbackPath = "/api/auth/google-callback";
+
+    // Handle the whole callback right here instead of a separate MVC controller action.
+    // The auth middleware (app.UseAuthentication()) intercepts any request to CallbackPath
+    // before routing ever sees it, so a controller mapped to the same path is unreachable —
+    // doing everything in OnTicketReceived sidesteps that entirely.
+    options.Events = new OAuthEvents
+    {
+        OnTicketReceived = async context =>
+        {
+            const string frontendBase = "http://localhost:5173";
+            context.HandleResponse();
+
+            // Done with the temporary external-login cookie — this app is JWT-based from here on.
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            var claims = context.Principal?.Identities.First().Claims;
+            var email = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            var name = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                context.Response.Redirect($"{frontendBase}/login?error=google_auth_failed");
+                return;
+            }
+
+            var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+            var tokenService = context.HttpContext.RequestServices.GetRequiredService<TokenService>();
+
+            var (user, isNewUser, providerId, _) = await userService.HandleGoogleLogin(name, email);
+            var token = tokenService.CreateToken(user);
+
+            var redirectUrl = $"{frontendBase}/auth/google/callback" +
+                $"?token={Uri.EscapeDataString(token)}&role={Uri.EscapeDataString(user.Role)}&userId={user.UserId}";
+            if (isNewUser) redirectUrl += "&needsPassword=true";
+            if (providerId is int pid) redirectUrl += $"&providerId={pid}";
+
+            context.Response.Redirect(redirectUrl);
+        }
+    };
 });
 
 // =======================

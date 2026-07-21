@@ -12,11 +12,6 @@ public sealed class UserRepository(SqlHelper sql)
     // They are implemented via stored procedures/queries in the database.
     public Task<User?> GetByEmail(string email) => GetUserByEmail(email);
 
-    public async Task Add(User user)
-    {
-        await RegisterUser(user);
-    }
-
  public async Task<int> RegisterUser(User user)
     {
         SqlParameter[] param =
@@ -173,6 +168,19 @@ public sealed class UserRepository(SqlHelper sql)
 
         return _sql.ExecuteNonQueryAsync(
             "UPDATE Users SET Name = @Name, Phone = @Phone, UpdatedAt = GETUTCDATE() WHERE UserId = @UserId",
+            parameters);
+    }
+
+    public Task UpdatePasswordHash(int userId, string passwordHash)
+    {
+        SqlParameter[] parameters =
+        [
+            new("@UserId", userId),
+            new("@PasswordHash", passwordHash)
+        ];
+
+        return _sql.ExecuteNonQueryAsync(
+            "UPDATE Users SET PasswordHash = @PasswordHash, UpdatedAt = GETUTCDATE() WHERE UserId = @UserId",
             parameters);
     }
 

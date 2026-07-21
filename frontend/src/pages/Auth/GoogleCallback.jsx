@@ -30,11 +30,12 @@ const GoogleCallback = () => {
       }
 
       try {
-        // Call the googleLogin function from AuthContext
+        // Call the googleLogin function from AuthContext — this also fetches /api/auth/me,
+        // which is the authoritative source for providerId/customerId.
         const userData = await googleLogin(token, userId, role);
-        
-        // Update user data with providerId if available
-        if (providerId) {
+
+        // The URL's providerId (sent for existing providers) fills in if /api/auth/me didn't have it yet.
+        if (providerId && !userData.providerId) {
           userData.providerId = providerId;
           localStorage.setItem('washx_user', JSON.stringify(userData));
         }
@@ -49,14 +50,14 @@ const GoogleCallback = () => {
         if (role === 'admin') {
           navigate('/admin/dashboard');
         } else if (role === 'provider') {
-          if (providerId) {
-            navigate(`/provider/${providerId}/dashboard`);
+          if (userData.providerId) {
+            navigate(`/provider/${userData.providerId}/dashboard`);
           } else {
             navigate('/login?error=provider_profile_missing');
           }
         } else if (role === 'customer') {
-          if (userId) {
-            navigate(`/customer/${userId}/dashboard`);
+          if (userData.customerId) {
+            navigate(`/customer/${userData.customerId}/dashboard`);
           } else {
             navigate('/login?error=customer_profile_missing');
           }

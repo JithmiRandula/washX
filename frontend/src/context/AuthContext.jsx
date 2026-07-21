@@ -298,11 +298,14 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (data.success) {
+        // /api/auth/me returns { success, user: {id,name,email,phone,role}, providerId, customerId }
         const userData = {
-          ...data.data,
+          ...data.user,
           id: userId,
           role: role,
-          token: token
+          token: token,
+          providerId: data.providerId ?? undefined,
+          customerId: data.customerId ?? undefined
         };
         localStorage.setItem('washx_user', JSON.stringify(userData));
         setUser(userData);
