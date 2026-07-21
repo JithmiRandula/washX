@@ -51,6 +51,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<AdminRepository>();
+builder.Services.AddScoped<StatsRepository>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddSingleton(provider =>

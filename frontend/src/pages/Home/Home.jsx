@@ -1,13 +1,21 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Search, MapPin, Clock, Shield, Star, TrendingUp } from 'lucide-react';
+import statsApi from '../../api/statsApi';
 import './Home.css';
 
 const Home = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
+  const [stats, setStats] = useState(null);
+
   const images = ['/search13.jpg', '/search14.jpg', '/search15.jpg', '/search16.jpg'];
+
+  useEffect(() => {
+    statsApi.getPublic()
+      .then((res) => setStats(res?.data?.data ?? null))
+      .catch(() => setStats(null));
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -73,15 +81,25 @@ const Home = () => {
           </div>
           <div className="hero-stats-updated">
             <div className="stat-item-updated">
-              <div className="stat-number-updated">500+</div>
-              <div className="stat-label-updated">Verified Providers</div>
+              <div className="stat-number-updated">
+                {stats ? (stats.totalProviders ?? stats.TotalProviders ?? 0) : '—'}
+              </div>
+              <div className="stat-label-updated">Total Providers</div>
             </div>
             <div className="stat-item-updated">
-              <div className="stat-number-updated">10K+</div>
+              <div className="stat-number-updated">
+                {stats ? (stats.totalCustomers ?? stats.TotalCustomers ?? 0) : '—'}
+              </div>
               <div className="stat-label-updated">Happy Customers</div>
             </div>
             <div className="stat-item-updated">
-              <div className="stat-number-updated">4.8</div>
+              <div className="stat-number-updated">
+                {stats
+                  ? ((stats.totalReviews ?? stats.TotalReviews ?? 0) > 0
+                      ? (stats.averageRating ?? stats.AverageRating ?? 0).toFixed(1)
+                      : 'New')
+                  : '—'}
+              </div>
               <div className="stat-label-updated">Average Rating</div>
             </div>
           </div>
