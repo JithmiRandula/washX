@@ -40,7 +40,9 @@ const ProviderServices = () => {
   const [error, setError] = useState(null);
 
   const PAGE_SIZE = 3;
-  const [currentPage, setCurrentPage] = useState(1);
+  const [itemPage, setItemPage] = useState(1);
+  const [bulkPage, setBulkPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('item'); // 'item' | 'bulk'
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -119,7 +121,8 @@ const ProviderServices = () => {
         };
       });
       setServices(mapped);
-      setCurrentPage(1);
+      setItemPage(1);
+      setBulkPage(1);
     } catch (err) {
       setError((typeof err === 'string' ? err : err?.message) || 'Failed to load services');
     } finally {
@@ -127,14 +130,24 @@ const ProviderServices = () => {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(services.length / PAGE_SIZE));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
-  const pagedServices = services.slice(startIndex, startIndex + PAGE_SIZE);
+  const modeOf = (s) => s.serviceMode || getServiceMode(s.prices?.[0]?.unit);
+  const itemServices = services.filter((s) => modeOf(s) === 'item');
+  const bulkServices = services.filter((s) => modeOf(s) === 'bulk');
+
+  const itemTotalPages = Math.max(1, Math.ceil(itemServices.length / PAGE_SIZE));
+  const bulkTotalPages = Math.max(1, Math.ceil(bulkServices.length / PAGE_SIZE));
+  const safeItemPage = Math.min(itemPage, itemTotalPages);
+  const safeBulkPage = Math.min(bulkPage, bulkTotalPages);
+  const pagedItemServices = itemServices.slice((safeItemPage - 1) * PAGE_SIZE, safeItemPage * PAGE_SIZE);
+  const pagedBulkServices = bulkServices.slice((safeBulkPage - 1) * PAGE_SIZE, safeBulkPage * PAGE_SIZE);
 
   useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
+    if (itemPage > itemTotalPages) setItemPage(itemTotalPages);
+  }, [itemPage, itemTotalPages]);
+
+  useEffect(() => {
+    if (bulkPage > bulkTotalPages) setBulkPage(bulkTotalPages);
+  }, [bulkPage, bulkTotalPages]);
 
   const handlePriceChange = (index, field, value) => {
     const updatedPrices = [...newService.prices];
@@ -244,12 +257,8 @@ const ProviderServices = () => {
     if (!window.confirm('Are you sure you want to delete this service?')) return;
     try {
       await serviceAPI.deleteService(id);
-      setServices((prev) => {
-        const next = prev.filter((s) => s._id !== id);
-        const nextTotalPages = Math.max(1, Math.ceil(next.length / PAGE_SIZE));
-        setCurrentPage((p) => Math.min(p, nextTotalPages));
-        return next;
-      });
+      // Per-section page clamping happens automatically via the itemPage/bulkPage effects.
+      setServices((prev) => prev.filter((s) => s._id !== id));
     } catch (err) {
       setError((typeof err === 'string' ? err : err?.message) || 'Failed to delete service');
     }
@@ -259,6 +268,157 @@ const ProviderServices = () => {
     setServices(services.map(s =>
       s._id === id ? { ...s, active: !s.active } : s
     ));
+  };
+
+  const renderServiceCard = (service) => {
+    const cat = categoryColors[service.category] || categoryColors._default;
+    const mode = modeOf(service);
+    return (
+      <div key={service._id} className={`ps-card ${service.active ? '' : 'ps-card--inactive'}`}>
+
+        {/* Card Top Bar */}
+        <div className="ps-card-top">
+          <div className="ps-card-name-row">
+            <h3 className="ps-card-name">{service.name}</h3>
+            <span className={`ps-status-badge ${service.active ? 'ps-status-badge--active' : 'ps-status-badge--inactive'}`}>
+              <span className="ps-status-dot"></span>
+              {service.active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div className="ps-card-actions">
+            <button className="ps-icon-btn ps-icon-btn--edit" onClick={() => handleEditService(service)} title="Edit">
+              <Edit size={14} />
+            </button>
+            <button className="ps-icon-btn ps-icon-btn--delete" onClick={() => handleDeleteService(service._id)} title="Delete">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Category + service type */}
+        <div className="ps-card-badges">
+          <div className="ps-category-chip" style={{ background: cat.bg, color: cat.text }}>
+            <span className="ps-category-dot" style={{ background: cat.dot }}></span>
+            {service.category}
+          </div>
+          <span className={`ps-type-badge ps-type-badge--${mode}`}>
+            {mode === 'bulk' ? 'Bulk (per kg)' : 'Item-based'}
+          </span>
+        </div>
+
+        {/* Pricing */}
+        <div className="ps-pricing-block">
+          <div className="ps-pricing-label">
+            <Tag size={12} />
+            Pricing
+          </div>
+          {service.prices.map((p, i) => (
+            <div key={i} className="ps-price-row">
+              <span className="ps-price-unit">{p.unit}</span>
+              <span className="ps-price-amount">Rs {p.price}</span>
+            </div>
+          ))}
+          {service.minOrder && (
+            <div className="ps-min-order">
+              <span>Min. Order</span>
+              <span className="ps-min-order-val">{service.minOrder}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Duration */}
+        {service.duration && (
+          <div className="ps-duration">
+            <Clock size={14} />
+            <span>{service.duration}</span>
+          </div>
+        )}
+
+        {/* Description */}
+        {service.description && (
+          <p className="ps-description">{service.description}</p>
+        )}
+
+        {/* Features */}
+        {service.features && (
+          <div className="ps-info-block ps-info-block--features">
+            <div className="ps-info-label">
+              <Star size={11} />
+              Key Features
+            </div>
+            <p className="ps-info-text">{service.features}</p>
+          </div>
+        )}
+
+        {/* Special Instructions */}
+        {service.specialInstructions && (
+          <div className="ps-info-block ps-info-block--instructions">
+            <div className="ps-info-label">
+              <AlertCircle size={11} />
+              Special Instructions
+            </div>
+            <p className="ps-info-text">{service.specialInstructions}</p>
+          </div>
+        )}
+
+        {mode === 'item' && (
+          <Link to={`/provider/${providerId}/items/${service._id}`} className="ps-manage-items-link">
+            <List size={14} /> Manage Items
+          </Link>
+        )}
+        {mode === 'bulk' && (
+          <Link to={`/provider/${providerId}/bulk-items/${service._id}`} className="ps-manage-items-link">
+            <List size={14} /> Manage Items
+          </Link>
+        )}
+
+        {/* Toggle */}
+        <button
+          className={`ps-toggle-btn ${service.active ? 'ps-toggle-btn--deactivate' : 'ps-toggle-btn--activate'}`}
+          onClick={() => toggleServiceStatus(service._id)}
+        >
+          {service.active ? 'Deactivate' : 'Activate'}
+        </button>
+      </div>
+    );
+  };
+
+  const renderPagination = (safePage, totalPages, setPage) => {
+    if (totalPages <= 1) return null;
+    return (
+      <div className="ps-pagination-wrap">
+        <div className="ps-pagination">
+          <button
+            className="ps-page-btn"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+          >
+            Prev
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              className={`ps-page-btn ${page === safePage ? 'ps-page-btn--active' : ''}`}
+              onClick={() => setPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            className="ps-page-btn"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+        <div className="ps-pagination-meta">
+          Page {safePage} of {totalPages}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -307,161 +467,54 @@ const ProviderServices = () => {
           </div>
         ) : (
           <>
-            <div className="ps-grid">
-              {pagedServices.map((service) => {
-              const cat = categoryColors[service.category] || categoryColors._default;
-              return (
-                <div key={service._id} className={`ps-card ${service.active ? '' : 'ps-card--inactive'}`}>
-
-                  {/* Card Top Bar */}
-                  <div className="ps-card-top">
-                    <div className="ps-card-name-row">
-                      <h3 className="ps-card-name">{service.name}</h3>
-                      <span className={`ps-status-badge ${service.active ? 'ps-status-badge--active' : 'ps-status-badge--inactive'}`}>
-                        <span className="ps-status-dot"></span>
-                        {service.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    <div className="ps-card-actions">
-                      <button className="ps-icon-btn ps-icon-btn--edit" onClick={() => handleEditService(service)} title="Edit">
-                        <Edit size={14} />
-                      </button>
-                      <button className="ps-icon-btn ps-icon-btn--delete" onClick={() => handleDeleteService(service._id)} title="Delete">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Category + service type */}
-                  <div className="ps-card-badges">
-                    <div className="ps-category-chip" style={{ background: cat.bg, color: cat.text }}>
-                      <span className="ps-category-dot" style={{ background: cat.dot }}></span>
-                      {service.category}
-                    </div>
-                    <span className={`ps-type-badge ps-type-badge--${service.serviceMode || getServiceMode(service.prices?.[0]?.unit)}`}>
-                      {service.serviceMode === 'bulk' || getServiceMode(service.prices?.[0]?.unit) === 'bulk'
-                        ? 'Bulk (per kg)'
-                        : 'Item-based'}
-                    </span>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="ps-pricing-block">
-                    <div className="ps-pricing-label">
-                      <Tag size={12} />
-                      Pricing
-                    </div>
-                    {service.prices.map((p, i) => (
-                      <div key={i} className="ps-price-row">
-                        <span className="ps-price-unit">{p.unit}</span>
-                        <span className="ps-price-amount">Rs {p.price}</span>
-                      </div>
-                    ))}
-                    {service.minOrder && (
-                      <div className="ps-min-order">
-                        <span>Min. Order</span>
-                        <span className="ps-min-order-val">{service.minOrder}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Duration */}
-                  {service.duration && (
-                    <div className="ps-duration">
-                      <Clock size={14} />
-                      <span>{service.duration}</span>
-                    </div>
-                  )}
-
-                  {/* Description */}
-                  {service.description && (
-                    <p className="ps-description">{service.description}</p>
-                  )}
-
-                  {/* Features */}
-                  {service.features && (
-                    <div className="ps-info-block ps-info-block--features">
-                      <div className="ps-info-label">
-                        <Star size={11} />
-                        Key Features
-                      </div>
-                      <p className="ps-info-text">{service.features}</p>
-                    </div>
-                  )}
-
-                  {/* Special Instructions */}
-                  {service.specialInstructions && (
-                    <div className="ps-info-block ps-info-block--instructions">
-                      <div className="ps-info-label">
-                        <AlertCircle size={11} />
-                        Special Instructions
-                      </div>
-                      <p className="ps-info-text">{service.specialInstructions}</p>
-                    </div>
-                  )}
-
-                  {(service.serviceMode === 'item' || getServiceMode(service.prices?.[0]?.unit) === 'item') && (
-                    <Link
-                      to={`/provider/${providerId}/items/${service._id}`}
-                      className="ps-manage-items-link"
-                    >
-                      <List size={14} /> Manage Items
-                    </Link>
-                  )}
-                  {(service.serviceMode === 'bulk' || getServiceMode(service.prices?.[0]?.unit) === 'bulk') && (
-                    <Link
-                      to={`/provider/${providerId}/bulk-items/${service._id}`}
-                      className="ps-manage-items-link"
-                    >
-                      <List size={14} /> Manage Items
-                    </Link>
-                  )}
-
-                  {/* Toggle */}
-                  <button
-                    className={`ps-toggle-btn ${service.active ? 'ps-toggle-btn--deactivate' : 'ps-toggle-btn--activate'}`}
-                    onClick={() => toggleServiceStatus(service._id)}
-                  >
-                    {service.active ? 'Deactivate' : 'Activate'}
-                  </button>
-                </div>
-              );
-              })}
+            {/* Tab switcher */}
+            <div className="ps-tabs">
+              <button
+                type="button"
+                className={`ps-tab-btn ${activeTab === 'item' ? 'ps-tab-btn--active' : ''}`}
+                onClick={() => setActiveTab('item')}
+              >
+                <Package size={16} />
+                Item-Based
+                <span className="ps-tab-count">{itemServices.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`ps-tab-btn ${activeTab === 'bulk' ? 'ps-tab-btn--active' : ''}`}
+                onClick={() => setActiveTab('bulk')}
+              >
+                <Settings size={16} />
+                Bulk-Based (per kg)
+                <span className="ps-tab-count">{bulkServices.length}</span>
+              </button>
             </div>
 
-            {totalPages > 1 && (
-              <div className="ps-pagination-wrap">
-                <div className="ps-pagination">
-                  <button
-                    className="ps-page-btn"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={safeCurrentPage === 1}
-                  >
-                    Prev
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      className={`ps-page-btn ${page === safeCurrentPage ? 'ps-page-btn--active' : ''}`}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
-
-                  <button
-                    className="ps-page-btn"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={safeCurrentPage === totalPages}
-                  >
-                    Next
-                  </button>
+            {activeTab === 'item' ? (
+              itemServices.length === 0 ? (
+                <div className="ps-empty-inline">
+                  <p>No item-based services yet.</p>
                 </div>
-                <div className="ps-pagination-meta">
-                  Page {safeCurrentPage} of {totalPages}
+              ) : (
+                <>
+                  <div className="ps-grid">
+                    {pagedItemServices.map(renderServiceCard)}
+                  </div>
+                  {renderPagination(safeItemPage, itemTotalPages, setItemPage)}
+                </>
+              )
+            ) : (
+              bulkServices.length === 0 ? (
+                <div className="ps-empty-inline">
+                  <p>No bulk-based services yet.</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="ps-grid">
+                    {pagedBulkServices.map(renderServiceCard)}
+                  </div>
+                  {renderPagination(safeBulkPage, bulkTotalPages, setBulkPage)}
+                </>
+              )
             )}
           </>
         )}

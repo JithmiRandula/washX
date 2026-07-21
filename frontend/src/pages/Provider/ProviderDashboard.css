@@ -239,6 +239,13 @@
   font-size: 14px;
 }
 
+.pvd-td-muted {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ===== Status Badge ===== */
 .pvd-status-badge {
   display: inline-flex;

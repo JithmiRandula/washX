@@ -1,47 +1,129 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Package, DollarSign, TrendingUp, Users,
   Plus, UserCircle, ClipboardList,
-  Clock, CheckCircle, AlertCircle, ArrowRight
+  Clock, CheckCircle, AlertCircle, ArrowRight, Loader
 } from 'lucide-react';
+import { providerOrdersAPI } from '../../api/commerceApi';
 import './ProviderDashboard.css';
 
 const STATUS_META = {
-  pending:     { bg: '#fffbeb', color: '#d97706', label: 'Pending'     },
+  pending:      { bg: '#fffbeb', color: '#d97706', label: 'Pending'     },
   'in-progress':{ bg: '#e0f2fe', color: '#0369a1', label: 'In Progress' },
-  ready:       { bg: '#ecfdf5', color: '#059669', label: 'Ready'       },
-  completed:   { bg: '#f1f5f9', color: '#64748b', label: 'Completed'   },
-  cancelled:   { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled'   },
+  completed:    { bg: '#f1f5f9', color: '#64748b', label: 'Completed'   },
+  cancelled:    { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled'   },
 };
+
+// Only the forward transitions the backend actually supports from each status.
+const NEXT_STATUS_OPTIONS = {
+  pending:      ['pending', 'in-progress', 'cancelled'],
+  'in-progress':['in-progress', 'completed'],
+};
+
+const f = (obj, camel, pascal) => obj?.[camel] ?? obj?.[pascal];
 
 const ProviderDashboard = () => {
   const { user }       = useAuth();
   const { providerId } = useParams();
   const navigate       = useNavigate();
 
-  const [orders, setOrders] = useState([
-    { id: '1', customer: 'John Doe',    status: 'pending',     amount: 45,  items: 3, date: '2025-12-08' },
-    { id: '2', customer: 'Jane Smith',  status: 'in-progress', amount: 60,  items: 5, date: '2025-12-08' },
-    { id: '3', customer: 'Bob Johnson', status: 'ready',       amount: 30,  items: 2, date: '2025-12-07' },
-  ]);
-
+  const [orders, setOrders]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [updatingId, setUpdatingId] = useState(null);
 
-  const stats = [
-    { icon: Package,    label: 'Total Orders', value: '156',      accent: '#1d4ed8', iconBg: '#dbeafe', iconColor: '#1d4ed8' },
-    { icon: DollarSign, label: 'Revenue',      value: 'Rs 8,450', accent: '#059669', iconBg: '#ecfdf5', iconColor: '#059669' },
-    { icon: TrendingUp, label: 'This Month',   value: '+23%',     accent: '#0284c7', iconBg: '#e0f2fe', iconColor: '#0284c7' },
-    { icon: Users,      label: 'Customers',    value: '89',       accent: '#d97706', iconBg: '#fffbeb', iconColor: '#d97706' },
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await providerOrdersAPI.getMine();
+      const rows = res?.data?.data ?? res?.data ?? [];
+      setOrders(Array.isArray(rows) ? rows : []);
+    } catch {
+      setError('Failed to load dashboard data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadOrders(); }, []);
+
+  const norm = (o) => ({
+    orderId:        f(o, 'orderId', 'OrderId'),
+    orderReference: f(o, 'orderReference', 'OrderReference') ?? '—',
+    customerId:     f(o, 'customerId', 'CustomerId'),
+    customerName:   f(o, 'customerName', 'CustomerName') ?? '—',
+    itemCount:      f(o, 'itemCount', 'ItemCount') ?? 0,
+    totalAmount:    Number(f(o, 'totalAmount', 'TotalAmount') ?? 0),
+    paymentStatus:  (f(o, 'paymentStatus', 'PaymentStatus') ?? '').toLowerCase(),
+    providerStatus: (f(o, 'providerStatus', 'ProviderStatus') ?? 'pending').toLowerCase(),
+    createdAt:      f(o, 'createdAt', 'CreatedAt'),
+  });
+
+  const normalized = useMemo(() => orders.map(norm), [orders]);
+
+  // ── Stats ──────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const paid = normalized.filter(o => o.paymentStatus === 'paid');
+    const revenue = paid.reduce((s, o) => s + o.totalAmount, 0);
+
+    const now = new Date();
+    const inMonth = (d, monthOffset) => {
+      if (!d) return false;
+      const dt = new Date(d);
+      const target = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+      return dt.getFullYear() === target.getFullYear() && dt.getMonth() === target.getMonth();
+    };
+    const thisMonthRevenue = paid.filter(o => inMonth(o.createdAt, 0)).reduce((s, o) => s + o.totalAmount, 0);
+    const lastMonthRevenue = paid.filter(o => inMonth(o.createdAt, -1)).reduce((s, o) => s + o.totalAmount, 0);
+    const monthChange = lastMonthRevenue === 0
+      ? (thisMonthRevenue > 0 ? null : 0)
+      : Math.round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100);
+
+    const customerCount = new Set(normalized.map(o => o.customerId).filter(Boolean)).size;
+
+    return {
+      totalOrders: normalized.length,
+      revenue,
+      monthChange,
+      customerCount,
+    };
+  }, [normalized]);
+
+  const statCards = [
+    { icon: Package,    label: 'Total Orders', value: String(stats.totalOrders), accent: '#1d4ed8', iconBg: '#dbeafe', iconColor: '#1d4ed8' },
+    { icon: DollarSign, label: 'Revenue',      value: `Rs ${stats.revenue.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, accent: '#059669', iconBg: '#ecfdf5', iconColor: '#059669' },
+    { icon: TrendingUp, label: 'This Month',   value: stats.monthChange === null ? 'New' : `${stats.monthChange >= 0 ? '+' : ''}${stats.monthChange}%`, accent: '#0284c7', iconBg: '#e0f2fe', iconColor: '#0284c7' },
+    { icon: Users,      label: 'Customers',    value: String(stats.customerCount), accent: '#d97706', iconBg: '#fffbeb', iconColor: '#d97706' },
   ];
 
-  const updateOrderStatus = (orderId, newStatus) =>
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+  // ── Recent orders table ───────────────────────────────────────────────
+  const updateOrderStatus = async (orderId, newStatus) => {
+    setUpdatingId(orderId);
+    try {
+      await providerOrdersAPI.updateStatus(orderId, newStatus);
+      setOrders(prev => prev.map(o => {
+        const id = f(o, 'orderId', 'OrderId');
+        return id === orderId ? { ...o, providerStatus: newStatus, ProviderStatus: newStatus } : o;
+      }));
+    } catch {
+      alert('Failed to update order status.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const recentOrders = useMemo(
+    () => [...normalized].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5),
+    [normalized]
+  );
 
   const filteredOrders = statusFilter === 'all'
-    ? orders
-    : orders.filter(o => o.status === statusFilter);
+    ? recentOrders
+    : recentOrders.filter(o => o.providerStatus === statusFilter);
 
   const providerName =
     user?.name ?? user?.firstName ?? user?.email?.split('@')[0] ?? 'Provider';
@@ -49,6 +131,8 @@ const ProviderDashboard = () => {
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
   return (
     <div className="pvd-page">
@@ -73,13 +157,13 @@ const ProviderDashboard = () => {
 
         {/* Stat Cards */}
         <div className="pvd-stats-grid">
-          {stats.map((s, i) => (
+          {statCards.map((s, i) => (
             <div key={i} className="pvd-stat-card" style={{ borderLeftColor: s.accent }}>
               <div className="pvd-stat-icon" style={{ background: s.iconBg, color: s.iconColor }}>
                 <s.icon size={22} />
               </div>
               <div className="pvd-stat-body">
-                <span className="pvd-stat-num">{s.value}</span>
+                <span className="pvd-stat-num">{loading ? '—' : s.value}</span>
                 <span className="pvd-stat-label">{s.label}</span>
               </div>
             </div>
@@ -105,8 +189,8 @@ const ProviderDashboard = () => {
                   <option value="all">All Orders</option>
                   <option value="pending">Pending</option>
                   <option value="in-progress">In Progress</option>
-                  <option value="ready">Ready</option>
                   <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -125,35 +209,50 @@ const ProviderDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="pvd-no-data">
+                        <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> Loading orders…
+                      </td>
+                    </tr>
+                  ) : error ? (
+                    <tr>
+                      <td colSpan={7} className="pvd-no-data">{error}</td>
+                    </tr>
+                  ) : filteredOrders.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="pvd-no-data">No orders found</td>
                     </tr>
                   ) : filteredOrders.map(order => {
-                    const sm = STATUS_META[order.status] || STATUS_META.pending;
+                    const sm = STATUS_META[order.providerStatus] || STATUS_META.pending;
+                    const options = NEXT_STATUS_OPTIONS[order.providerStatus];
                     return (
-                      <tr key={order.id} className="pvd-tr">
-                        <td className="pvd-td pvd-order-id">#{order.id}</td>
-                        <td className="pvd-td pvd-cust">{order.customer}</td>
-                        <td className="pvd-td pvd-center">{order.items}</td>
-                        <td className="pvd-td pvd-amount">Rs {order.amount}</td>
-                        <td className="pvd-td pvd-date-cell">{order.date}</td>
+                      <tr key={order.orderId} className="pvd-tr">
+                        <td className="pvd-td pvd-order-id">#{order.orderReference}</td>
+                        <td className="pvd-td pvd-cust">{order.customerName}</td>
+                        <td className="pvd-td pvd-center">{order.itemCount}</td>
+                        <td className="pvd-td pvd-amount">Rs {order.totalAmount.toFixed(2)}</td>
+                        <td className="pvd-td pvd-date-cell">{fmtDate(order.createdAt)}</td>
                         <td className="pvd-td">
                           <span className="pvd-status-badge" style={{ background: sm.bg, color: sm.color }}>
                             ● {sm.label}
                           </span>
                         </td>
                         <td className="pvd-td">
-                          <select
-                            className="pvd-status-select"
-                            value={order.status}
-                            onChange={e => updateOrderStatus(order.id, e.target.value)}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="ready">Ready</option>
-                            <option value="completed">Completed</option>
-                          </select>
+                          {options ? (
+                            <select
+                              className="pvd-status-select"
+                              value={order.providerStatus}
+                              disabled={updatingId === order.orderId}
+                              onChange={e => updateOrderStatus(order.orderId, e.target.value)}
+                            >
+                              {options.map(opt => (
+                                <option key={opt} value={opt}>{STATUS_META[opt]?.label ?? opt}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="pvd-td-muted">—</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -217,7 +316,7 @@ const ProviderDashboard = () => {
                     <Clock size={15} style={{ color: '#d97706' }} />
                     <span>Pending</span>
                   </div>
-                  <strong>{orders.filter(o => o.status === 'pending').length}</strong>
+                  <strong>{normalized.filter(o => o.providerStatus === 'pending').length}</strong>
                 </div>
                 <div className="pvd-summary-row">
                   <div className="pvd-sum-left">
@@ -225,7 +324,7 @@ const ProviderDashboard = () => {
                     <AlertCircle size={15} style={{ color: '#0284c7' }} />
                     <span>In Progress</span>
                   </div>
-                  <strong>{orders.filter(o => o.status === 'in-progress').length}</strong>
+                  <strong>{normalized.filter(o => o.providerStatus === 'in-progress').length}</strong>
                 </div>
                 <div className="pvd-summary-row">
                   <div className="pvd-sum-left">
@@ -233,7 +332,7 @@ const ProviderDashboard = () => {
                     <CheckCircle size={15} style={{ color: '#059669' }} />
                     <span>Completed</span>
                   </div>
-                  <strong>{orders.filter(o => o.status === 'completed' || o.status === 'ready').length}</strong>
+                  <strong>{normalized.filter(o => o.providerStatus === 'completed').length}</strong>
                 </div>
               </div>
             </div>
