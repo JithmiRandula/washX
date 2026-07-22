@@ -129,7 +129,7 @@ public sealed class UserRepository(SqlHelper sql)
 
         return _sql.ExecuteSingleAsync(
             """
-            SELECT u.UserId, u.Name, u.Email, u.Phone, u.PasswordHash,
+            SELECT u.UserId, u.Name, u.Email, u.Phone, u.PasswordHash, u.AvatarUrl,
                    c.CustomerId, c.Address, c.Latitude, c.Longitude
             FROM Users u
             INNER JOIN Customers c ON c.UserId = u.UserId
@@ -153,7 +153,10 @@ public sealed class UserRepository(SqlHelper sql)
                     ? null
                     : reader.GetDecimal(reader.GetOrdinal("Longitude")),
                 HasPassword = !reader.IsDBNull(reader.GetOrdinal("PasswordHash"))
-                    && !string.IsNullOrWhiteSpace(reader.GetString(reader.GetOrdinal("PasswordHash")))
+                    && !string.IsNullOrWhiteSpace(reader.GetString(reader.GetOrdinal("PasswordHash"))),
+                AvatarUrl = reader.IsDBNull(reader.GetOrdinal("AvatarUrl"))
+                    ? null
+                    : reader.GetString(reader.GetOrdinal("AvatarUrl"))
             });
     }
 
@@ -194,6 +197,57 @@ public sealed class UserRepository(SqlHelper sql)
 
         return _sql.ExecuteNonQueryAsync(
             "UPDATE Customers SET Address = @Address WHERE UserId = @UserId",
+            parameters);
+    }
+
+    public Task UpdateAvatarUrl(int userId, string avatarUrl)
+    {
+        SqlParameter[] parameters =
+        [
+            new("@UserId", userId),
+            new("@AvatarUrl", avatarUrl)
+        ];
+
+        return _sql.ExecuteNonQueryAsync(
+            "UPDATE Users SET AvatarUrl = @AvatarUrl WHERE UserId = @UserId",
+            parameters);
+    }
+
+    public Task SetResetToken(int userId, string token, DateTime expiryUtc)
+    {
+        SqlParameter[] parameters =
+        [
+            new("@UserId", userId),
+            new("@Token", token),
+            new("@Expiry", expiryUtc)
+        ];
+
+        return _sql.ExecuteNonQueryAsync(
+            "UPDATE Users SET ResetToken = @Token, ResetTokenExpiry = @Expiry WHERE UserId = @UserId",
+            parameters);
+    }
+
+    public Task<User?> GetByResetToken(string token)
+    {
+        SqlParameter[] parameters = [new("@Token", token)];
+
+        return _sql.ExecuteSingleAsync(
+            """
+            SELECT UserId, Name, Email, Phone, PasswordHash, Role, CreatedAt, UpdatedAt
+            FROM Users
+            WHERE ResetToken = @Token AND ResetTokenExpiry > GETUTCDATE()
+            """,
+            parameters,
+            MapUser,
+            System.Data.CommandType.Text);
+    }
+
+    public Task ClearResetToken(int userId)
+    {
+        SqlParameter[] parameters = [new("@UserId", userId)];
+
+        return _sql.ExecuteNonQueryAsync(
+            "UPDATE Users SET ResetToken = NULL, ResetTokenExpiry = NULL WHERE UserId = @UserId",
             parameters);
     }
 }

@@ -165,30 +165,33 @@ public class ProvidersController : ControllerBase
         public string? Description { get; set; }
         public string? BusinessLicense { get; set; }
         public string? Phone { get; set; }
-        public AddressDto? Address { get; set; }
-        public Dictionary<string, DayHoursDto>? OperatingHours { get; set; }
+        public ProviderAddressDto? Address { get; set; }
+        public Dictionary<string, ProviderDayHoursDto>? OperatingHours { get; set; }
+    }
 
-        public sealed class AddressDto
-        {
-            public string? Street { get; set; }
-            public string? City { get; set; }
-            public string? State { get; set; }
-            public string? ZipCode { get; set; }
-            public CoordinatesDto? Coordinates { get; set; }
-        }
+    // Named uniquely (not nested) — Swashbuckle generates Swagger schemaIds from the short
+    // type name only, so a same-named nested class elsewhere (e.g. Contracts.Auth.AddressDto)
+    // collides even though the full namespaces differ.
+    public sealed class ProviderAddressDto
+    {
+        public string? Street { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? ZipCode { get; set; }
+        public ProviderCoordinatesDto? Coordinates { get; set; }
+    }
 
-        public sealed class CoordinatesDto
-        {
-            public decimal? Lat { get; set; }
-            public decimal? Lng { get; set; }
-        }
+    public sealed class ProviderCoordinatesDto
+    {
+        public decimal? Lat { get; set; }
+        public decimal? Lng { get; set; }
+    }
 
-        public sealed class DayHoursDto
-        {
-            public string? Open { get; set; }
-            public string? Close { get; set; }
-            public bool IsClosed { get; set; }
-        }
+    public sealed class ProviderDayHoursDto
+    {
+        public string? Open { get; set; }
+        public string? Close { get; set; }
+        public bool IsClosed { get; set; }
     }
 
     // PUT: /api/providers/{providerId}/profile

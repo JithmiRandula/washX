@@ -10,10 +10,12 @@ using System.Security.Claims;
 public class AuthController : ControllerBase
 {
     private readonly UserService _service;
+    private readonly IConfiguration _config;
 
-    public AuthController(UserService service)
+    public AuthController(UserService service, IConfiguration config)
     {
         _service = service;
+        _config = config;
     }
 
     // =========================
@@ -102,9 +104,59 @@ public class AuthController : ControllerBase
             return BadRequest(new { success = false, message = ex.Message });
         }
     }
+
+    // =========================
+    // FORGOT PASSWORD
+    // =========================
+    // No SMTP is configured in this project, so — same as the frontend's own dev-mode
+    // comment expects — the reset link is returned directly in the response instead of
+    // being emailed. Always responds success (even for an unknown email) to avoid
+    // leaking which emails are registered.
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+    {
+        var token = await _service.ForgotPassword(req.Email);
+
+        if (token is null)
+        {
+            return Ok(new { success = true, message = "If that email is registered, a reset link has been sent." });
+        }
+
+        var baseUrl = _config["Frontend:BaseUrl"] ?? "http://localhost:5173";
+        var resetUrl = $"{baseUrl}/reset-password/{token}";
+
+        return Ok(new { success = true, message = "Reset link generated.", resetUrl });
+    }
+
+    // =========================
+    // RESET PASSWORD (via emailed/dev-mode link token)
+    // =========================
+    [HttpPut("reset-password/{token}")]
+    public async Task<IActionResult> ResetPassword(string token, [FromBody] ResetPasswordRequest req)
+    {
+        try
+        {
+            var result = await _service.ResetPassword(token, req.Password);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
 }
 
 public sealed class UpdatePasswordRequest
 {
     public string NewPassword { get; set; } = string.Empty;
+}
+
+public sealed class ForgotPasswordRequest
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public sealed class ResetPasswordRequest
+{
+    public string Password { get; set; } = string.Empty;
 }

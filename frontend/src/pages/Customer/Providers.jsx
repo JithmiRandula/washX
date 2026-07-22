@@ -365,6 +365,10 @@ const Providers = () => {
       alert('Please enter a pickup address.');
       return;
     }
+    if (bulkDate && bulkDate < new Date().toISOString().split('T')[0]) {
+      alert('Preferred date cannot be in the past.');
+      return;
+    }
 
     setBulkSubmitting(true);
     try {
@@ -1189,7 +1193,12 @@ const Providers = () => {
                 <div className="bkr-field-row">
                   <div className="bkr-field">
                     <label>Preferred Date</label>
-                    <input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+                    <input
+                      type="date"
+                      value={bulkDate}
+                      onChange={(e) => setBulkDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
                   </div>
                   <div className="bkr-field">
                     <label>Preferred Time</label>

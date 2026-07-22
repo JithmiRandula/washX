@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ProvidersPopup from '../../components/ProvidersPopup/ProvidersPopup';
 import Navbar from '../../components/Navbar/Navbar';
-import { Search, MapPin, Star, Package, Calendar, Navigation } from 'lucide-react';
+import { Search, MapPin, Star, Package, Calendar, Navigation, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../utils/api';
 import './HomeProviders.css';
 
@@ -44,6 +44,9 @@ const HomeProviders = () => {
     serviceType: 'all',
     sortBy: 'rating', // switches to 'distance' once location is known
   });
+
+  const [page, setPage] = useState(1);
+  const PROVIDERS_PER_PAGE = 3;
 
   // ── 1. Fetch real providers from backend ──────────────────────────────────
   useEffect(() => {
@@ -119,6 +122,7 @@ const HomeProviders = () => {
       }));
       setProviders(withDistance);
       setFilters((prev) => ({ ...prev, sortBy: 'distance' }));
+      setPage(1);
     },
     [rawProviders]
   );
@@ -197,6 +201,13 @@ const HomeProviders = () => {
       return 0;
     });
 
+  const totalPages = Math.max(1, Math.ceil(filteredProviders.length / PROVIDERS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedProviders = filteredProviders.slice(
+    (currentPage - 1) * PROVIDERS_PER_PAGE,
+    currentPage * PROVIDERS_PER_PAGE
+  );
+
   const handleBookOrder = (providerId) => {
     navigate('/register', {
       state: {
@@ -206,8 +217,10 @@ const HomeProviders = () => {
     });
   };
 
-  const handleFilterChange = (key, value) =>
+  const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -339,7 +352,7 @@ const HomeProviders = () => {
         {/* Provider grid */}
         {!loading && !error && filteredProviders.length > 0 && (
           <div className="home-providers-grid">
-            {filteredProviders.map((provider) => {
+            {paginatedProviders.map((provider) => {
               const isNear = provider.distance != null && provider.distance <= 5;
               return (
                 <div key={provider.id} className="home-provider-card">
@@ -430,6 +443,37 @@ const HomeProviders = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && !error && filteredProviders.length > 0 && totalPages > 1 && (
+          <div className="home-pagination">
+            <button
+              className="home-page-btn"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft size={16} /> Prev
+            </button>
+            <div className="home-page-numbers">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  className={`home-page-num${n === currentPage ? ' home-page-num-active' : ''}`}
+                  onClick={() => setPage(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <button
+              className="home-page-btn"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next <ChevronRight size={16} />
+            </button>
           </div>
         )}
 

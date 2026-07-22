@@ -125,7 +125,7 @@
 /* Provider Cards */
 .home-providers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -377,6 +377,65 @@
   margin: 0;
   text-align: center;
   font-weight: 500;
+}
+
+/* Pagination */
+.home-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 2rem;
+}
+
+.home-page-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-page-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.home-page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.home-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-page-num {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 4px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-page-num:hover:not(.home-page-num-active) { background: #f8fafc; border-color: #cbd5e1; }
+
+.home-page-num-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .home-pagination { flex-wrap: wrap; }
 }
 
 /* No providers */

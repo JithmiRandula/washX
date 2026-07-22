@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Laundry.DAL.Repositories;
 using Laundry.Models;
 
@@ -170,6 +171,79 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
         await _repo.UpdatePasswordHash(userId, hash);
     }
 
+    // Used by the profile "Change Password" form — verifies the current password first,
+    // unlike UpdatePassword() above which is only for the no-password-yet Google sign-in flow.
+    public async Task ChangePassword(int userId, string currentPassword, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            throw new ArgumentException("New password must be at least 6 characters", nameof(newPassword));
+
+        var user = await _repo.GetUserById(userId)
+            ?? throw new ArgumentException("User not found");
+
+        if (!string.IsNullOrEmpty(user.PasswordHash))
+        {
+            if (string.IsNullOrWhiteSpace(currentPassword) || !BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+                throw new ArgumentException("Current password is incorrect");
+        }
+
+        var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        await _repo.UpdatePasswordHash(userId, hash);
+    }
+
+    // Generates a one-hour reset token for the given email, if an account exists for it.
+    // Returns null (never an error) when the email isn't found, so callers can't use this
+    // to enumerate registered emails.
+    public async Task<string?> ForgotPassword(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+
+        var user = await _repo.GetUserByEmail(email);
+        if (user is null) return null;
+
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        await _repo.SetResetToken(user.UserId, token, DateTime.UtcNow.AddHours(1));
+        return token;
+    }
+
+    public async Task<object?> ResetPassword(string token, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            throw new ArgumentException("Password must be at least 6 characters", nameof(newPassword));
+
+        var user = await _repo.GetByResetToken(token)
+            ?? throw new ArgumentException("This reset link is invalid or has expired");
+
+        var hash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        await _repo.UpdatePasswordHash(user.UserId, hash);
+        await _repo.ClearResetToken(user.UserId);
+
+        var jwt = _tokenService.CreateToken(user);
+
+        int? providerId = null;
+        int? customerId = null;
+        if (user.Role.Equals("provider", StringComparison.OrdinalIgnoreCase))
+            providerId = await _repo.GetProviderIdByUserId(user.UserId);
+        else if (user.Role.Equals("customer", StringComparison.OrdinalIgnoreCase))
+            customerId = await _repo.GetCustomerIdByUserId(user.UserId);
+
+        return new
+        {
+            success = true,
+            user = new
+            {
+                id = user.UserId,
+                name = user.Name,
+                email = user.Email,
+                phone = user.Phone,
+                role = user.Role
+            },
+            token = jwt,
+            providerId,
+            customerId
+        };
+    }
+
     public async Task<object?> GetCustomerProfile(int userId)
     {
         var row = await _repo.GetCustomerProfileByUserId(userId);
@@ -200,6 +274,14 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
         return updated is null ? null : MapProfileResponse(updated);
     }
 
+    public async Task<object?> UpdateAvatar(int userId, string avatarUrl)
+    {
+        await _repo.UpdateAvatarUrl(userId, avatarUrl);
+
+        var updated = await _repo.GetCustomerProfileByUserId(userId);
+        return updated is null ? null : MapProfileResponse(updated);
+    }
+
     private static object MapProfileResponse(CustomerUserProfile row) => new
     {
         customerId = row.CustomerId,
@@ -209,7 +291,7 @@ public sealed class UserService(UserRepository repo, TokenService tokenService)
         dateOfBirth = (string?)null,
         gender = (string?)null,
         address = ParseAddress(row.Address),
-        avatar = (string?)null,
+        avatar = row.AvatarUrl,
         preferences = new
         {
             notifications = true,
