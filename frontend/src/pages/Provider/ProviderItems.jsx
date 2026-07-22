@@ -8,7 +8,7 @@ const emptyForm = {
   itemName: '',
   description: '',
   price: '',
-  imageUrl: '/wash1.jpg'
+  imageUrl: ''
 };
 
 const ProviderItems = () => {
@@ -24,8 +24,11 @@ const ProviderItems = () => {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [imagePreview, setImagePreview] = useState('/wash1.jpg');
+  const [imagePreview, setImagePreview] = useState('');
   const [imageFile, setImageFile] = useState(null);
+
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadItems = async () => {
     try {
@@ -33,12 +36,21 @@ const ProviderItems = () => {
       setError('');
       const result = await serviceItemsAPI.getByService(Number(serviceId));
       setItems(result?.data || []);
+      setCurrentPage(1);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load items');
     } finally {
       setLoading(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   useEffect(() => {
     if (!serviceId) {
@@ -51,7 +63,7 @@ const ProviderItems = () => {
 
   const resetForm = () => {
     setForm(emptyForm);
-    setImagePreview('/wash1.jpg');
+    setImagePreview('');
     setEditingId(null);
     setImageFile(null);
   };
@@ -68,9 +80,9 @@ const ProviderItems = () => {
       itemName: item.itemName,
       description: item.description || '',
       price: String(item.price),
-      imageUrl: item.imageUrl || '/wash1.jpg'
+      imageUrl: item.imageUrl || ''
     });
-    setImagePreview(item.imageUrl || '/wash1.jpg');
+    setImagePreview(item.imageUrl || '');
     setShowForm(true);
   };
 
@@ -104,7 +116,7 @@ const ProviderItems = () => {
     setSuccess('');
 
     try {
-      let imageUrl = form.imageUrl || '/wash1.jpg';
+      let imageUrl = form.imageUrl || null;
 
       // If user selected a local file, upload it to Cloudinary first
       if (imageFile) {
@@ -227,9 +239,9 @@ const ProviderItems = () => {
                   value={form.imageUrl.startsWith('data:') ? '' : form.imageUrl}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, imageUrl: e.target.value }));
-                    setImagePreview(e.target.value || '/wash1.jpg');
+                    setImagePreview(e.target.value);
                   }}
-                  placeholder="/wash1.jpg or https://..."
+                  placeholder="https://..."
                 />
               </label>
               <label className="pi-full pi-upload-label">
@@ -238,7 +250,14 @@ const ProviderItems = () => {
               </label>
             </div>
             <div className="pi-preview">
-              <img src={imagePreview} alt="Preview" />
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" />
+              ) : (
+                <div className="pi-preview-empty">
+                  <Package size={28} />
+                  <span>No image</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="pi-form-actions">
@@ -263,65 +282,107 @@ const ProviderItems = () => {
         <p className="pi-muted">Loading items...</p>
       ) : items.filter(isItemActive).length === 0 && items.length === 0 ? (
         <div className="pi-empty">
-          <Package size={48} />
+          <div className="pi-empty-icon"><Package size={36} /></div>
           <h3>No items yet</h3>
           <p>Add your first item for this service type.</p>
+          <button type="button" className="pi-add-btn" onClick={openAddForm}>
+            <Plus size={18} /> Add Your First Item
+          </button>
         </div>
       ) : (
-        <div className="pi-table-wrap">
-          <table className="pi-table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const active = isItemActive(item);
-                return (
-                <tr key={item.itemId} className={active ? '' : 'pi-row-inactive'}>
-                  <td>
-                    <img
-                      src={item.imageUrl || '/wash1.jpg'}
-                      alt={item.itemName}
-                      className="pi-thumb"
-                    />
-                  </td>
-                  <td>{item.itemName}</td>
-                  <td>{item.description || '—'}</td>
-                  <td>Rs.{Number(item.price).toFixed(2)}</td>
-                  <td>
-                    <span className={`pi-status-badge ${active ? 'pi-status-active' : 'pi-status-deleted'}`}>
-                      {active ? 'Active' : 'Deleted'}
-                    </span>
-                  </td>
-                  <td className="pi-actions">
-                    {active ? (
-                      <>
-                        <button type="button" onClick={() => openEditForm(item)} title="Edit">
-                          <Pencil size={16} />
-                        </button>
-                        <button type="button" onClick={() => handleDelete(item)} title="Soft delete">
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <button type="button" onClick={() => handleRestore(item)} title="Restore">
-                        <RotateCcw size={16} />
-                      </button>
-                    )}
-                  </td>
+        <>
+          <div className="pi-table-wrap">
+            <table className="pi-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              );
-              })}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {pagedItems.map((item) => {
+                  const active = isItemActive(item);
+                  return (
+                  <tr key={item.itemId} className={active ? '' : 'pi-row-inactive'}>
+                    <td>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.itemName} className="pi-thumb" />
+                      ) : (
+                        <div className="pi-thumb pi-thumb-empty">
+                          <Package size={16} />
+                        </div>
+                      )}
+                    </td>
+                    <td className="pi-name-cell">{item.itemName}</td>
+                    <td className="pi-desc-cell">{item.description || '—'}</td>
+                    <td className="pi-price-cell">Rs.{Number(item.price).toFixed(2)}</td>
+                    <td>
+                      <span className={`pi-status-badge ${active ? 'pi-status-active' : 'pi-status-deleted'}`}>
+                        {active ? 'Active' : 'Deleted'}
+                      </span>
+                    </td>
+                    <td className="pi-actions">
+                      {active ? (
+                        <>
+                          <button type="button" onClick={() => openEditForm(item)} title="Edit">
+                            <Pencil size={16} />
+                          </button>
+                          <button type="button" onClick={() => handleDelete(item)} title="Soft delete">
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => handleRestore(item)} title="Restore">
+                          <RotateCcw size={16} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pi-pagination-wrap">
+              <div className="pi-pagination">
+                <button
+                  className="pi-page-btn"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                >
+                  Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    className={`pi-page-btn ${page === safePage ? 'pi-page-btn--active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  className="pi-page-btn"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+              <div className="pi-pagination-meta">
+                Page {safePage} of {totalPages} · {items.length} item{items.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

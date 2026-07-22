@@ -10,7 +10,7 @@ const emptyForm = {
   maxWeightKg: '',
   description: '',
   price: '',
-  imageUrl: '/wash1.jpg'
+  imageUrl: ''
 };
 
 const ProviderBulkItems = () => {
@@ -26,7 +26,7 @@ const ProviderBulkItems = () => {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [imagePreview, setImagePreview] = useState('/wash1.jpg');
+  const [imagePreview, setImagePreview] = useState('');
   const [imageFile, setImageFile] = useState(null);
 
   const loadItems = async () => {
@@ -53,7 +53,7 @@ const ProviderBulkItems = () => {
 
   const resetForm = () => {
     setForm(emptyForm);
-    setImagePreview('/wash1.jpg');
+    setImagePreview('');
     setEditingId(null);
     setImageFile(null);
   };
@@ -78,9 +78,9 @@ const ProviderBulkItems = () => {
       
       description: baseDesc,
       price: String(item.price ?? ''),
-      imageUrl: item.imageUrl || '/wash1.jpg'
+      imageUrl: item.imageUrl || ''
     });
-    setImagePreview(item.imageUrl || '/wash1.jpg');
+    setImagePreview(item.imageUrl || '');
     setShowForm(true);
   };
 
@@ -114,7 +114,7 @@ const ProviderBulkItems = () => {
     setSuccess('');
 
     try {
-      let imageUrl = form.imageUrl || '/wash1.jpg';
+      let imageUrl = form.imageUrl || null;
 
       // If user selected a local file, upload it to Cloudinary first
       if (imageFile) {
@@ -276,9 +276,9 @@ const ProviderBulkItems = () => {
                   value={form.imageUrl.startsWith('data:') ? '' : form.imageUrl}
                   onChange={(e) => {
                     setForm((p) => ({ ...p, imageUrl: e.target.value }));
-                    setImagePreview(e.target.value || '/wash1.jpg');
+                    setImagePreview(e.target.value);
                   }}
-                  placeholder="/wash1.jpg or https://..."
+                  placeholder="https://..."
                 />
               </label>
               <label className="pi-full pi-upload-label">
@@ -287,7 +287,14 @@ const ProviderBulkItems = () => {
               </label>
             </div>
             <div className="pi-preview">
-              <img src={imagePreview} alt="Preview" />
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" />
+              ) : (
+                <div className="pi-preview-empty">
+                  <Package size={28} />
+                  <span>No image</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="pi-form-actions">
@@ -312,9 +319,12 @@ const ProviderBulkItems = () => {
         <p className="pi-muted">Loading items...</p>
       ) : items.filter(isItemActive).length === 0 && items.length === 0 ? (
         <div className="pi-empty">
-          <Package size={48} />
+          <div className="pi-empty-icon"><Package size={36} /></div>
           <h3>No bulk items yet</h3>
           <p>Add your first bulk option for this service.</p>
+          <button type="button" className="pi-add-btn" onClick={openAddForm}>
+            <Plus size={18} /> Add Your First Bulk Item
+          </button>
         </div>
       ) : (
         <div className="pi-cards-grid">
@@ -347,7 +357,13 @@ const ProviderBulkItems = () => {
 
                 <div className="pi-card-body">
                   <div className="pi-card-image-wrap">
-                    <img src={item.imageUrl || '/wash1.jpg'} alt={item.name} />
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} />
+                    ) : (
+                      <div className="pi-card-image-empty">
+                        <Package size={22} />
+                      </div>
+                    )}
                   </div>
                   <div className="pi-card-price">Rs.{Number(item.price).toFixed(2)}</div>
                   <div className="pi-card-meta">{includedCount} bag{includedCount > 1 ? 's' : ''} included</div>
