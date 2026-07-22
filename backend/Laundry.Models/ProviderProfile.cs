@@ -21,5 +21,16 @@ public sealed class ProviderProfile
     public bool OffersDelivery { get; set; }
     public decimal DeliveryFee { get; set; }
 
+    public string? ImageUrl { get; set; }
+    // Kept as a single-element list so the frontend's existing `images[0]` read keeps working.
+    public List<string> Images => string.IsNullOrEmpty(ImageUrl) ? [] : [ImageUrl];
+
+    public string? BusinessLicense { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? ZipCode { get; set; }
+    // Raw JSON: { monday: { open, close, isClosed }, ... } — parsed/serialized on the frontend.
+    public string? OperatingHours { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

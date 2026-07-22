@@ -146,8 +146,9 @@ public sealed class OrderRepository(SqlHelper sql)
     // Detail view — order header + items with names joined from ServiceItems / BulkItems
     public async Task<Order?> GetOrderById(int orderId)
     {
-        SqlParameter[] parameters = [new("@OrderId", orderId)];
-
+        // Each call below gets its own fresh SqlParameter instance — a SqlParameter can only
+        // belong to one command's collection at a time, so sharing one array across multiple
+        // sequential ExecuteXAsync calls throws "already contained by another SqlParameterCollection".
         var headerSql = $@"
             SELECT
                 o.OrderId,
@@ -164,7 +165,7 @@ public sealed class OrderRepository(SqlHelper sql)
             FROM dbo.Orders o
             WHERE o.OrderId = @OrderId";
 
-        var order = await _sql.ExecuteSingleAsync(headerSql, parameters, MapOrderSummary);
+        var order = await _sql.ExecuteSingleAsync(headerSql, [new SqlParameter("@OrderId", orderId)], MapOrderSummary);
         if (order is null) return null;
 
         const string itemsSql = @"
@@ -199,8 +200,41 @@ public sealed class OrderRepository(SqlHelper sql)
             WHERE oi.OrderId = @OrderId
             ORDER BY oi.OrderItemId";
 
-        order.Items = await _sql.ExecuteListAsync(itemsSql, parameters, MapOrderItemDetailed);
+        order.Items = await _sql.ExecuteListAsync(itemsSql, [new SqlParameter("@OrderId", orderId)], MapOrderItemDetailed);
         order.Deliveries = await GetDeliveriesByOrder(orderId);
+
+        const string custLocSql = "SELECT Address, Latitude, Longitude FROM dbo.Customers WHERE CustomerId = @CustomerId";
+        var custLoc = await _sql.ExecuteSingleAsync(
+            custLocSql,
+            [new SqlParameter("@CustomerId", order.CustomerId)],
+            r => (
+                Address: r.IsDBNull(r.GetOrdinal("Address")) ? null : r.GetString(r.GetOrdinal("Address")),
+                Latitude: r.IsDBNull(r.GetOrdinal("Latitude")) ? (decimal?)null : r.GetDecimal(r.GetOrdinal("Latitude")),
+                Longitude: r.IsDBNull(r.GetOrdinal("Longitude")) ? (decimal?)null : r.GetDecimal(r.GetOrdinal("Longitude"))
+            ));
+        order.CustomerAddress = custLoc.Address;
+        order.CustomerLatitude = custLoc.Latitude;
+        order.CustomerLongitude = custLoc.Longitude;
+
+        const string provLocSql = """
+            SELECT DISTINCT p.ProviderId, p.BusinessName, p.BusinessAddress, p.Latitude, p.Longitude
+            FROM dbo.OrderItems oi
+            INNER JOIN dbo.Providers p ON p.ProviderId = oi.ProviderId
+            WHERE oi.OrderId = @OrderId
+            """;
+        order.ProviderLocations = await _sql.ExecuteListAsync(
+            provLocSql,
+            [new SqlParameter("@OrderId", orderId)],
+            r => new OrderProviderLocation
+            {
+                ProviderId = r.GetInt32(r.GetOrdinal("ProviderId")),
+                ProviderName = r.GetString(r.GetOrdinal("BusinessName")),
+                Address = r.IsDBNull(r.GetOrdinal("BusinessAddress")) ? null : r.GetString(r.GetOrdinal("BusinessAddress")),
+                Latitude = r.IsDBNull(r.GetOrdinal("Latitude")) ? null : r.GetDecimal(r.GetOrdinal("Latitude")),
+                Longitude = r.IsDBNull(r.GetOrdinal("Longitude")) ? null : r.GetDecimal(r.GetOrdinal("Longitude"))
+            },
+            CommandType.Text);
+
         return order;
     }
 

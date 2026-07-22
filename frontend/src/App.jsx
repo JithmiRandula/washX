@@ -18,12 +18,14 @@ import Providers from './pages/Customer/Providers';
 import ProviderDetails from './pages/Customer/ProviderDetails';
 import CustomerDashboard from './pages/Customer/CustomerDashboard';
 import Bookings from './pages/Customer/Bookings';
+import BulkRequests from './pages/Customer/BulkRequests';
 import CustomerProfile from './pages/Customer/CustomerProfile';
 import Messages from './pages/Customer/Messages';
 import PaymentResult from './pages/Customer/PaymentResult';
 import ProviderDashboard from './pages/Provider/ProviderDashboard';
 import ProviderServices from './pages/Provider/ProviderServices';
 import ProviderOrders from './pages/Provider/ProviderOrders';
+import ProviderBulkRequests from './pages/Provider/ProviderBulkRequests';
 import ProviderAnalytics from './pages/Provider/ProviderAnalytics';
 import ProviderProfile from './pages/Provider/ProviderProfile';
 import ProviderItems from './pages/Provider/ProviderItems';
@@ -120,6 +122,14 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/customer/:customerId/bulk-requests"
+            element={
+              <ProtectedRoute allowedRoles={['customer']}>
+                <BulkRequests />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Provider Routes — single ProviderNavbar via layout */}
           <Route
@@ -135,6 +145,7 @@ function AppContent() {
             <Route path="items/:serviceId" element={<ProviderItems />} />
             <Route path="bulk-items/:serviceId" element={<ProviderBulkItems />} />
             <Route path="orders" element={<ProviderOrders />} />
+            <Route path="bulk-requests" element={<ProviderBulkRequests />} />
             <Route path="messages" element={<ProviderMessages />} />
             <Route path="analytics" element={<ProviderAnalytics />} />
             <Route path="profile" element={<ProviderProfile />} />

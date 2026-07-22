@@ -316,9 +316,39 @@
 }
 
 .cmb-detail-wrap {
-  max-width: 860px;
+  max-width: 1220px;
   margin: 0 auto;
   padding: 32px 24px 56px;
+}
+
+.cmb-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+.cmb-detail-main {
+  min-width: 0;
+}
+
+.cmb-detail-side {
+  position: sticky;
+  top: 24px;
+}
+
+.cmb-map-card {
+  padding: 20px 22px;
+}
+
+@media (max-width: 960px) {
+  .cmb-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .cmb-detail-side {
+    position: static;
+  }
 }
 
 .cmb-back-btn {

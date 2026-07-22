@@ -26,4 +26,19 @@ public sealed class ProviderService(ProviderRepository repository)
     {
         return _repository.UpdateDeliverySettings(providerId, offersDelivery, deliveryFee);
     }
+
+    public Task UpdateImageUrl(int providerId, string imageUrl)
+    {
+        return _repository.UpdateImageUrl(providerId, imageUrl);
+    }
+
+    public Task UpdateProfile(
+        int providerId, string businessName, string? description, string? businessLicense,
+        string? businessAddress, string? city, string? state, string? zipCode,
+        decimal? latitude, decimal? longitude, string? operatingHours)
+    {
+        return _repository.UpdateProfile(
+            providerId, businessName, description, businessLicense,
+            businessAddress, city, state, zipCode, latitude, longitude, operatingHours);
+    }
 }

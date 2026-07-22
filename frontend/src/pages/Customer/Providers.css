@@ -1162,6 +1162,140 @@
   }
 }
 
+/* ── Bulk/weight-based request form ── */
+.bkr-card {
+  max-width: 640px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.05);
+}
+
+.bkr-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bkr-price {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.bkr-price-unit {
+  font-size: 1rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.bkr-desc {
+  margin: 0.5rem 0 0;
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.bkr-min-order {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.bkr-note {
+  margin: 1.25rem 0;
+  padding: 0.9rem 1rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #1e40af;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.bkr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.bkr-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.bkr-fulfillment-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.bkr-fulfillment-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.1rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bkr-fulfillment-card:hover { border-color: #93c5fd; background: #f8fafc; }
+
+.bkr-fulfillment-card.active {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.bkr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bkr-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.bkr-field input,
+.bkr-field select,
+.bkr-field textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.bkr-field textarea { resize: vertical; }
+
+.bkr-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .bkr-card { padding: 1.25rem; }
+  .bkr-fulfillment-options { grid-template-columns: 1fr; }
+  .bkr-field-row { grid-template-columns: 1fr; }
+}
+
 /* Bulk items grid (per kg) */
 .bulk-item-grid-row {
   display: grid;
@@ -2427,6 +2561,63 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+/* ── Pagination ── */
+.cfp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.cfp-page-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cfp-page-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.cfp-page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.cfp-page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cfp-page-num {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 4px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cfp-page-num:hover:not(.cfp-page-num-active) { background: #f8fafc; border-color: #cbd5e1; }
+
+.cfp-page-num-active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .cfp-pagination { flex-wrap: wrap; }
 }
 
 /* ── Provider Card ── */

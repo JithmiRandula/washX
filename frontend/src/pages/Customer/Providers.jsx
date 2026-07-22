@@ -43,12 +43,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag, Truck } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Star, Package, Calendar, Clock, Phone, Mail, ArrowLeft, Settings, CreditCard, CheckCircle, X, ShoppingBasket, ShoppingBag, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import ItemBasedSelector from './ItemBasedSelector';
 import api from '../../utils/api';
-import { cartAPI, bulkItemsAPI } from '../../api/commerceApi';
+import { cartAPI } from '../../api/commerceApi';
 import { redirectToPayHereCheckout } from '../../utils/payhere';
 import './Providers.css';
 
@@ -85,9 +85,12 @@ const Providers = () => {
   const [serviceGroup, setServiceGroup] = useState(null); // 'item' | 'bulk'
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkService, setBulkService] = useState(null);
-  const [selectedBulkPackage, setSelectedBulkPackage] = useState(null);
-  const [bulkPkgs, setBulkPkgs] = useState([]);
-  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkFulfillment, setBulkFulfillment] = useState('pickup'); // 'pickup' | 'dropoff'
+  const [bulkAddress, setBulkAddress] = useState('');
+  const [bulkDate, setBulkDate] = useState('');
+  const [bulkSlot, setBulkSlot] = useState('');
+  const [bulkNotes, setBulkNotes] = useState('');
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [showCartModal, setShowCartModal] = useState(false);
   const [cartLoading, setCartLoading] = useState(false);
@@ -137,6 +140,8 @@ const Providers = () => {
     maxDistance: 50,
     serviceType: 'all'
   });
+  const [providerPage, setProviderPage] = useState(1);
+  const PROVIDERS_PER_PAGE = 3;
 
   // Providers data from API
   const [providers, setProviders] = useState([]);
@@ -209,7 +214,7 @@ const Providers = () => {
             return {
               id: provider.providerId,
               name: provider.businessName,
-              image: '/wash1.jpg',
+              image: provider.imageUrl || '/wash1.jpg',
               rating: ratingData.rating,
               reviews: ratingData.reviews,
               address: provider.businessAddress || '',
@@ -333,109 +338,54 @@ const Providers = () => {
 
   const openBulkPackageModal = (service) => {
     setBulkService(service);
-    setSelectedBulkPackage(null);
-    setBulkPkgs([]);
+    setBulkFulfillment('pickup');
+    setBulkAddress(user?.address || '');
+    setBulkDate('');
+    setBulkSlot('');
+    setBulkNotes('');
     setShowBulkModal(true);
-    // fetch provider-defined bulk packages for this service
-    (async () => {
-      try {
-        setBulkLoading(true);
-        const resp = await bulkItemsAPI.getByService(Number(service.serviceId));
-        const rows = resp?.data || resp || [];
-        // map api rows to modal package shape
-        const mapped = rows.map((r) => ({
-          id: r.bulkItemId || r.id || `${r.serviceId}-${r.includedCount}`,
-          bags: Number(r.includedCount || r.bags || 1),
-          maxKg: Number(r.maxWeightKg || r.maxKg || 0),
-          price: Number(r.price || 0),
-          title: r.name || r.serviceName || '',
-          imageUrl: r.imageUrl || r.image || null,
-          description: r.description || ''
-        }));
-        if (mapped.length > 0) setBulkPkgs(mapped);
-      } catch (err) {
-        // ignore and fallback to generated packages
-        console.error('Failed to load bulk packages from API', err);
-      } finally {
-        setBulkLoading(false);
-      }
-    })();
   };
 
   const closeBulkPackageModal = () => {
     setShowBulkModal(false);
     setBulkService(null);
-    setSelectedBulkPackage(null);
   };
 
-  const addBulkToCart = async (pkg) => {
-    const p = pkg || selectedBulkPackage;
-    if (!selectedProvider || !bulkService || !p) return;
-    // If user is logged in as customer, persist to DB
-    if (String(user?.role).toLowerCase() === 'customer') {
-      try {
-        setCartSaving(true);
+  // Bulk/weight-based services don't have a known price up front — the customer submits
+  // a pickup/drop-off request, the provider weighs the laundry, and only then is a price
+  // computed and payment collected. See BulkRequests.jsx for the rest of that flow.
+  const submitBulkRequest = async () => {
+    if (!bulkService) return;
 
-        const providerId = Number(selectedProvider?.id ?? selectedProvider?.providerId ?? 0);
-        const bulkItemId = Number(p.id ?? p.bulkItemId ?? 0);
-
-        if (!providerId || providerId <= 0) {
-          alert('Invalid provider selected — cannot add to cart');
-          return;
-        }
-
-        if (!bulkItemId || bulkItemId <= 0) {
-          alert('Invalid bulk package selected');
-          return;
-        }
-
-        const payload = {
-          providerId,
-          bulkItemId,
-          kind: 'bulk',
-          quantity: 1,
-          bags: p.bags,
-          maxKg: p.maxKg,
-          unitPrice: Number(p.unitPrice ?? p.price ?? 0),
-          price: Number(p.price ?? 0),
-          description: p.title || bulkService.serviceName
-        };
-
-        console.debug('Adding bulk to cart payload:', payload);
-
-        const resp = await cartAPI.addGeneric(payload);
-        const dbItems = resp?.data || [];
-        setCartItems(dbItems);
-        if (showBulkModal) closeBulkPackageModal();
-        setShowCartModal(true);
-      } catch (err) {
-        console.error('Failed to add bulk to cart:', err.response?.data || err);
-        alert(err.response?.data?.message || err.message || 'Failed to add package to cart');
-      } finally {
-        setCartSaving(false);
-      }
+    if (String(user?.role).toLowerCase() !== 'customer') {
+      alert('Please log in as a customer to request bulk laundry service.');
+      return;
+    }
+    if (bulkFulfillment === 'pickup' && !bulkAddress.trim()) {
+      alert('Please enter a pickup address.');
       return;
     }
 
-    // fallback: local-only cart (not persisted)
-    const id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
-    const item = {
-      id,
-      kind: 'bulk',
-      providerId: selectedProvider.id,
-      providerName: selectedProvider.name,
-      serviceId: bulkService.serviceId,
-      serviceName: bulkService.serviceName,
-      pricingType: bulkService.pricingType,
-      unitPrice: Number(bulkService.price ?? 0),
-      bags: p.bags,
-      maxKg: p.maxKg,
-      price: p.price
-    };
+    setBulkSubmitting(true);
+    try {
+      const { default: bulkRequestsApi } = await import('../../api/bulkRequestsApi');
+      const res = await bulkRequestsApi.create({
+        serviceId: Number(bulkService.serviceId),
+        fulfillmentMethod: bulkFulfillment,
+        address: bulkFulfillment === 'pickup' ? bulkAddress.trim() : null,
+        preferredDate: bulkDate || null,
+        preferredSlot: bulkSlot || null,
+        notes: bulkNotes.trim() || null,
+      });
+      if (!res?.data?.success) throw new Error(res?.data?.message || 'Failed to submit request');
 
-    setCartItems((prev) => [...prev, item]);
-    if (showBulkModal) closeBulkPackageModal();
-    setShowCartModal(true);
+      closeBulkPackageModal();
+      navigate(`/customer/${user.customerId}/bulk-requests`);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to submit bulk request');
+    } finally {
+      setBulkSubmitting(false);
+    }
   };
 
   const openItemSelector = (service) => {
@@ -626,7 +576,6 @@ const Providers = () => {
     setPaymentSuccess(false);
     setShowBulkModal(false);
     setBulkService(null);
-    setSelectedBulkPackage(null);
     setShowItemSelector(false);
     setSelectedItemService(null);
     resetCardDetails();
@@ -720,6 +669,13 @@ const Providers = () => {
     }
   });
 
+  const providerTotalPages = Math.max(1, Math.ceil(filteredProviders.length / PROVIDERS_PER_PAGE));
+  const currentProviderPage = Math.min(providerPage, providerTotalPages);
+  const paginatedProviders = filteredProviders.slice(
+    (currentProviderPage - 1) * PROVIDERS_PER_PAGE,
+    currentProviderPage * PROVIDERS_PER_PAGE
+  );
+
   // Pricing helpers
   const baseRates = {
     'Wash & Fold': 8,
@@ -788,6 +744,7 @@ const Providers = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters({ ...filters, [key]: value });
+    setProviderPage(1);
   };
 
   const clearFilters = () => {
@@ -798,6 +755,7 @@ const Providers = () => {
       maxDistance: 50,
       serviceType: 'all'
     });
+    setProviderPage(1);
   };
 
   const handleBookService = (provider) => {
@@ -1150,16 +1108,13 @@ const Providers = () => {
     );
   }
 
-  // Bulk Package Modal (Bag-based picker)
+  // Bulk/Weight-Based Request Form — no price is known yet; the provider weighs the
+  // laundry after pickup/drop-off and the customer confirms + pays afterward.
   if (showBulkModal && bulkService) {
-    const pkgs = (bulkPkgs && bulkPkgs.length > 0) ? bulkPkgs : [];
-
     return (
       <>
         <CustomerNavbar />
         <div className="bkp-page">
-
-          {/* Clean white header — distinct from service list gradient */}
           <div className="bkp-header">
             <div className="bkp-main">
               <button
@@ -1175,76 +1130,93 @@ const Providers = () => {
               <div className="bkp-header-row">
                 <div>
                   <h1 className="bkp-title">{bulkService.serviceName}</h1>
-                  <p className="bkp-subtitle">Choose a package size to add to your cart</p>
+                  <p className="bkp-subtitle">Weight-based service — priced per kg</p>
                 </div>
-                {pkgs.length > 0 && (
-                  <span className="bkp-count-badge">
-                    {pkgs.length} package{pkgs.length !== 1 ? 's' : ''}
-                  </span>
-                )}
               </div>
             </div>
           </div>
 
           <div className="bkp-main bkp-content">
-            {bulkLoading ? (
-              <div className="bkp-loading">
-                <div className="home-spinner" />
-                <p>Loading packages…</p>
+            <div className="bkr-card">
+              <div className="bkr-price-row">
+                <span className="bkr-price">Rs {Number(bulkService.price ?? 0).toFixed(2)}</span>
+                <span className="bkr-price-unit">/ kg</span>
               </div>
-            ) : pkgs.length === 0 ? (
-              <div className="no-bookings">
-                <Package size={48} />
-                <h3>No packages available</h3>
-                <p>This provider has not defined any bulk packages for this service.</p>
+              {bulkService.description && <p className="bkr-desc">{bulkService.description}</p>}
+              {bulkService.minimumOrder > 0 && (
+                <p className="bkr-min-order">Minimum order: {bulkService.minimumOrder} kg</p>
+              )}
+
+              <div className="bkr-note">
+                Your laundry will be weighed by the provider after it's received. The final
+                price will be calculated based on the actual weight — you'll confirm and pay
+                only once you know the exact amount.
               </div>
-            ) : (
-              <div className="bkp-grid">
-                {pkgs.map((p) => (
-                  <div key={p.id} className="bkp-card">
 
-                    {/* Image — left column */}
-                    <div className="bkp-image-wrap">
-                      <img
-                        src={p.imageUrl || bulkService.imageUrl || '/wash1.jpg'}
-                        alt={p.title || bulkService.serviceName}
-                        className="bkp-image"
-                        onError={(e) => { e.target.src = '/wash1.jpg'; }}
-                      />
-                      <span className="bkp-bag-badge">
-                        {p.bags} BAG{p.bags !== 1 ? 'S' : ''}
-                      </span>
-                    </div>
+              <div className="bkr-form">
+                <label className="bkr-label">How will you get your laundry to the provider?</label>
+                <div className="bkr-fulfillment-options">
+                  <button
+                    type="button"
+                    className={`bkr-fulfillment-card ${bulkFulfillment === 'pickup' ? 'active' : ''}`}
+                    onClick={() => setBulkFulfillment('pickup')}
+                  >
+                    <MapPin size={20} />
+                    <span>Pickup from my address</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`bkr-fulfillment-card ${bulkFulfillment === 'dropoff' ? 'active' : ''}`}
+                    onClick={() => setBulkFulfillment('dropoff')}
+                  >
+                    <Package size={20} />
+                    <span>Drop off at the laundry</span>
+                  </button>
+                </div>
 
-                    {/* Content — right column */}
-                    <div className="bkp-body">
-                      <div className="bkp-price">Rs {Number(p.price).toFixed(2)}</div>
-
-                      <div className="bkp-details">
-                        <span className="bkp-detail-pill">
-                          {p.bags} bag{p.bags > 1 ? 's' : ''} included
-                        </span>
-                        {p.maxKg > 0 && (
-                          <span className="bkp-detail-pill">Up to {p.maxKg} Kg</span>
-                        )}
-                      </div>
-
-                      {p.description && (
-                        <p className="bkp-desc">{p.description}</p>
-                      )}
-
-                      <button
-                        className="bkp-add-btn"
-                        onClick={() => addBulkToCart(p)}
-                        disabled={cartSaving}
-                      >
-                        {cartSaving ? 'Adding…' : 'Add to Cart'}
-                      </button>
-                    </div>
+                {bulkFulfillment === 'pickup' && (
+                  <div className="bkr-field">
+                    <label>Pickup Address *</label>
+                    <textarea
+                      value={bulkAddress}
+                      onChange={(e) => setBulkAddress(e.target.value)}
+                      placeholder="Enter the address to pick up your laundry from"
+                      rows={2}
+                    />
                   </div>
-                ))}
+                )}
+
+                <div className="bkr-field-row">
+                  <div className="bkr-field">
+                    <label>Preferred Date</label>
+                    <input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+                  </div>
+                  <div className="bkr-field">
+                    <label>Preferred Time</label>
+                    <select value={bulkSlot} onChange={(e) => setBulkSlot(e.target.value)}>
+                      <option value="">Any time</option>
+                      <option value="Morning">Morning</option>
+                      <option value="Afternoon">Afternoon</option>
+                      <option value="Evening">Evening</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bkr-field">
+                  <label>Notes (optional)</label>
+                  <textarea
+                    value={bulkNotes}
+                    onChange={(e) => setBulkNotes(e.target.value)}
+                    placeholder="e.g. mostly everyday clothes, a few delicate items"
+                    rows={2}
+                  />
+                </div>
+
+                <button className="bkp-add-btn" onClick={submitBulkRequest} disabled={bulkSubmitting}>
+                  {bulkSubmitting ? 'Submitting…' : 'Submit Request'}
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
         <CartButton />
@@ -1524,7 +1496,6 @@ const Providers = () => {
             />
           </div>
         </div>
-        <CartButton />
       </>
     );
   }
@@ -2174,7 +2145,7 @@ const Providers = () => {
             </div>
           ) : (
             <div className="cfp-grid">
-              {filteredProviders.map(provider => (
+              {paginatedProviders.map(provider => (
                 <div
                   key={provider.id}
                   className="cfp-card"
@@ -2258,6 +2229,36 @@ const Providers = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {!providersLoading && !providersError && filteredProviders.length > 0 && providerTotalPages > 1 && (
+            <div className="cfp-pagination">
+              <button
+                className="cfp-page-btn"
+                onClick={() => setProviderPage(p => Math.max(1, p - 1))}
+                disabled={currentProviderPage === 1}
+              >
+                <ChevronLeft size={16} /> Prev
+              </button>
+              <div className="cfp-page-numbers">
+                {Array.from({ length: providerTotalPages }, (_, i) => i + 1).map(pageNum => (
+                  <button
+                    key={pageNum}
+                    className={`cfp-page-num${pageNum === currentProviderPage ? ' cfp-page-num-active' : ''}`}
+                    onClick={() => setProviderPage(pageNum)}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="cfp-page-btn"
+                onClick={() => setProviderPage(p => Math.min(providerTotalPages, p + 1))}
+                disabled={currentProviderPage === providerTotalPages}
+              >
+                Next <ChevronRight size={16} />
+              </button>
             </div>
           )}
 

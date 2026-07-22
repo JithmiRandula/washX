@@ -367,9 +367,9 @@ const ProviderServices = () => {
           </Link>
         )}
         {mode === 'bulk' && (
-          <Link to={`/provider/${providerId}/bulk-items/${service._id}`} className="ps-manage-items-link">
-            <List size={14} /> Manage Items
-          </Link>
+          <p className="ps-bulk-hint">
+            Priced per kg — requests are weighed and priced automatically. See <Link to={`/provider/${providerId}/bulk-requests`}>Bulk Requests</Link>.
+          </p>
         )}
 
         {/* Toggle */}

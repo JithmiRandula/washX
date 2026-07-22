@@ -18,6 +18,7 @@ public sealed class ProviderRepository(SqlHelper sql)
         public decimal? Latitude { get; init; }
         public decimal? Longitude { get; init; }
         public string? ProviderDescription { get; init; }
+        public string? ImageUrl { get; init; }
         public decimal Rating { get; init; }
         public bool IsVerified { get; init; }
         public bool OffersDelivery { get; init; }
@@ -73,16 +74,92 @@ public sealed class ProviderRepository(SqlHelper sql)
             },
             commandType: CommandType.StoredProcedure);
 
-        // sp_GetProviderProfile predates the delivery columns — merge them in separately
-        // rather than touching the (un-source-controlled) stored procedure.
+        // sp_GetProviderProfile predates the delivery/image/extended-profile columns —
+        // merge them in separately rather than touching the (un-source-controlled) stored procedure.
         if (profile is not null)
         {
             var (offersDelivery, deliveryFee) = await GetDeliverySettings(providerId);
             profile.OffersDelivery = offersDelivery;
             profile.DeliveryFee = deliveryFee;
+
+            var extras = await GetProfileExtras(providerId);
+            profile.ImageUrl = extras.ImageUrl;
+            profile.BusinessLicense = extras.BusinessLicense;
+            profile.City = extras.City;
+            profile.State = extras.State;
+            profile.ZipCode = extras.ZipCode;
+            profile.OperatingHours = extras.OperatingHours;
         }
 
         return profile;
+    }
+
+    public Task<(string? ImageUrl, string? BusinessLicense, string? City, string? State, string? ZipCode, string? OperatingHours)> GetProfileExtras(int providerId)
+    {
+        SqlParameter[] p = [new("@ProviderId", providerId)];
+        return _sql.ExecuteSingleAsync(
+            "SELECT ImageUrl, BusinessLicense, City, State, ZipCode, OperatingHours FROM dbo.Providers WHERE ProviderId = @ProviderId",
+            p,
+            reader => (
+                NullStr(reader, "ImageUrl"),
+                NullStr(reader, "BusinessLicense"),
+                NullStr(reader, "City"),
+                NullStr(reader, "State"),
+                NullStr(reader, "ZipCode"),
+                NullStr(reader, "OperatingHours")
+            ),
+            CommandType.Text);
+    }
+
+    public Task UpdateImageUrl(int providerId, string imageUrl)
+    {
+        SqlParameter[] p = [new("@ProviderId", providerId), new("@ImageUrl", imageUrl)];
+        return _sql.ExecuteNonQueryAsync(
+            "UPDATE dbo.Providers SET ImageUrl = @ImageUrl WHERE ProviderId = @ProviderId",
+            p, CommandType.Text);
+    }
+
+    public Task UpdateProfile(
+        int providerId, string businessName, string? description, string? businessLicense,
+        string? businessAddress, string? city, string? state, string? zipCode,
+        decimal? latitude, decimal? longitude, string? operatingHours)
+    {
+        SqlParameter[] p =
+        [
+            new("@ProviderId",      providerId),
+            new("@BusinessName",    businessName),
+            new("@Description",     (object?)description ?? DBNull.Value),
+            new("@BusinessLicense", (object?)businessLicense ?? DBNull.Value),
+            new("@BusinessAddress", (object?)businessAddress ?? DBNull.Value),
+            new("@City",            (object?)city ?? DBNull.Value),
+            new("@State",           (object?)state ?? DBNull.Value),
+            new("@ZipCode",         (object?)zipCode ?? DBNull.Value),
+            new("@Latitude",        (object?)latitude ?? DBNull.Value),
+            new("@Longitude",       (object?)longitude ?? DBNull.Value),
+            new("@OperatingHours",  (object?)operatingHours ?? DBNull.Value)
+        ];
+
+        return _sql.ExecuteNonQueryAsync(
+            """
+            UPDATE dbo.Providers SET
+                BusinessName    = @BusinessName,
+                Description     = @Description,
+                BusinessLicense = @BusinessLicense,
+                BusinessAddress = @BusinessAddress,
+                City            = @City,
+                State           = @State,
+                ZipCode         = @ZipCode,
+                Latitude        = @Latitude,
+                Longitude       = @Longitude,
+                OperatingHours  = @OperatingHours
+            WHERE ProviderId = @ProviderId
+            """, p, CommandType.Text);
+    }
+
+    private static string? NullStr(SqlDataReader r, string col)
+    {
+        var o = r.GetOrdinal(col);
+        return r.IsDBNull(o) ? null : r.GetString(o);
     }
 
     public async Task<(bool OffersDelivery, decimal DeliveryFee)> GetDeliverySettings(int providerId)
@@ -120,6 +197,7 @@ public sealed class ProviderRepository(SqlHelper sql)
             p.Latitude,
             p.Longitude,
             p.Description AS ProviderDescription,
+            p.ImageUrl,
             p.Rating,
             p.IsVerified,
             p.OffersDelivery,
@@ -164,6 +242,9 @@ public sealed class ProviderRepository(SqlHelper sql)
                 ProviderDescription = reader.IsDBNull(reader.GetOrdinal("ProviderDescription"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("ProviderDescription")),
+                ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl"))
+                    ? null
+                    : reader.GetString(reader.GetOrdinal("ImageUrl")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
                 IsVerified = reader.GetBoolean(reader.GetOrdinal("IsVerified")),
                 OffersDelivery = reader.GetBoolean(reader.GetOrdinal("OffersDelivery")),
@@ -219,6 +300,7 @@ public sealed class ProviderRepository(SqlHelper sql)
                     Latitude = row.Latitude,
                     Longitude = row.Longitude,
                     Description = row.ProviderDescription,
+                    ImageUrl = row.ImageUrl,
                     Rating = row.Rating,
                     IsVerified = row.IsVerified,
                     OffersDelivery = row.OffersDelivery,
@@ -290,6 +372,7 @@ public sealed class ProviderRepository(SqlHelper sql)
     p.Latitude,
     p.Longitude,
     p.Description AS ProviderDescription,
+    p.ImageUrl,
     p.Rating,
     p.IsVerified,
     p.OffersDelivery,
@@ -329,6 +412,9 @@ ORDER BY s.ServiceId DESC",
                 ProviderDescription = reader.IsDBNull(reader.GetOrdinal("ProviderDescription"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("ProviderDescription")),
+                ImageUrl = reader.IsDBNull(reader.GetOrdinal("ImageUrl"))
+                    ? null
+                    : reader.GetString(reader.GetOrdinal("ImageUrl")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
                 IsVerified = reader.GetBoolean(reader.GetOrdinal("IsVerified")),
                 OffersDelivery = reader.GetBoolean(reader.GetOrdinal("OffersDelivery")),
@@ -384,6 +470,7 @@ ORDER BY s.ServiceId DESC",
             Latitude = first.Latitude,
             Longitude = first.Longitude,
             Description = first.ProviderDescription,
+            ImageUrl = first.ImageUrl,
             Rating = first.Rating,
             IsVerified = first.IsVerified,
             OffersDelivery = first.OffersDelivery,

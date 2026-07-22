@@ -19,6 +19,8 @@ public sealed class ProviderWithServices
 
     public string? Description { get; set; }
 
+    public string? ImageUrl { get; set; }
+
     public decimal Rating { get; set; }
 
     public bool IsVerified { get; set; }

@@ -34,16 +34,17 @@ public sealed class NotificationRepository(SqlHelper sql)
         return _sql.ExecuteNonQueryAsync(sqlText, p, CommandType.Text);
     }
 
-    // Called for the customer when the provider marks their order complete.
+    // Called for the customer when the provider marks their order complete, or for
+    // bulk-request updates (which have no OrderId/OrderReference — pass null for those).
     public Task AddCustomerNotification(
-        int customerId, int providerId, int orderId, string orderReference, string title, string message)
+        int customerId, int providerId, int? orderId, string? orderReference, string title, string message)
     {
         SqlParameter[] p =
         [
             new("@CustomerId",     customerId),
             new("@ProviderId",     providerId),
-            new("@OrderId",        orderId),
-            new("@OrderReference", orderReference),
+            new("@OrderId",        (object?)orderId ?? DBNull.Value),
+            new("@OrderReference", (object?)orderReference ?? DBNull.Value),
             new("@Title",          title),
             new("@Message",        message)
         ];

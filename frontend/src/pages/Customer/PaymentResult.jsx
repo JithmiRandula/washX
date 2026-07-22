@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import { CheckCircle, XCircle } from 'lucide-react';
 import './PaymentResult.css';
 import { cartAPI } from '../../api/commerceApi';
+import bulkRequestsApi from '../../api/bulkRequestsApi';
 
 const PaymentResult = ({ status }) => {
   const { user } = useAuth();
@@ -15,10 +16,38 @@ const PaymentResult = ({ status }) => {
     null;
   const customerId = user?.customerId;
 
+  // Read once on first render, before the effect below clears sessionStorage —
+  // determines which confirmation copy/links to show.
+  const [isBulkPayment] = useState(() => sessionStorage.getItem('washx_bulk_payment') !== null);
+
   const isSuccess = status === 'success';
 
   useEffect(() => {
+    const finishBulkPaymentIfSuccess = async () => {
+      // Read THEN clear synchronously before any await (same StrictMode-double-invoke guard
+      // used below for item orders) — but only touch washx_payhere_order when this really
+      // is a bulk payment, so the item-order branch below still has it available otherwise.
+      const bulkJson = sessionStorage.getItem('washx_bulk_payment');
+      if (!bulkJson) return false;
+
+      sessionStorage.removeItem('washx_bulk_payment');
+      sessionStorage.removeItem('washx_payhere_order');
+      if (!isSuccess) return true;
+
+      try {
+        const { bulkRequestId } = JSON.parse(bulkJson);
+        if (bulkRequestId) await bulkRequestsApi.markPaid(bulkRequestId, 'PayHere');
+      } catch (e) {
+        console.error('Failed to confirm bulk request payment:', e);
+      }
+      return true;
+    };
+
     const saveOrderIfSuccess = async () => {
+      // Bulk-request payments take a different completion path (no cart/order to create).
+      const wasBulkPayment = await finishBulkPaymentIfSuccess();
+      if (wasBulkPayment) return;
+
       if (!isSuccess) return;
 
       // Read THEN clear synchronously before any await.
@@ -96,8 +125,12 @@ const PaymentResult = ({ status }) => {
           <h1>{isSuccess ? 'Payment Successful' : 'Payment Cancelled'}</h1>
           <p>
             {isSuccess
-              ? 'Your PayHere payment was completed. Your order will be confirmed shortly.'
-              : 'You closed or cancelled the payment. Your cart items are still saved.'}
+              ? isBulkPayment
+                ? 'Your bulk laundry payment was completed. Your provider will start processing shortly.'
+                : 'Your PayHere payment was completed. Your order will be confirmed shortly.'
+              : isBulkPayment
+                ? 'You closed or cancelled the payment. You can pay again anytime from your Bulk Requests.'
+                : 'You closed or cancelled the payment. Your cart items are still saved.'}
           </p>
 
           {orderId && (
@@ -107,12 +140,17 @@ const PaymentResult = ({ status }) => {
           )}
 
           <div className="payment-result-actions">
-            {customerId && (
+            {customerId && !isBulkPayment && (
               <Link to={`/customer/${customerId}/findproviders`} className="payment-result-btn primary">
                 Continue Shopping
               </Link>
             )}
-            {customerId && isSuccess && (
+            {customerId && isBulkPayment && (
+              <Link to={`/customer/${customerId}/bulk-requests`} className="payment-result-btn primary">
+                View Bulk Requests
+              </Link>
+            )}
+            {customerId && isSuccess && !isBulkPayment && (
               <Link to={`/customer/${customerId}/mybooking`} className="payment-result-btn secondary">
                 View My Bookings
               </Link>

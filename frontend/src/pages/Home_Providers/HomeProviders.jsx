@@ -81,6 +81,7 @@ const HomeProviders = () => {
           return {
             id: p.providerId,
             name: p.businessName || 'Unnamed Provider',
+            image: p.imageUrl || '/wash1.jpg',
             rating: ratingData.rating,
             reviews: ratingData.reviews,
             address: p.businessAddress || '',
@@ -346,7 +347,7 @@ const HomeProviders = () => {
                   {/* Image + badges */}
                   <div className="home-provider-image">
                     <img
-                      src="/wash1.jpg"
+                      src={provider.image || '/wash1.jpg'}
                       alt={provider.name}
                       onError={(e) => { e.target.src = '/wash1.jpg'; }}
                     />

@@ -16,6 +16,32 @@ const DAY_LABELS = {
 
 const DEFAULT_HOURS = { open: '09:00', close: '18:00', closed: false };
 
+const DEFAULT_BUSINESS_HOURS = {
+  monday:    { open: '09:00', close: '18:00', closed: false },
+  tuesday:   { open: '09:00', close: '18:00', closed: false },
+  wednesday: { open: '09:00', close: '18:00', closed: false },
+  thursday:  { open: '09:00', close: '18:00', closed: false },
+  friday:    { open: '09:00', close: '18:00', closed: false },
+  saturday:  { open: '09:00', close: '18:00', closed: false },
+  sunday:    { open: '',      close: '',       closed: true  },
+};
+
+// Backend stores operating hours as a JSON string: { monday: { open, close, isClosed }, ... }
+const parseOperatingHours = (raw) => {
+  if (!raw) return DEFAULT_BUSINESS_HOURS;
+  try {
+    const parsed = JSON.parse(raw);
+    return Object.fromEntries(
+      DAYS.map((day) => {
+        const h = parsed[day];
+        return [day, h ? { open: h.open || '', close: h.close || '', closed: Boolean(h.isClosed) } : DEFAULT_BUSINESS_HOURS[day]];
+      })
+    );
+  } catch {
+    return DEFAULT_BUSINESS_HOURS;
+  }
+};
+
 const ProviderProfile = () => {
   const { providerId } = useParams();
   const { user }       = useAuth();
@@ -67,15 +93,7 @@ const ProviderProfile = () => {
           rating:          Number(d.rating ?? 0),
           totalReviews:    d.totalReviews || 0,
           logoUrl:         d.images?.length ? d.images[0] : null,
-          businessHours: {
-            monday:    { open: '09:00', close: '18:00', closed: false },
-            tuesday:   { open: '09:00', close: '18:00', closed: false },
-            wednesday: { open: '09:00', close: '18:00', closed: false },
-            thursday:  { open: '09:00', close: '18:00', closed: false },
-            friday:    { open: '09:00', close: '18:00', closed: false },
-            saturday:  { open: '09:00', close: '18:00', closed: false },
-            sunday:    { open: '',      close: '',       closed: true  },
-          },
+          businessHours: parseOperatingHours(d.operatingHours),
         };
         setProfile(formatted);
         setTempProfile(formatted);
@@ -119,10 +137,10 @@ const ProviderProfile = () => {
     try {
       const required = {
         'Business Name':  tempProfile.businessName,
+        'Owner Name':     tempProfile.ownerName,
         'Description':    tempProfile.description,
         'Street Address': tempProfile.address,
         'Phone':          tempProfile.phone,
-        'Email':          tempProfile.email,
       };
       const missing = Object.entries(required)
         .filter(([, v]) => !v?.trim())
@@ -135,6 +153,7 @@ const ProviderProfile = () => {
 
       const payload = {
         businessName:    tempProfile.businessName,
+        ownerName:       tempProfile.ownerName,
         description:     tempProfile.description,
         businessLicense: tempProfile.businessLicense,
         address: {
@@ -145,7 +164,6 @@ const ProviderProfile = () => {
           coordinates: { lat: tempProfile.latitude, lng: tempProfile.longitude },
         },
         phone: tempProfile.phone,
-        email: tempProfile.email,
         operatingHours: Object.fromEntries(
           DAYS.map(day => {
             const h = tempProfile.businessHours[day];
@@ -375,17 +393,13 @@ const ProviderProfile = () => {
               )}
             </div>
 
-            {/* Email */}
+            {/* Email — login identifier, not editable here */}
             <div className="ppf-info-item">
               <label className="ppf-info-label">Email</label>
-              {isEditing ? (
-                <input className="ppf-input" type="email" value={tempProfile.email}
-                  onChange={e => handleInputChange('email', e.target.value)} />
-              ) : (
-                <div className="ppf-info-val ppf-info-icon-val">
-                  <Mail size={15} className="ppf-field-icon" /> {profile.email || '—'}
-                </div>
-              )}
+              <div className="ppf-info-val ppf-info-icon-val">
+                <Mail size={15} className="ppf-field-icon" /> {profile.email || '—'}
+              </div>
+              {isEditing && <small className="ppf-note">Email cannot be changed</small>}
             </div>
 
             {/* Phone */}

@@ -406,6 +406,13 @@
 .ppf-muted  { color: #94a3b8 !important; }
 .ppf-italic { font-style: italic; }
 
+.ppf-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
 /* License badge */
 .ppf-license-badge {
   display: inline-block;

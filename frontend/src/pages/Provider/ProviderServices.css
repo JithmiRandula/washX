@@ -673,6 +673,22 @@
   background: #dbeafe;
 }
 
+.ps-bulk-hint {
+  margin: 0 0 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: #f3e8ff;
+  color: #6b21a8;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.ps-bulk-hint a {
+  color: #7c3aed;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 .ps-toggle-btn {
   align-self: flex-start;
   margin-top: auto;

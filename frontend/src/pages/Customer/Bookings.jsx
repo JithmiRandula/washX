@@ -10,6 +10,7 @@ import CustomerNavbar from '../../components/CustomerNavbar/CustomerNavbar';
 import { ordersAPI } from '../../api/commerceApi';
 import { reviewsApi } from '../../api/reviewsApi';
 import ReviewModal from '../../components/ReviewModal/ReviewModal';
+import OrderMap from '../../components/OrderMap/OrderMap';
 import './Bookings.css';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -111,6 +112,20 @@ const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
     r => (r.orderId ?? r.OrderId) === thisOrderId
   );
 
+  const customerLat = displayOrder?.customerLatitude ?? displayOrder?.CustomerLatitude;
+  const customerLng = displayOrder?.customerLongitude ?? displayOrder?.CustomerLongitude;
+  const mapCustomer = {
+    lat: customerLat != null ? Number(customerLat) : null,
+    lng: customerLng != null ? Number(customerLng) : null,
+    label: displayOrder?.customerAddress ?? displayOrder?.CustomerAddress ?? null,
+  };
+  const mapProviders = (displayOrder?.providerLocations ?? displayOrder?.ProviderLocations ?? []).map((p) => ({
+    lat: (p.latitude ?? p.Latitude) != null ? Number(p.latitude ?? p.Latitude) : null,
+    lng: (p.longitude ?? p.Longitude) != null ? Number(p.longitude ?? p.Longitude) : null,
+    label: p.address ?? p.Address ?? null,
+    name: p.providerName ?? p.ProviderName ?? 'Provider',
+  }));
+
   return (
     <div className="cmb-detail-page">
       <CustomerNavbar />
@@ -126,6 +141,8 @@ const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
             <p style={{ marginTop: '1rem' }}>Loading order details…</p>
           </div>
         ) : (
+          <div className="cmb-detail-layout">
+          <div className="cmb-detail-main">
           <div className="cmb-detail-cards">
 
             {/* Header card */}
@@ -317,6 +334,16 @@ const OrderDetail = ({ order, reviewableOrders, onBack, onReviewSuccess }) => {
                 </div>
               </div>
             )}
+
+          </div>
+          </div>
+
+          <div className="cmb-detail-side">
+            <div className="cmb-detail-card cmb-map-card">
+              <h3 className="cmb-detail-card-title">Order Location</h3>
+              <OrderMap customer={mapCustomer} providers={mapProviders} />
+            </div>
+          </div>
 
           </div>
         )}

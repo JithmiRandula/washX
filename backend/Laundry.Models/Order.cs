@@ -23,4 +23,9 @@ public sealed class Order
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
     public string? ProviderStatus { get; set; }
+
+    // Populated on GetOrderById only — used to plot the order on a map.
+    public decimal? CustomerLatitude { get; set; }
+    public decimal? CustomerLongitude { get; set; }
+    public List<OrderProviderLocation>? ProviderLocations { get; set; }
 }

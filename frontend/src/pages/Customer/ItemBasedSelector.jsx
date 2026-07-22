@@ -15,11 +15,14 @@ const normalizeItem = (raw) => ({
   imageUrl: raw?.imageUrl ?? raw?.ImageUrl ?? '/wash1.jpg'
 });
 
+const ITEMS_PER_PAGE = 10;
+
 const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantities, setQuantities] = useState({});
+  const [page, setPage] = useState(1);
 
   const serviceId = Number(service?.serviceId ?? 0);
 
@@ -43,6 +46,7 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
         const list = (result?.data || []).map(normalizeItem).filter((i) => i.itemId > 0);
         setItems(list);
         setQuantities({});
+        setPage(1);
       } catch (err) {
         if (cancelled) return;
         setItems([]);
@@ -62,6 +66,10 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
     if (items.length === 0) return Number(service?.price ?? 0);
     return Math.min(...items.map((i) => i.price));
   }, [items, service?.price]);
+
+  const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedItems = items.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const selectedCount = Object.values(quantities).reduce((sum, qty) => sum + Number(qty || 0), 0);
 
@@ -116,10 +124,15 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
               {service?.serviceName}
             </p>
           </div>
-          <div className="ibs-header-badge">
-            {items.length > 0
-              ? `From ${toMoney(priceFrom)}/item`
-              : `Service from ${toMoney(service?.price)}/item`}
+          <div className="ibs-header-badges">
+            {items.length > 0 && (
+              <span className="ibs-count-badge">{items.length} item{items.length !== 1 ? 's' : ''} available</span>
+            )}
+            <span className="ibs-header-badge">
+              {items.length > 0
+                ? `From ${toMoney(priceFrom)}/item`
+                : `Service from ${toMoney(service?.price)}/item`}
+            </span>
           </div>
         </div>
       </header>
@@ -145,7 +158,7 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
 
       {!loading && !error && items.length > 0 && (
         <div className="ibs-grid">
-          {items.map((item) => {
+          {pagedItems.map((item) => {
             const qty = Number(quantities[item.itemId] || 0);
             const inCart = qty > 0;
 
@@ -199,6 +212,39 @@ const ItemBasedSelector = ({ provider, service, onBack, onAddToCart }) => {
               </article>
             );
           })}
+        </div>
+      )}
+
+      {!loading && !error && totalPages > 1 && (
+        <div className="ibs-pagination">
+          <button
+            type="button"
+            className="ibs-page-btn"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            ‹ Prev
+          </button>
+          <div className="ibs-page-numbers">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`ibs-page-num${n === currentPage ? ' active' : ''}`}
+                onClick={() => setPage(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="ibs-page-btn"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next ›
+          </button>
         </div>
       )}
 
